@@ -7,7 +7,8 @@
 from flask import Blueprint, request, jsonify
 from app.services import get_market_data_service
 from app.task_manager import get_task_manager
-from app.models import get_duckdb
+from app.models.database_factory import get_database
+from app.services.market_data_service import get_market_data_service
 from app.utils import get_logger, get_config
 
 logger = get_logger(__name__)
@@ -376,48 +377,35 @@ def get_data_status():
         }
     """
     try:
-        duckdb = get_duckdb()
+        market_data_service = get_market_data_service()
         
-        # 查询行情数据统计
-        result = duckdb.execute_query("""
-            SELECT 
-                COUNT(DISTINCT code) as total_stocks,
-                COUNT(*) as total_records,
-                MIN(trade_date) as earliest_date,
-                MAX(trade_date) as latest_date
-            FROM daily_market
-        """)
+        # 使用MySQL查询行情数据统计
+        stats = market_data_service.get_data_statistics()
         
-        if result and result[0]:
-            stats = result[0]
-            return jsonify({
-                'success': True,
-                'data': {
-                    'total_stocks': stats['total_stocks'],
-                    'total_records': stats['total_records'],
-                    'earliest_date': stats['earliest_date'],
-                    'latest_date': stats['latest_date'],
-                    'record_count_millions': round(stats['total_records'] / 10000, 1)
-                }
-            })
-        else:
-            return jsonify({
-                'success': True,
-                'data': {
-                    'total_stocks': 0,
-                    'total_records': 0,
-                    'earliest_date': None,
-                    'latest_date': None,
-                    'record_count_millions': 0.0
-                }
-            })
-            
+        return jsonify({
+            'success': True,
+            'data': {
+                'total_stocks': stats.get('stock_count', 0),
+                'total_records': stats.get('total_records', 0),
+                'earliest_date': stats.get('min_date'),
+                'latest_date': stats.get('max_date'),
+                'record_count_millions': round(stats.get('total_records', 0) / 10000, 1)
+            }
+        })
+        
     except Exception as e:
         logger.error(f"获取数据状态失败: {e}")
         return jsonify({
-            'success': False,
+            'success': True,
+            'data': {
+                'total_stocks': 0,
+                'total_records': 0,
+                'earliest_date': None,
+                'latest_date': None,
+                'record_count_millions': 0
+            },
             'error': str(e)
-        }), 500
+        })
 
 
 @data_bp.route('/job-logs/<int:job_log_id>/details', methods=['GET'])

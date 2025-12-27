@@ -7,7 +7,6 @@ datasource:
     token: a998c8f9aa86387141ffd1e2de9d257c4c471b299b3181a0597026b1
 database:
   type: mysql
-  duckdb_path: ./data/market_data.duckdb
   mysql:
     host: localhost
     port: 3306

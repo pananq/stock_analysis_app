@@ -9,7 +9,7 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 from app.utils import get_config, setup_logging, get_logger
-from app.models import get_sqlite_db, get_duckdb
+from app.models.orm_models import ORMDatabase
 from app.services import get_market_data_service
 
 
@@ -118,13 +118,20 @@ def main():
         
         # 显示配置信息
         logger.info(f"数据源类型: {config.get('datasource.type')}")
-        logger.info(f"SQLite数据库: {config.get('database.sqlite_path')}")
-        logger.info(f"DuckDB数据库: {config.get('database.duckdb_path')}")
+        logger.info(f"MySQL数据库: {config.get('database.mysql.host')}:{config.get('database.mysql.port')}/{config.get('database.mysql.database')}")
         
         # 初始化数据库
-        sqlite_db = get_sqlite_db()
-        duckdb = get_duckdb()
-        logger.info("数据库初始化完成")
+        mysql_config = config.get('database.mysql')
+        if mysql_config:
+            mysql_url = (
+                f"mysql+pymysql://{mysql_config.get('username')}:"
+                f"{mysql_config.get('password')}@"
+                f"{mysql_config.get('host')}:"
+                f"{mysql_config.get('port')}/"
+                f"{mysql_config.get('database')}?charset=utf8mb4"
+            )
+            orm_db = ORMDatabase(mysql_url)
+            logger.info("数据库初始化完成")
         
         # 测试行情数据服务
         test_market_data_service()

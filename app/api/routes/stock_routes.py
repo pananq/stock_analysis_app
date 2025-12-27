@@ -141,6 +141,8 @@ def get_stock_history_data(stock_code):
                 'high': 'high_price',
                 'low': 'low_price'
             })
+            # 将NaN替换为None以生成有效的JSON
+            df_renamed = df_renamed.astype(object).where(df_renamed.notna(), None)
             data = df_renamed.to_dict('records')
         
         return jsonify({
@@ -196,6 +198,8 @@ def get_stock_daily_data(stock_code):
                 'high': 'high_price',
                 'low': 'low_price'
             })
+            # 将NaN替换为None以生成有效的JSON
+            df_renamed = df_renamed.astype(object).where(df_renamed.notna(), None)
             data = df_renamed.to_dict('records')
         
         return jsonify({

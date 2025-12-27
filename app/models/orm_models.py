@@ -5,7 +5,7 @@ SQLAlchemy ORM 模型定义
 from datetime import datetime
 from sqlalchemy import (
     create_engine, Column, Integer, String, Text, DateTime, 
-    Date, Boolean, Float, ForeignKey, Index
+    Date, Boolean, Float, ForeignKey, Index, Numeric, BigInteger
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
@@ -168,6 +168,33 @@ class TaskExecutionDetail(Base):
         Index('idx_stock_code', 'stock_code'),
         Index('idx_detail_type', 'detail_type'),
     )
+
+
+class DailyMarket(Base):
+    """股票日线行情数据表"""
+    __tablename__ = 'daily_market'
+    
+    code = Column(String(20), primary_key=True, comment='股票代码')
+    trade_date = Column(Date, primary_key=True, comment='交易日期')
+    open = Column(Numeric(10, 2), comment='开盘价')
+    close = Column(Numeric(10, 2), comment='收盘价')
+    high = Column(Numeric(10, 2), comment='最高价')
+    low = Column(Numeric(10, 2), comment='最低价')
+    volume = Column(BigInteger, comment='成交量')
+    amount = Column(Numeric(20, 2), comment='成交额')
+    change_pct = Column(Numeric(10, 2), comment='涨跌幅')
+    turnover_rate = Column(Numeric(10, 2), comment='换手率')
+    created_at = Column(DateTime, default=datetime.now, comment='创建时间')
+    
+    # 索引
+    __table_args__ = (
+        Index('idx_daily_market_code', 'code'),
+        Index('idx_daily_market_date', 'trade_date'),
+        Index('idx_daily_market_code_date', 'code', 'trade_date'),
+        {'mysql_engine': 'InnoDB', 'mysql_charset': 'utf8mb4'}
+    )
+
+
 
 
 class ORMDatabase:
@@ -459,6 +486,7 @@ class ORMDatabase:
             'data_update_history': DataUpdateHistory,
             'job_logs': JobLog,
             'task_execution_details': TaskExecutionDetail,
+            'daily_market': DailyMarket,
         }
         return model_map.get(table_name)
     

@@ -12,7 +12,7 @@ from flask_cors import CORS
 from datetime import datetime
 from app.utils import get_config, get_logger
 from app.models.database_factory import get_database
-from app.models import get_duckdb
+from app.services.market_data_service import get_market_data_service
 
 logger = get_logger(__name__)
 
@@ -47,8 +47,8 @@ def create_app(config=None):
     
     # 初始化数据库（使用 ORM 模式）
     with app.app_context():
-        get_database(use_orm=True)  # 使用工厂方法获取数据库（强制使用ORM）
-        get_duckdb()
+        get_database()  # 使用工厂方法获取数据库（MySQL或SQLite）
+        get_market_data_service()  # 初始化MySQL行情数据库
         logger.info("数据库初始化完成")
     
     # 注册蓝图
@@ -88,21 +88,27 @@ def create_app(config=None):
     @app.route('/health')
     def health():
         """健康检查"""
-        from datetime import timezone
         try:
             # 检查数据库连接
-            db = get_database(use_orm=True)  # 使用工厂方法获取数据库（强制使用ORM）
-            duckdb = get_duckdb()
+            db = get_database()  # 使用工厂方法获取数据库（MySQL或SQLite）
+            market_data_service = get_market_data_service()
             
             db_result = db.execute_query("SELECT 1")
-            duckdb_result = duckdb.execute_query("SELECT 1")
+            
+            # 检查MySQL行情数据
+            market_db_ok = False
+            try:
+                stats = market_data_service.get_data_statistics()
+                market_db_ok = stats is not None
+            except:
+                market_db_ok = False
             
             return jsonify({
                 'status': 'healthy',
-                'timestamp': datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S GMT'),
+                'timestamp': datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S GMT'),
                 'database': {
                     'main': 'ok' if db_result else 'error',
-                    'duckdb': 'ok' if duckdb_result else 'error'
+                    'market_data': 'ok' if market_db_ok else 'error'
                 }
             })
         except Exception as e:

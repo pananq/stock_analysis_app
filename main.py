@@ -16,7 +16,6 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 from app.utils import get_config, setup_logging, get_logger
-from app.models import get_duckdb
 
 # PID文件路径
 PID_FILE = project_root / '.stock_app.pid'
@@ -122,11 +121,18 @@ def init_databases():
         
         # 显示配置信息
         logger.info(f"数据源类型: {config.get('datasource.type')}")
-        logger.info(f"DuckDB数据库: {config.get('database.duckdb_path')}")
         
-        # 初始化DuckDB数据库
-        duckdb = get_duckdb()
-        logger.info("DuckDB数据库连接成功")
+        # 初始化MySQL行情数据库
+        from app.services.market_data_service import get_market_data_service
+        market_data_service = get_market_data_service()
+        stats = market_data_service.get_statistics()
+        
+        if stats:
+            logger.info(f"MySQL行情数据库连接成功")
+            logger.info(f"  股票数量: {stats.get('stock_count', 0)}")
+            logger.info(f"  记录总数: {stats.get('total_records', 0)}")
+            if stats.get('earliest_date'):
+                logger.info(f"  日期范围: {stats.get('earliest_date')} ~ {stats.get('latest_date')}")
         
         logger.info("数据库初始化完成")
         

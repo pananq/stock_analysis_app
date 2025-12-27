@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Any, Tuple
 import pandas as pd
 from app.models.database_factory import get_database
-from app.models import get_duckdb
 from app.services.strategy_service import get_strategy_service
 from app.services.market_data_service import get_market_data_service
 from app.indicators import TechnicalIndicators
@@ -23,9 +22,8 @@ class StrategyExecutor:
     def __init__(self):
         """初始化策略执行引擎"""
         self.db = get_database()  # 使用工厂方法获取数据库（MySQL或SQLite）
-        self.duckdb = get_duckdb()  # DuckDB 用于行情数据
+        self.market_data_service = get_market_data_service()  # 行情数据服务（MySQL）
         self.strategy_service = get_strategy_service()
-        self.market_data_service = get_market_data_service()
         self.indicators = TechnicalIndicators()
         logger.info("策略执行引擎初始化完成")
     
@@ -220,24 +218,13 @@ class StrategyExecutor:
             股票列表
         """
         try:
-            # 从DuckDB中获取有数据的股票代码
-            sql = """
-                SELECT DISTINCT code as stock_code
-                FROM daily_market
-                ORDER BY code
-            """
+            # 从MySQL中获取有数据的股票代码
+            stock_codes = self.market_data_service.get_stocks_with_data(limit)
             
-            if limit:
-                sql += f" LIMIT {limit}"
-            
-            result = self.duckdb.execute_query(sql)
-            
-            if not result:
+            if not stock_codes:
                 return []
             
-            stock_codes = [row['stock_code'] for row in result]
-            
-            # 从SQLite中获取股票详细信息
+            # 从主数据库中获取股票详细信息
             placeholders = ','.join(['?' for _ in stock_codes])
             sql = f"""
                 SELECT code as stock_code, name as stock_name, market_type as market
@@ -283,23 +270,18 @@ class StrategyExecutor:
             extended_start = (datetime.strptime(start_date, '%Y-%m-%d') - 
                             timedelta(days=buffer_days)).strftime('%Y-%m-%d')
             
-            sql = """
-                SELECT trade_date, open, high, low, close, volume, amount, change_pct as pct_change
-                FROM daily_market
-                WHERE code = ?
-                  AND trade_date >= ?
-                  AND trade_date <= ?
-                ORDER BY trade_date
-            """
+            # 使用MySQL获取行情数据
+            df = self.market_data_service.get_stock_data(
+                code=stock_code,
+                start_date=extended_start,
+                end_date=end_date
+            )
             
-            data = self.duckdb.execute_query(sql, (stock_code, extended_start, end_date))
-            
-            if not data or len(data) < ma_period + observation_days:
+            if df.empty or len(df) < ma_period + observation_days:
                 return []
             
-            # 将list转换为pandas DataFrame
-            import pandas as pd
-            df = pd.DataFrame(data)
+            # 重命名列以匹配后续处理逻辑
+            df = df.rename(columns={'change_pct': 'pct_change'})
             
             # 确保trade_date是字符串格式，避免类型比较错误
             if len(df) > 0 and not isinstance(df['trade_date'].iloc[0], str):

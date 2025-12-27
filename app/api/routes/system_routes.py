@@ -415,12 +415,12 @@ def get_database_status():
     """
     try:
         from app.models.database_factory import get_database
-        from app.models import get_duckdb
+        from app.services.market_data_service import get_market_data_service
         
         db = get_database()
-        duckdb = get_duckdb()
+        market_data_service = get_market_data_service()
         
-        # 检查主数据库
+        # 检查主数据库（MySQL/SQLite）
         main_db_status = {
             'type': db.type if hasattr(db, 'type') else 'unknown',
             'status': 'unknown',
@@ -437,28 +437,30 @@ def get_database_status():
             main_db_status['status'] = 'error'
             main_db_status['error'] = str(e)
         
-        # 检查DuckDB
-        duckdb_status = {
-            'type': 'duckdb',
+        # 检查行情数据数据库（MySQL）
+        market_db_status = {
+            'type': 'mysql',
             'status': 'unknown',
             'error': None
         }
         
         try:
-            result = duckdb.execute_query("SELECT 1")
-            if result:
-                duckdb_status['status'] = 'healthy'
+            # 通过market_data_service检查MySQL连接
+            stats = market_data_service.get_data_statistics()
+            if stats is not None:
+                market_db_status['status'] = 'healthy'
+                market_db_status['data_stats'] = stats
             else:
-                duckdb_status['status'] = 'error'
+                market_db_status['status'] = 'error'
         except Exception as e:
-            duckdb_status['status'] = 'error'
-            duckdb_status['error'] = str(e)
+            market_db_status['status'] = 'error'
+            market_db_status['error'] = str(e)
         
         return jsonify({
             'success': True,
             'data': {
                 'main_database': main_db_status,
-                'duckdb': duckdb_status
+                'market_database': market_db_status
             }
         })
         
@@ -520,14 +522,14 @@ def health_check():
     """
     try:
         from app.models.database_factory import get_database
-        from app.models import get_duckdb
+        from app.services.market_data_service import get_market_data_service
         
         db = get_database()  # 使用工厂方法获取数据库（MySQL或SQLite）
-        duckdb = get_duckdb()
+        market_data_service = get_market_data_service()
         
         # 检查数据库连接
         main_db_ok = False
-        duckdb_ok = False
+        market_db_ok = False
         
         try:
             result = db.execute_query("SELECT 1")
@@ -536,8 +538,9 @@ def health_check():
             pass
         
         try:
-            result = duckdb.execute_query("SELECT 1")
-            duckdb_ok = bool(result)
+            # 检查行情数据数据库
+            stats = market_data_service.get_data_statistics()
+            market_db_ok = stats is not None
         except:
             pass
         
@@ -549,7 +552,7 @@ def health_check():
         except:
             pass
         
-        all_ok = main_db_ok and duckdb_ok
+        all_ok = main_db_ok and market_db_ok
         
         return jsonify({
             'success': True,
@@ -557,7 +560,7 @@ def health_check():
                 'status': 'healthy' if all_ok else 'degraded',
                 'components': {
                     'database': 'ok' if main_db_ok else 'error',
-                    'duckdb': 'ok' if duckdb_ok else 'error',
+                    'market_database': 'ok' if market_db_ok else 'error',
                     'scheduler': 'running' if scheduler_ok else 'stopped'
                 }
             }
@@ -581,12 +584,12 @@ def get_system_stats():
     """
     try:
         from app.models.database_factory import get_database
-        from app.models import get_duckdb
-        from app.services import get_stock_service, get_strategy_service
+        from app.services import get_stock_service, get_strategy_service, get_market_data_service
         
         db = get_database()  # 使用工厂方法获取数据库（MySQL或SQLite）
         stock_service = get_stock_service()
         strategy_service = get_strategy_service()
+        market_data_service = get_market_data_service()
         
         # 股票数量
         total_stocks = stock_service.count_stocks()
@@ -595,41 +598,15 @@ def get_system_stats():
         strategies = strategy_service.list_strategies()
         enabled_strategies = [s for s in strategies if s.get('enabled')]
         
-        # 行情数据统计（带重试机制）
-        market_stats = {
-            'stock_count': 0,
-            'record_count': 0,
-            'earliest_date': None,
-            'latest_date': None
-        }
-        
-        max_retries = 3
-        retry_delay = 0.5
-        
-        for attempt in range(max_retries):
-            try:
-                duckdb = get_duckdb()
-                result = duckdb.execute_query("""
-                    SELECT 
-                        COUNT(DISTINCT code) as stock_count,
-                        COUNT(*) as record_count,
-                        MIN(trade_date) as earliest_date,
-                        MAX(trade_date) as latest_date
-                    FROM daily_market
-                """)
-                
-                if result:
-                    market_stats = result[0]
-                break  # 成功则退出重试循环
-                
-            except Exception as e:
-                logger.warning(f"获取DuckDB统计信息失败（尝试 {attempt + 1}/{max_retries}）: {e}")
-                if attempt < max_retries - 1:
-                    import time
-                    time.sleep(retry_delay)
-                    retry_delay *= 2  # 指数退避
-                else:
-                    logger.error(f"获取DuckDB统计信息失败，已达到最大重试次数: {e}")
+        # 行情数据统计（使用MySQL）
+        market_stats = market_data_service.get_data_statistics()
+        if market_stats is None:
+            market_stats = {
+                'stock_count': 0,
+                'total_records': 0,
+                'min_date': None,
+                'max_date': None
+            }
         
         # 任务日志统计
         scheduler = get_task_scheduler()
@@ -647,9 +624,9 @@ def get_system_stats():
                 },
                 'market_data': {
                     'stock_count': market_stats.get('stock_count', 0),
-                    'record_count': market_stats.get('record_count', 0),
-                    'earliest_date': market_stats.get('earliest_date'),
-                    'latest_date': market_stats.get('latest_date')
+                    'record_count': market_stats.get('total_records', 0),
+                    'earliest_date': market_stats.get('min_date'),
+                    'latest_date': market_stats.get('max_date')
                 },
                 'job_logs': {
                     'total': job_log_count

@@ -5,9 +5,11 @@
 from typing import List, Dict, Any, Optional, Callable
 from datetime import datetime, timedelta
 import pandas as pd
-from app.models import get_duckdb
+from app.models.orm_models import DailyMarket, ORMDatabase
 from app.services import get_datasource, get_stock_service
 from app.utils import get_logger, get_rate_limiter, get_config, get_stock_limit_for_mode
+from sqlalchemy import func
+from sqlalchemy.orm import sessionmaker
 
 logger = get_logger(__name__)
 
@@ -17,11 +19,27 @@ class MarketDataService:
     
     def __init__(self):
         """初始化行情数据服务"""
-        self.duckdb = get_duckdb()
         self.datasource = get_datasource()
         self.stock_service = get_stock_service()
         self.rate_limiter = get_rate_limiter()
         self.config = get_config()
+        
+        # 创建ORM数据库连接
+        mysql_config = self.config.get('database.mysql')
+        if not mysql_config:
+            raise ValueError("未配置MySQL数据库信息")
+        
+        mysql_url = (
+            f"mysql+pymysql://{mysql_config.get('username')}:"
+            f"{mysql_config.get('password')}@"
+            f"{mysql_config.get('host')}:"
+            f"{mysql_config.get('port')}/"
+            f"{mysql_config.get('database')}?charset=utf8mb4"
+        )
+        
+        self.orm_db = ORMDatabase(mysql_url)
+        self.Session = sessionmaker(bind=self.orm_db.engine)
+        
         logger.info("行情数据服务初始化完成")
     
     def import_all_history(self, start_date: str = None, end_date: str = None,
@@ -281,14 +299,17 @@ class MarketDataService:
         # 获取需要更新的股票列表
         if only_existing:
             # 只更新已有数据的股票
-            query = "SELECT DISTINCT code FROM daily_market"
-            result = self.duckdb.execute_query(query)
-            stock_codes = [row['code'] for row in result]
-            
-            # 从股票服务获取完整信息
-            all_stocks = self.stock_service.get_stock_list()
-            stocks = [s for s in all_stocks if s['code'] in stock_codes]
-            logger.info(f"只更新已有数据的股票: {len(stocks)}只")
+            session = self.Session()
+            try:
+                result = session.query(DailyMarket.code).distinct().all()
+                stock_codes = [row[0] for row in result]
+                
+                # 从股票服务获取完整信息
+                all_stocks = self.stock_service.get_stock_list()
+                stocks = [s for s in all_stocks if s['code'] in stock_codes]
+                logger.info(f"只更新已有数据的股票: {len(stocks)}只")
+            finally:
+                session.close()
         else:
             # 更新所有股票
             stocks = self.stock_service.get_stock_list()
@@ -407,22 +428,43 @@ class MarketDataService:
         Returns:
             行情数据DataFrame
         """
-        query = f"SELECT * FROM daily_market WHERE code = '{code}'"
-        
-        if start_date:
-            query += f" AND trade_date >= '{start_date}'"
-        
-        if end_date:
-            query += f" AND trade_date <= '{end_date}'"
-        
-        query += " ORDER BY trade_date DESC"
-        
-        if limit:
-            query += f" LIMIT {limit}"
-        
-        # 使用execute_query获取结果并转换为DataFrame
-        result = self.duckdb.execute_query(query)
-        return pd.DataFrame(result)
+        session = self.Session()
+        try:
+            query = session.query(DailyMarket).filter(DailyMarket.code == code)
+            
+            if start_date:
+                query = query.filter(DailyMarket.trade_date >= start_date)
+            
+            if end_date:
+                query = query.filter(DailyMarket.trade_date <= end_date)
+            
+            query = query.order_by(DailyMarket.trade_date.desc())
+            
+            if limit:
+                query = query.limit(limit)
+            
+            results = query.all()
+            
+            # 转换为DataFrame
+            data = []
+            for row in results:
+                data.append({
+                    'code': row.code,
+                    'trade_date': row.trade_date,
+                    'open': float(row.open) if row.open else None,
+                    'close': float(row.close) if row.close else None,
+                    'high': float(row.high) if row.high else None,
+                    'low': float(row.low) if row.low else None,
+                    'volume': int(row.volume) if row.volume else None,
+                    'amount': float(row.amount) if row.amount else None,
+                    'change_pct': float(row.change_pct) if row.change_pct else None,
+                    'turnover_rate': float(row.turnover_rate) if row.turnover_rate else None,
+                    'created_at': row.created_at
+                })
+            
+            return pd.DataFrame(data)
+        finally:
+            session.close()
     
     def get_latest_data(self, code: str) -> Optional[Dict[str, Any]]:
         """
@@ -449,22 +491,23 @@ class MarketDataService:
         Returns:
             包含最早和最晚日期的字典
         """
-        query = f"""
-            SELECT 
-                MIN(trade_date) as earliest_date,
-                MAX(trade_date) as latest_date,
-                COUNT(*) as record_count
-            FROM daily_market 
-            WHERE code = '{code}'
-        """
-        result = self.duckdb.execute_query(query)
-        if result and result[0]['earliest_date']:
-            return {
-                'earliest_date': str(result[0]['earliest_date']),
-                'latest_date': str(result[0]['latest_date']),
-                'record_count': int(result[0]['record_count'])
-            }
-        return None
+        session = self.Session()
+        try:
+            result = session.query(
+                func.min(DailyMarket.trade_date).label('earliest_date'),
+                func.max(DailyMarket.trade_date).label('latest_date'),
+                func.count(DailyMarket.trade_date).label('record_count')
+            ).filter(DailyMarket.code == code).first()
+            
+            if result and result.earliest_date:
+                return {
+                    'earliest_date': str(result.earliest_date),
+                    'latest_date': str(result.latest_date),
+                    'record_count': int(result.record_count)
+                }
+            return None
+        finally:
+            session.close()
     
     def get_statistics(self) -> Dict[str, Any]:
         """
@@ -473,41 +516,79 @@ class MarketDataService:
         Returns:
             统计信息字典
         """
-        # 总记录数
-        total_query = "SELECT COUNT(*) as total FROM daily_market"
-        total_result = self.duckdb.execute_query(total_query)
-        total_records = total_result[0]['total'] if total_result else 0
-        
-        # 股票数量
-        stock_query = "SELECT COUNT(DISTINCT code) as stock_count FROM daily_market"
-        stock_result = self.duckdb.execute_query(stock_query)
-        stock_count = stock_result[0]['stock_count'] if stock_result else 0
-        
-        # 日期范围
-        date_query = """
-            SELECT 
-                MIN(trade_date) as earliest_date,
-                MAX(trade_date) as latest_date
-            FROM daily_market
+        session = self.Session()
+        try:
+            # 总记录数
+            total_records = session.query(DailyMarket).count()
+            
+            # 股票数量
+            stock_count = session.query(DailyMarket.code).distinct().count()
+            
+            # 日期范围
+            date_result = session.query(
+                func.min(DailyMarket.trade_date).label('earliest_date'),
+                func.max(DailyMarket.trade_date).label('latest_date')
+            ).first()
+            
+            result = {
+                'total_records': int(total_records),
+                'stock_count': int(stock_count),
+                'earliest_date': None,
+                'latest_date': None
+            }
+            
+            if date_result and date_result.earliest_date:
+                result['earliest_date'] = str(date_result.earliest_date)
+                result['latest_date'] = str(date_result.latest_date)
+            
+            return result
+        finally:
+            session.close()
+    
+    def get_stocks_with_data(self, limit: Optional[int] = None) -> List[str]:
         """
-        date_result = self.duckdb.execute_query(date_query)
+        获取有行情数据的股票代码列表
         
-        result = {
-            'total_records': int(total_records),
-            'stock_count': int(stock_count),
-            'earliest_date': None,
-            'latest_date': None
+        Args:
+            limit: 限制返回的股票数量
+            
+        Returns:
+            股票代码列表
+        """
+        session = self.Session()
+        try:
+            query = session.query(DailyMarket.code).distinct().order_by(DailyMarket.code)
+            
+            if limit:
+                query = query.limit(limit)
+            
+            result = query.all()
+            stock_codes = [row[0] for row in result]
+            
+            return stock_codes
+        finally:
+            session.close()
+    
+    def get_data_statistics(self) -> Optional[Dict[str, Any]]:
+        """
+        获取数据统计信息（用于API和健康检查）
+        
+        Returns:
+            统计信息字典，包含：stock_count, total_records, min_date, max_date
+        """
+        stats = self.get_statistics()
+        
+        # 转换字段名以匹配API期望
+        return {
+            'stock_count': stats.get('stock_count', 0),
+            'total_records': stats.get('total_records', 0),
+            'min_date': stats.get('earliest_date'),
+            'max_date': stats.get('latest_date')
         }
-        
-        if date_result and date_result[0]['earliest_date']:
-            result['earliest_date'] = str(date_result[0]['earliest_date'])
-            result['latest_date'] = str(date_result[0]['latest_date'])
-        
-        return result
     
     def _save_daily_data(self, df: pd.DataFrame, code: str):
         """
-        保存日线数据到DuckDB
+        保存日线数据到MySQL
         
         Args:
             df: 行情数据DataFrame
@@ -516,12 +597,53 @@ class MarketDataService:
         if df.empty:
             return
         
-        # 确保有code列
-        if 'code' not in df.columns:
-            df['code'] = code
-        
-        # 插入数据
-        self.duckdb.insert_dataframe('daily_market', df)
+        session = self.Session()
+        try:
+            # 确保有code列
+            if 'code' not in df.columns:
+                df['code'] = code
+            
+            # 遍历DataFrame，逐条插入或更新
+            for _, row in df.iterrows():
+                # 检查记录是否已存在
+                exists = session.query(DailyMarket).filter(
+                    DailyMarket.code == row['code'],
+                    DailyMarket.trade_date == row['trade_date']
+                ).first()
+                
+                if exists:
+                    # 更新现有记录
+                    exists.open = row.get('open')
+                    exists.close = row.get('close')
+                    exists.high = row.get('high')
+                    exists.low = row.get('low')
+                    exists.volume = row.get('volume')
+                    exists.amount = row.get('amount')
+                    exists.change_pct = row.get('change_pct')
+                    exists.turnover_rate = row.get('turnover_rate')
+                else:
+                    # 创建新记录
+                    daily_market = DailyMarket(
+                        code=row['code'],
+                        trade_date=row['trade_date'],
+                        open=row.get('open'),
+                        close=row.get('close'),
+                        high=row.get('high'),
+                        low=row.get('low'),
+                        volume=row.get('volume'),
+                        amount=row.get('amount'),
+                        change_pct=row.get('change_pct'),
+                        turnover_rate=row.get('turnover_rate'),
+                        created_at=row.get('created_at', datetime.now())
+                    )
+                    session.add(daily_market)
+            
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise
+        finally:
+            session.close()
     
     def _delete_data_in_range(self, code: str, start_date: str, end_date: str):
         """
@@ -532,13 +654,20 @@ class MarketDataService:
             start_date: 开始日期
             end_date: 结束日期
         """
-        query = f"""
-            DELETE FROM daily_market 
-            WHERE code = '{code}' 
-            AND trade_date >= '{start_date}' 
-            AND trade_date <= '{end_date}'
-        """
-        self.duckdb.execute_update(query)
+        session = self.Session()
+        try:
+            deleted_count = session.query(DailyMarket).filter(
+                DailyMarket.code == code,
+                DailyMarket.trade_date >= start_date,
+                DailyMarket.trade_date <= end_date
+            ).delete()
+            session.commit()
+            logger.debug(f"删除了 {deleted_count} 条记录: {code} {start_date}~{end_date}")
+        except Exception as e:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 # 全局服务实例

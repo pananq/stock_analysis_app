@@ -15,7 +15,7 @@
 ### 技术特点
 - **多数据源支持**: 支持Akshare和Tushare数据源，可灵活切换
 - **API频率控制**: 智能的请求延迟和重试机制，避免被数据源封禁
-- **高性能存储**: SQLite存储元数据，DuckDB存储行情数据，查询性能优异
+- **高性能存储**: MySQL存储所有数据，使用SQLAlchemy ORM访问，支持复杂查询和事务
 - **响应式设计**: Web界面支持桌面和移动设备访问
 
 ## 🚀 快速开始
@@ -196,8 +196,13 @@ api_rate_limit:
 
 # 数据库配置
 database:
-  sqlite_path: data/stocks.db
-  duckdb_path: data/market_data.duckdb
+  type: mysql
+  mysql:
+    host: localhost
+    port: 3306
+    username: your_username
+    password: your_password
+    database: stock_analysis
 
 # API服务器配置
 api:

@@ -1,0 +1,722 @@
+============================================================
+数据迁移报告
+============================================================
+
+迁移时间: 2025-12-28T00:10:12.612065
+DuckDB路径: data/market_data.duckdb.backup
+MySQL URL: mysql+pymysql://stock_user:your_password@localhost:3306/stock_analysis?charset=utf8mb4
+批量大小: 1000
+模拟运行: False
+
+统计信息:
+  total_records: 34843
+  successful_inserts: 0
+  skipped_records: 0
+  failed_records: 34843
+  batch_count: 35
+  duration_seconds: 23.667009
+  start_time: 2025-12-28T00:09:48.916966
+  end_time: 2025-12-28T00:10:12.583975
+  errors_count: 34843
+
+错误信息 (34843):
+  - 处理记录失败: 000001 2022-12-28: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2022, 12, 28), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2022-12-29: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2022, 12, 29), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2022-12-30: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2022, 12, 30), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-01-03: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 1, 3), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-01-04: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 1, 4), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-01-05: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 1, 5), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-01-06: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 1, 6), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-01-09: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 1, 9), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-01-10: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 1, 10), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-01-11: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 1, 11), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-01-12: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 1, 12), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-01-13: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 1, 13), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-01-16: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 1, 16), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-01-17: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 1, 17), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-01-18: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 1, 18), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-01-19: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 1, 19), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-01-20: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 1, 20), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-01-30: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 1, 30), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-01-31: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 1, 31), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-02-01: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 2, 1), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-02-02: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 2, 2), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-02-03: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 2, 3), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-02-06: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 2, 6), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-02-07: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 2, 7), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-02-08: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 2, 8), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-02-09: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 2, 9), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-02-10: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 2, 10), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-02-13: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 2, 13), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-02-14: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 2, 14), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-02-15: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 2, 15), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-02-16: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 2, 16), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-02-17: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 2, 17), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-02-20: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 2, 20), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-02-21: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 2, 21), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-02-22: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 2, 22), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-02-23: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 2, 23), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-02-24: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 2, 24), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-02-27: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 2, 27), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-02-28: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 2, 28), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-01: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 1), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-02: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 2), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-03: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 3), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-06: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 6), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-07: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 7), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-08: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 8), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-09: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 9), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-10: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 10), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-13: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 13), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-14: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 14), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-15: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 15), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-16: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 16), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-17: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 17), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-20: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 20), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-21: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 21), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-22: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 22), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-23: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 23), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-24: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 24), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-27: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 27), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-28: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 28), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-29: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 29), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-30: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 30), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-03-31: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 3, 31), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-04-03: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 4, 3), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-04-04: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 4, 4), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-04-06: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 4, 6), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-04-07: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 4, 7), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-04-10: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 4, 10), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-04-11: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 4, 11), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-04-12: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 4, 12), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-04-13: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 4, 13), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-04-14: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 4, 14), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-04-17: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 4, 17), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-04-18: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 4, 18), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-04-19: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 4, 19), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-04-20: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 4, 20), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-04-21: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 4, 21), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-04-24: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 4, 24), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-04-25: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 4, 25), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-04-26: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 4, 26), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-04-27: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 4, 27), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-04-28: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 4, 28), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-05-04: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 5, 4), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-05-05: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 5, 5), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-05-08: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 5, 8), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-05-09: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 5, 9), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-05-10: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 5, 10), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-05-11: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 5, 11), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-05-12: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 5, 12), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-05-15: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 5, 15), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-05-16: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 5, 16), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-05-17: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 5, 17), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-05-18: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 5, 18), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-05-19: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 5, 19), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-05-22: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 5, 22), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-05-23: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 5, 23), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-05-24: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 5, 24), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-05-25: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 5, 25), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-05-26: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 5, 26), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-05-29: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 5, 29), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+  - 处理记录失败: 000001 2023-05-30: (pymysql.err.ProgrammingError) (1146, "Table 'stock_analysis.daily_market' doesn't exist")
+[SQL: SELECT daily_market.code AS daily_market_code, daily_market.trade_date AS daily_market_trade_date, daily_market.open AS daily_market_open, daily_market.close AS daily_market_close, daily_market.high AS daily_market_high, daily_market.low AS daily_market_low, daily_market.volume AS daily_market_volume, daily_market.amount AS daily_market_amount, daily_market.change_pct AS daily_market_change_pct, daily_market.turnover_rate AS daily_market_turnover_rate, daily_market.created_at AS daily_market_created_at 
+FROM daily_market 
+WHERE daily_market.code = %(code_1)s AND daily_market.trade_date = %(trade_date_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'code_1': '000001', 'trade_date_1': datetime.date(2023, 5, 30), 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)

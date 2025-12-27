@@ -5,7 +5,6 @@ Flask==3.0.0
 Flask-CORS==4.0.0
 
 # 数据库
-duckdb==0.9.2
 SQLAlchemy==2.0.23
 pymysql==1.1.0
 cryptography==41.0.7
