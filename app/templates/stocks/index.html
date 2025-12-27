@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}股票查询 - 股票分析系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-list"></i> 股票查询</h2>
+        <hr>
+    </div>
+</div>
+
+<!-- 筛选表单 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-filter"></i> 筛选条件
+            </div>
+            <div class="card-body">
+                <form method="GET" id="filterForm">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="code" class="form-label">股票代码</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="code" 
+                                   name="code" 
+                                   placeholder="例如：600000"
+                                   value="{{ params.code or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="name" class="form-label">股票名称</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="name" 
+                                   name="name" 
+                                   placeholder="例如：浦发银行"
+                                   value="{{ params.name or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="industry" class="form-label">行业</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="industry" 
+                                   name="industry" 
+                                   placeholder="例如：银行"
+                                   value="{{ params.industry or '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="market" class="form-label">市场</label>
+                            <select class="form-select" id="market" name="market">
+                                <option value="">全部</option>
+                                <option value="沪市" {% if params.market == '沪市' %}selected{% endif %}>沪市</option>
+                                <option value="深市" {% if params.market == '深市' %}selected{% endif %}>深市</option>
+                                <option value="北交所" {% if params.market == '北交所' %}selected{% endif %}>北交所</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i> 查询
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="resetFilter()">
+                                <i class="fas fa-times"></i> 重置
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 股票列表 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>
+                    <i class="fas fa-list"></i> 股票列表
+                    {% if total > 0 %}
+                    <span class="badge bg-info ms-2">{{ total }} 只</span>
+                    {% endif %}
+                </span>
+                <button class="btn btn-sm btn-outline-primary" onclick="exportTableToCSV('stocksTable', 'stocks.csv')">
+                    <i class="fas fa-download"></i> 导出CSV
+                </button>
+            </div>
+            <div class="card-body">
+                {% if error %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> {{ error }}
+                </div>
+                {% endif %}
+                
+                {% if stocks %}
+                <div class="table-responsive">
+                    <table class="table table-hover data-table" id="stocksTable">
+                        <thead>
+                            <tr>
+                                <th>股票代码</th>
+                                <th>股票名称</th>
+                                <th>行业</th>
+                                <th>市场类型</th>
+                                <th>上市日期</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stock in stocks %}
+                            <tr>
+                                <td>
+                                    <strong>{{ stock.code }}</strong>
+                                </td>
+                                <td>{{ stock.name }}</td>
+                                <td>{{ stock.industry or '-' }}</td>
+                                <td>
+                                    {% if stock.market_type == '沪市' %}
+                                    <span class="badge bg-primary">沪市</span>
+                                    {% elif stock.market_type == '深市' %}
+                                    <span class="badge bg-success">深市</span>
+                                    {% elif stock.market_type == '北交所' %}
+                                    <span class="badge bg-warning">北交所</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ stock.market_type }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if stock.list_date %}
+                                    {{ stock.list_date[:4] }}-{{ stock.list_date[4:6] }}-{{ stock.list_date[6:] }}
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if stock.status == 'active' %}
+                                    <span class="badge bg-success">正常</span>
+                                    {% elif stock.status == 'delisted' %}
+                                    <span class="badge bg-danger">退市</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ stock.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="/stocks/{{ stock.code }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> 查看详情
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-search"></i>
+                    <h5>未找到匹配的股票</h5>
+                    <p>请调整筛选条件后重新查询</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/**
+ * 重置筛选条件
+ */
+function resetFilter() {
+    document.getElementById('code').value = '';
+    document.getElementById('name').value = '';
+    document.getElementById('industry').value = '';
+    document.getElementById('market').value = '';
+    document.getElementById('filterForm').submit();
+}
+</script>
+{% endblock %}

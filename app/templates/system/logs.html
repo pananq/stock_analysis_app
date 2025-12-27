@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}系统日志 - 股票分析系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-file-alt"></i> 系统日志</h2>
+        <hr>
+    </div>
+</div>
+
+<!-- 筛选表单 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-filter"></i> 筛选条件
+            </div>
+            <div class="card-body">
+                <form method="GET" id="filterForm">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label for="level" class="form-label">日志级别</label>
+                            <select class="form-select" id="level" name="level">
+                                <option value="">全部</option>
+                                <option value="DEBUG" {% if params and params.level == 'DEBUG' %}selected{% endif %}>DEBUG</option>
+                                <option value="INFO" {% if params and params.level == 'INFO' %}selected{% endif %}>INFO</option>
+                                <option value="WARNING" {% if params and params.level == 'WARNING' %}selected{% endif %}>WARNING</option>
+                                <option value="ERROR" {% if params and params.level == 'ERROR' %}selected{% endif %}>ERROR</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="module" class="form-label">模块</label>
+                            <select class="form-select" id="module" name="module">
+                                <option value="">全部</option>
+                                <option value="api" {% if params and params.module == 'api' %}selected{% endif %}>API</option>
+                                <option value="services" {% if params and params.module == 'services' %}selected{% endif %}>Services</option>
+                                <option value="scheduler" {% if params and params.module == 'scheduler' %}selected{% endif %}>Scheduler</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-search"></i> 查询
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="resetFilter()">
+                                    <i class="fas fa-times"></i> 重置
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 日志列表 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-list"></i> 日志列表
+                {% if total > 0 %}
+                <span class="badge bg-info ms-2">{{ total }} 条</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if error %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> {{ error }}
+                </div>
+                {% endif %}
+                
+                {% if logs %}
+                <div class="log-viewer">
+                    {% for log in logs %}
+                    <div class="log-line log-{{ log.level.lower() }}">
+                        <strong>[{{ log.created_at | datetime }}]</strong>
+                        <span class="badge bg-{{ 'primary' if log.level == 'INFO' else ('warning' if log.level == 'WARNING' else 'danger') }}">
+                            {{ log.level }}
+                        </span>
+                        <span class="badge bg-secondary">{{ log.module }}</span>
+                        {{ log.message }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-file-alt"></i>
+                    <h5>暂无日志记录</h5>
+                    <p>请调整筛选条件或检查系统运行状态</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function resetFilter() {
+    document.getElementById('level').value = '';
+    document.getElementById('module').value = '';
+    document.getElementById('filterForm').submit();
+}
+</script>
+{% endblock %}

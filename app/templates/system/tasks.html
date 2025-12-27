@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}任务历史 - 股票分析系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-tasks"></i> 任务执行历史</h2>
+        <hr>
+    </div>
+</div>
+
+<!-- 统计信息 -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <small class="text-muted">总执行次数</small>
+                        <h3>{{ total }}</h3>
+                    </div>
+                    <div class="text-primary" style="font-size: 2rem;">
+                        <i class="fas fa-history"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <small class="text-muted">成功次数</small>
+                        <h3 class="text-success">{{ tasks | selectattr('status', 'equalto', 'success') | list | length }}</h3>
+                    </div>
+                    <div class="text-success" style="font-size: 2rem;">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <small class="text-muted">失败次数</small>
+                        <h3 class="text-danger">{{ tasks | selectattr('status', 'equalto', 'failed') | list | length }}</h3>
+                    </div>
+                    <div class="text-danger" style="font-size: 2rem;">
+                        <i class="fas fa-times-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 任务列表 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-list"></i> 最近执行记录
+            </div>
+            <div class="card-body">
+                {% if error %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> {{ error }}
+                </div>
+                {% endif %}
+                
+                {% if tasks %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>任务名称</th>
+                                <th>执行时间</th>
+                                <th>开始时间</th>
+                                <th>耗时</th>
+                                <th>处理数</th>
+                                <th>成功数</th>
+                                <th>失败数</th>
+                                <th>状态</th>
+                                <th>消息</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for task in tasks %}
+                            <tr>
+                                <td>
+                                    <strong>{{ task.job_name }}</strong>
+                                </td>
+                                <td>
+                                    {% if task.executed_at %}
+                                    {{ task.executed_at | datetime }}
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if task.started_at %}
+                                    {{ task.started_at | datetime }}
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if task.duration %}
+                                    {{ task.duration | number(1) }}秒
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if task.processed_count is not none %}
+                                    <span class="badge bg-info">{{ task.processed_count }}</span>
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if task.success_count is not none %}
+                                    <span class="badge bg-success">{{ task.success_count }}</span>
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if task.failed_count is not none %}
+                                    <span class="badge bg-danger">{{ task.failed_count }}</span>
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if task.status == 'success' %}
+                                    <span class="badge bg-success">成功</span>
+                                    {% elif task.status == 'failed' %}
+                                    <span class="badge bg-danger">失败</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ task.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ task.message or '-' }}</small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-tasks"></i>
+                    <h5>暂无任务执行记录</h5>
+                    <p>系统会自动执行定时任务，执行记录将显示在这里</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

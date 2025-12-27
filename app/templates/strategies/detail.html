@@ -1,0 +1,386 @@
+{% extends "base.html" %}
+
+{% block title %}{{ strategy.name }} - 股票分析系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2>
+                <i class="fas fa-brain"></i> {{ strategy.name }}
+            </h2>
+            <div>
+                <a href="/strategies" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> 返回列表
+                </a>
+                <button class="btn btn-success" onclick="executeStrategy({{ strategy.id }})">
+                    <i class="fas fa-play"></i> 执行策略
+                </button>
+                <a href="/strategies/{{ strategy.id }}/edit" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> 编辑策略
+                </a>
+            </div>
+        </div>
+        <hr>
+    </div>
+</div>
+
+<!-- 策略信息卡片 -->
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i> 策略信息
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th width="30%">策略ID</th>
+                        <td>{{ strategy.id }}</td>
+                    </tr>
+                    <tr>
+                        <th>策略名称</th>
+                        <td>{{ strategy.name }}</td>
+                    </tr>
+                    <tr>
+                        <th>状态</th>
+                        <td>
+                            {% if strategy.enabled %}
+                            <span class="badge bg-success">启用</span>
+                            {% else %}
+                            <span class="badge bg-secondary">禁用</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>创建时间</th>
+                        <td>{{ strategy.created_at | datetime }}</td>
+                    </tr>
+                    <tr>
+                        <th>最后执行</th>
+                        <td>
+                            {% if strategy.last_executed_at %}
+                            {{ strategy.last_executed_at | datetime }}
+                            {% else %}
+                            <span class="text-muted">未执行</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+                
+                {% if strategy.description %}
+                <div class="mt-3">
+                    <strong>策略描述：</strong>
+                    <p class="text-muted mb-0">{{ strategy.description }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-cogs"></i> 策略参数
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th width="50%">涨幅阈值</th>
+                        <td>
+                            <span class="badge bg-primary">
+                                {{ strategy.config.rise_threshold }}%
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>观察天数</th>
+                        <td>
+                            <span class="badge bg-info">{{ strategy.config.observation_days }} 天</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>均线周期</th>
+                        <td>
+                            <span class="badge bg-warning">{{ strategy.config.ma_period }} 日均线</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 执行结果 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-history"></i> 最近执行结果
+            </div>
+            <div class="card-body">
+                {% if results %}
+                <div class="table-responsive">
+                    <table class="table table-hover" id="resultsTable">
+                        <thead>
+                            <tr>
+                                <th>执行ID</th>
+                                <th>执行时间</th>
+                                <th>匹配股票数</th>
+                                <th>耗时</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for result in results %}
+                            <tr>
+                                <td>{{ result.id }}</td>
+                                <td>{{ result.executed_at | datetime }}</td>
+                                <td>
+                                    <span class="badge bg-success">{{ result.stock_count }} 只</span>
+                                </td>
+                                <td>{{ result.duration | number(1) }} 秒</td>
+                                <td>
+                                    {% if result.status == 'success' %}
+                                    <span class="badge bg-success">成功</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">失败</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary"
+                                            onclick="viewResult({{ result.id }})">
+                                        <i class="fas fa-eye"></i> 查看详情
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-history"></i>
+                    <h5>暂无执行记录</h5>
+                    <p>点击"执行策略"按钮开始运行策略</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 执行结果详情模态框 -->
+<div class="modal fade" id="resultModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-list"></i> 执行结果详情
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="resultContent">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                        <p class="mt-2">正在加载...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 任务轮询定时器
+let taskPollTimer = null;
+
+/**
+ * 执行策略
+ */
+function executeStrategy(strategyId) {
+    showConfirm('确定要执行该策略吗？执行将在后台进行，完成后会通知您。', function() {
+        showLoading('正在创建执行任务...', false);
+        
+        apiRequest(`/strategies/${strategyId}/execute`, 'POST', {},
+            function(response) {
+                hideLoading();
+                const taskId = response.data.task_id;
+                showMessage('策略执行任务已创建，正在后台执行...', 'info');
+                
+                // 开始轮询任务状态
+                pollTaskStatus(taskId, strategyId);
+            },
+            function(error) {
+                hideLoading();
+            }
+        );
+    });
+}
+
+/**
+ * 轮询任务状态
+ */
+function pollTaskStatus(taskId, strategyId) {
+    // 清除之前的定时器
+    if (taskPollTimer) {
+        clearInterval(taskPollTimer);
+    }
+    
+    // 显示进度提示
+    showLoading('策略执行中，请稍候...', false);
+    
+    // 每2秒查询一次任务状态
+    taskPollTimer = setInterval(function() {
+        apiRequest(`/strategies/tasks/${taskId}`, 'GET', null,
+            function(response) {
+                const task = response.data;
+                
+                // 更新进度消息
+                if (task.status === 'running') {
+                    const progressMsg = `执行中... ${task.progress.toFixed(0)}% - ${task.message}`;
+                    showLoading(progressMsg, false);
+                } else if (task.status === 'completed') {
+                    // 任务完成
+                    clearInterval(taskPollTimer);
+                    taskPollTimer = null;
+                    hideLoading();
+                    
+                    // 显示结果
+                    if (task.result && task.result.success) {
+                        const result = task.result;
+                        showMessage(
+                            `策略执行完成！<br>` +
+                            `扫描股票: ${result.scanned_stocks} 只<br>` +
+                            `匹配股票: ${result.matched_count} 只<br>` +
+                            `耗时: ${result.execution_time.toFixed(1)} 秒`,
+                            'success'
+                        );
+                        
+                        // 1.5秒后刷新页面
+                        setTimeout(refreshPage, 1500);
+                    } else {
+                        showMessage('策略执行完成，但未返回结果', 'warning');
+                        setTimeout(refreshPage, 1500);
+                    }
+                } else if (task.status === 'failed') {
+                    // 任务失败
+                    clearInterval(taskPollTimer);
+                    taskPollTimer = null;
+                    hideLoading();
+                    showMessage(`策略执行失败: ${task.error || '未知错误'}`, 'error');
+                }
+            },
+            function(error) {
+                // 查询失败，停止轮询
+                clearInterval(taskPollTimer);
+                taskPollTimer = null;
+                hideLoading();
+                showMessage('无法获取任务状态', 'error');
+            }
+        );
+    }, 2000);
+}
+
+// 页面卸载时清除定时器
+window.addEventListener('beforeunload', function() {
+    if (taskPollTimer) {
+        clearInterval(taskPollTimer);
+    }
+});
+
+/**
+ * 查看执行结果详情
+ */
+function viewResult(resultId) {
+    const modal = new bootstrap.Modal(document.getElementById('resultModal'));
+    modal.show();
+    
+    const contentDiv = document.getElementById('resultContent');
+    contentDiv.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">加载中...</span>
+            </div>
+            <p class="mt-2">正在加载...</p>
+        </div>
+    `;
+    
+    // 获取结果详情
+    apiRequest(`/strategies/results/${resultId}`, 'GET', null,
+        function(response) {
+            const result = response.data;
+            const stocks = result.stocks || [];
+            
+            let html = `
+                <div class="mb-3">
+                    <strong>执行时间：</strong> ${result.executed_at}<br>
+                    <strong>匹配股票数：</strong> ${result.stock_count} 只<br>
+                    <strong>执行耗时：</strong> ${result.duration.toFixed(1)} 秒
+                </div>
+                <h6>匹配股票列表：</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>股票代码</th>
+                                <th>股票名称</th>
+                                <th>收盘价</th>
+                                <th>涨跌幅</th>
+                                <th>MA{{ document.querySelector('[data-strategy-ma-period]')?.getAttribute('data-strategy-ma-period') || 20 }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            if (stocks.length > 0) {
+                stocks.forEach(stock => {
+                    html += `
+                        <tr>
+                            <td><strong>${stock.code}</strong></td>
+                            <td>${stock.name || '-'}</td>
+                            <td>${stock.close_price?.toFixed(2) || '-'}</td>
+                            <td>${formatPctChange(stock.change_pct)}</td>
+                            <td>${stock.ma_value?.toFixed(2) || '-'}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                html += `<tr><td colspan="5" class="text-center text-muted">无数据</td></tr>`;
+            }
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            contentDiv.innerHTML = html;
+        },
+        function(error) {
+            contentDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle"></i> 加载失败：${error}
+                </div>
+            `;
+        }
+    );
+}
+
+// 设置策略参数到页面
+document.addEventListener('DOMContentLoaded', function() {
+    const strategy = {{ strategy | tojson }};
+    const body = document.body;
+    body.setAttribute('data-strategy-ma-period', strategy.config.ma_period);
+});
+</script>
+{% endblock %}

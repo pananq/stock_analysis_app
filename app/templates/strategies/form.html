@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}{% if strategy_id %}编辑策略{% else %}创建策略{% endif %} - 股票分析系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2>
+                <i class="fas fa-brain"></i> 
+                {% if strategy_id %}编辑策略{% else %}创建策略{% endif %}
+            </h2>
+            <a href="/strategies" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> 返回列表
+            </a>
+        </div>
+        <hr>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                {% if error %}
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle"></i> {{ error }}
+                </div>
+                {% endif %}
+                
+                <form method="POST" id="strategyForm" class="strategy-form">
+                    <!-- 策略名称 -->
+                    <div class="mb-3">
+                        <label for="name" class="form-label">
+                            <i class="fas fa-tag"></i> 策略名称 <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="name" 
+                               name="name" 
+                               required
+                               value="{{ strategy.name if strategy else '' }}"
+                               placeholder="例如：均线突破策略">
+                        <div class="form-text">给策略起一个有意义的名称</div>
+                    </div>
+                    
+                    <!-- 策略描述 -->
+                    <div class="mb-3">
+                        <label for="description" class="form-label">
+                            <i class="fas fa-align-left"></i> 策略描述
+                        </label>
+                        <textarea class="form-control" 
+                                  id="description" 
+                                  name="description" 
+                                  rows="3"
+                                  placeholder="描述该策略的投资逻辑和适用场景">{{ strategy.description if strategy else '' }}</textarea>
+                        <div class="form-text">简要说明策略的原理和目标</div>
+                    </div>
+                    
+                    <hr>
+                    <h5><i class="fas fa-cogs"></i> 策略参数</h5>
+                    <p class="text-muted mb-3">配置策略的筛选条件</p>
+                    
+                    <!-- 涨幅范围 -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="min_change" class="form-label">
+                                <i class="fas fa-arrow-down"></i> 最小涨幅 (%)
+                            </label>
+                            <div class="input-group">
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="min_change" 
+                                       name="min_change" 
+                                       step="0.1"
+                                       min="0"
+                                       value="{{ strategy.config.min_change if strategy else 0 }}">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="max_change" class="form-label">
+                                <i class="fas fa-arrow-up"></i> 最大涨幅 (%)
+                            </label>
+                            <div class="input-group">
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="max_change" 
+                                       name="max_change" 
+                                       step="0.1"
+                                       min="0"
+                                       value="{{ strategy.config.max_change if strategy else 10 }}">
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-text mb-3">筛选涨幅在此范围内的股票</div>
+                    
+                    <!-- 观察天数 -->
+                    <div class="mb-3">
+                        <label for="days" class="form-label">
+                            <i class="fas fa-calendar-alt"></i> 观察天数
+                        </label>
+                        <div class="input-group">
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="days" 
+                                   name="days" 
+                                   min="1"
+                                   max="365"
+                                   value="{{ strategy.config.days if strategy else 20 }}">
+                            <span class="input-group-text">天</span>
+                        </div>
+                        <div class="form-text">观察最近多少天的数据</div>
+                    </div>
+                    
+                    <!-- 均线周期 -->
+                    <div class="mb-3">
+                        <label for="ma_period" class="form-label">
+                            <i class="fas fa-chart-line"></i> 均线周期
+                        </label>
+                        <div class="input-group">
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="ma_period" 
+                                   name="ma_period" 
+                                   min="5"
+                                   max="120"
+                                   value="{{ strategy.config.ma_period if strategy else 20 }}">
+                            <span class="input-group-text">日</span>
+                        </div>
+                        <div class="form-text">移动平均线的周期（常用：5、10、20、60日均线）</div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <!-- 启用状态 -->
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" 
+                                   type="checkbox" 
+                                   id="enabled" 
+                                   name="enabled"
+                                   {% if strategy is none or strategy.enabled %}checked{% endif %}>
+                            <label class="form-check-label" for="enabled">
+                                <i class="fas fa-power-off"></i> 启用策略
+                            </label>
+                            <div class="form-text">禁用的策略不会被执行</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 提交按钮 -->
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="/strategies" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> 取消
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> {% if strategy_id %}更新策略{% else %}创建策略{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- 策略说明 -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i> 策略说明
+            </div>
+            <div class="card-body">
+                <h6>筛选条件</h6>
+                <ul>
+                    <li><strong>涨幅范围：</strong>股票的涨跌幅必须在指定范围内</li>
+                    <li><strong>观察天数：</strong>使用最近N天的数据进行计算</li>
+                    <li><strong>均线周期：</strong>计算N日移动平均线作为参考</li>
+                </ul>
+                <h6>执行流程</h6>
+                <ol>
+                    <li>扫描所有股票的历史行情数据</li>
+                    <li>计算指定周期的移动平均线</li>
+                    <li>筛选涨幅符合条件的股票</li>
+                    <li>返回匹配的股票列表</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/**
+ * 表单验证
+ */
+document.getElementById('strategyForm').addEventListener('submit', function(e) {
+    // 获取表单值
+    const minChange = parseFloat(document.getElementById('min_change').value);
+    const maxChange = parseFloat(document.getElementById('max_change').value);
+    const days = parseInt(document.getElementById('days').value);
+    const maPeriod = parseInt(document.getElementById('ma_period').value);
+    
+    // 验证涨幅范围
+    if (minChange < 0) {
+        e.preventDefault();
+        showMessage('最小涨幅不能小于0', 'danger');
+        return;
+    }
+    
+    if (maxChange <= 0) {
+        e.preventDefault();
+        showMessage('最大涨幅必须大于0', 'danger');
+        return;
+    }
+    
+    if (minChange >= maxChange) {
+        e.preventDefault();
+        showMessage('最小涨幅必须小于最大涨幅', 'danger');
+        return;
+    }
+    
+    // 验证观察天数
+    if (days < 1 || days > 365) {
+        e.preventDefault();
+        showMessage('观察天数必须在1-365之间', 'danger');
+        return;
+    }
+    
+    // 验证均线周期
+    if (maPeriod < 5 || maPeriod > 120) {
+        e.preventDefault();
+        showMessage('均线周期必须在5-120之间', 'danger');
+        return;
+    }
+    
+    // 显示加载提示
+    showLoading('{% if strategy_id %}正在更新策略...{% else %}正在创建策略...{% endif %}', false);
+});
+</script>
+{% endblock %}

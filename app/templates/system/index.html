@@ -1,0 +1,459 @@
+{% extends "base.html" %}
+
+{% block title %}系统设置 - 股票分析系统{% endblock %}
+
+{% block content %}
+<style>
+.config-section {
+    margin-bottom: 20px;
+}
+.config-section h6 {
+    margin-bottom: 15px;
+    color: #495057;
+    font-weight: 600;
+}
+.db-status-healthy {
+    color: #198754;
+}
+.db-status-error {
+    color: #dc3545;
+}
+.config-save-btn {
+    margin-top: 10px;
+}
+</style>
+
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-cog"></i> 系统设置</h2>
+        <hr>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert alert-warning">
+    <i class="fas fa-exclamation-triangle"></i> {{ error }}
+</div>
+{% endif %}
+
+<!-- 系统信息展示 -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i> 系统信息
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th width="40%">系统名称</th>
+                        <td>股票分析系统</td>
+                    </tr>
+                    <tr>
+                        <th>版本</th>
+                        <td><span class="badge bg-primary">v1.0.0</span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-database"></i> 数据库状态
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th width="40%">主数据库</th>
+                        <td>
+                            {% set main_db = database_status.get('main_database', {}) %}
+                            <span class="badge bg-{{ 'success' if main_db.get('status') == 'healthy' else 'danger' }}">
+                                {{ main_db.get('type', 'unknown') }} - {{ main_db.get('status', 'unknown') }}
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>DuckDB数据库</th>
+                        <td>
+                            {% set duckdb = database_status.get('duckdb', {}) %}
+                            <span class="badge bg-{{ 'success' if duckdb.get('status') == 'healthy' else 'danger' }}">
+                                {{ duckdb.get('status', 'unknown') }}
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 系统级配置（仅显示） -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-server"></i> 系统服务配置（只读）
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6>API 服务</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th>端口</th>
+                                <td><span class="badge bg-info">{{ system_info_config.get('api', {}).get('port', 5000) }}</span></td>
+                            </tr>
+                            <tr>
+                                <th>主机</th>
+                                <td>{{ system_info_config.get('api', {}).get('host', '0.0.0.0') }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>Web 服务</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th>端口</th>
+                                <td><span class="badge bg-info">{{ system_info_config.get('web', {}).get('port', 8000) }}</span></td>
+                            </tr>
+                            <tr>
+                                <th>调试模式</th>
+                                <td>
+                                    {% if system_info_config.get('web', {}).get('debug', False) %}
+                                    <span class="badge bg-warning">开启</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">关闭</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>日志配置</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th>日志级别</th>
+                                <td>
+                                    <span class="badge bg-primary">
+                                        {{ system_info_config.get('logging', {}).get('level', 'INFO') }}
+                                    </span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 可编辑配置 -->
+<form id="configForm">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-sliders-h"></i> 应用配置（可编辑）
+                </div>
+                <div class="card-body">
+                    <!-- 应用模式 -->
+                    <div class="config-section">
+                        <h6><i class="fas fa-code"></i> 应用模式</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="app_mode_mode">运行模式</label>
+                                    <select class="form-select" id="app_mode_mode" name="app_mode.mode">
+                                        <option value="development" {% if system_config.get('app_mode', {}).get('mode') == 'development' %}selected{% endif %}>开发模式</option>
+                                        <option value="production" {% if system_config.get('app_mode', {}).get('mode') == 'production' %}selected{% endif %}>生产模式</option>
+                                    </select>
+                                    <small class="form-text text-muted">开发模式仅处理100支股票，生产模式处理全部股票</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="app_mode_development_stock_limit">开发模式股票数量限制</label>
+                                    <input type="number" class="form-control" id="app_mode_development_stock_limit" 
+                                           name="app_mode.development_stock_limit"
+                                           value="{{ system_config.get('app_mode', {}).get('development_stock_limit', 100) }}"
+                                           min="1" max="1000">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 数据源 -->
+                    <div class="config-section">
+                        <h6><i class="fas fa-database"></i> 数据源</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="datasource_type">数据源类型</label>
+                                    <select class="form-select" id="datasource_type" name="datasource.type">
+                                        <option value="akshare" {% if system_config.get('datasource', {}).get('type') == 'akshare' %}selected{% endif %}>AKShare</option>
+                                        <option value="tushare" {% if system_config.get('datasource', {}).get('type') == 'tushare' %}selected{% endif %}>TuShare</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- API 频率限制 -->
+                    <div class="config-section">
+                        <h6><i class="fas fa-tachometer-alt"></i> API 频率限制</h6>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="api_rate_limit_min_delay">最小延迟（秒）</label>
+                                    <input type="number" class="form-control" id="api_rate_limit_min_delay" 
+                                           name="api_rate_limit.min_delay"
+                                           value="{{ system_config.get('api_rate_limit', {}).get('min_delay', 1.5) }}"
+                                           step="0.1" min="0.1">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="api_rate_limit_max_delay">最大延迟（秒）</label>
+                                    <input type="number" class="form-control" id="api_rate_limit_max_delay" 
+                                           name="api_rate_limit.max_delay"
+                                           value="{{ system_config.get('api_rate_limit', {}).get('max_delay', 2.0) }}"
+                                           step="0.1" min="0.1">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="api_rate_limit_max_retries">最大重试次数</label>
+                                    <input type="number" class="form-control" id="api_rate_limit_max_retries" 
+                                           name="api_rate_limit.max_retries"
+                                           value="{{ system_config.get('api_rate_limit', {}).get('max_retries', 3) }}"
+                                           min="0" max="10">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="api_rate_limit_retry_delay_increment">重试延迟增量（秒）</label>
+                                    <input type="number" class="form-control" id="api_rate_limit_retry_delay_increment" 
+                                           name="api_rate_limit.retry_delay_increment"
+                                           value="{{ system_config.get('api_rate_limit', {}).get('retry_delay_increment', 1.0) }}"
+                                           step="0.1" min="0.1">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 任务调度 -->
+                    <div class="config-section">
+                        <h6><i class="fas fa-clock"></i> 任务调度</h6>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="scheduler_enable_auto_update">启用自动更新</label>
+                                    <select class="form-select" id="scheduler_enable_auto_update" name="scheduler.enable_auto_update">
+                                        <option value="true" {% if system_config.get('scheduler', {}).get('enable_auto_update') == True %}selected{% endif %}>是</option>
+                                        <option value="false" {% if system_config.get('scheduler', {}).get('enable_auto_update') == False %}selected{% endif %}>否</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="scheduler_stock_list_update_time">股票列表更新时间</label>
+                                    <input type="time" class="form-control" id="scheduler_stock_list_update_time" 
+                                           name="scheduler.stock_list_update_time"
+                                           value="{{ system_config.get('scheduler', {}).get('stock_list_update_time', '18:00') }}">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="scheduler_market_data_update_time">行情数据更新时间</label>
+                                    <input type="time" class="form-control" id="scheduler_market_data_update_time" 
+                                           name="scheduler.market_data_update_time"
+                                           value="{{ system_config.get('scheduler', {}).get('market_data_update_time', '18:30') }}">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="scheduler_timezone">时区</label>
+                                    <input type="text" class="form-control" id="scheduler_timezone" 
+                                           name="scheduler.timezone"
+                                           value="{{ system_config.get('scheduler', {}).get('timezone', 'Asia/Shanghai') }}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 数据管理 -->
+                    <div class="config-section">
+                        <h6><i class="fas fa-hdd"></i> 数据管理</h6>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="data_management_data_retention_years">数据保留年限</label>
+                                    <input type="number" class="form-control" id="data_management_data_retention_years" 
+                                           name="data_management.data_retention_years"
+                                           value="{{ system_config.get('data_management', {}).get('data_retention_years', 5) }}"
+                                           min="1" max="20">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="data_management_enable_auto_backup">启用自动备份</label>
+                                    <select class="form-select" id="data_management_enable_auto_backup" name="data_management.enable_auto_backup">
+                                        <option value="true" {% if system_config.get('data_management', {}).get('enable_auto_backup') == True %}selected{% endif %}>是</option>
+                                        <option value="false" {% if system_config.get('data_management', {}).get('enable_auto_backup') == False %}selected{% endif %}>否</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="data_management_backup_retention_days">备份保留天数</label>
+                                    <input type="number" class="form-control" id="data_management_backup_retention_days" 
+                                           name="data_management.backup_retention_days"
+                                           value="{{ system_config.get('data_management', {}).get('backup_retention_days', 30) }}"
+                                           min="1" max="365">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 策略默认值 -->
+                    <div class="config-section">
+                        <h6><i class="fas fa-chart-line"></i> 策略默认值</h6>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="strategy_defaults_rise_threshold">默认涨幅阈值（%）</label>
+                                    <input type="number" class="form-control" id="strategy_defaults_rise_threshold" 
+                                           name="strategy_defaults.rise_threshold"
+                                           value="{{ system_config.get('strategy_defaults', {}).get('rise_threshold', 8.0) }}"
+                                           step="0.1" min="0" max="100">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="strategy_defaults_observation_days">默认观察天数</label>
+                                    <input type="number" class="form-control" id="strategy_defaults_observation_days" 
+                                           name="strategy_defaults.observation_days"
+                                           value="{{ system_config.get('strategy_defaults', {}).get('observation_days', 3) }}"
+                                           min="1" max="30">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="strategy_defaults_ma_period">默认均线周期</label>
+                                    <input type="number" class="form-control" id="strategy_defaults_ma_period" 
+                                           name="strategy_defaults.ma_period"
+                                           value="{{ system_config.get('strategy_defaults', {}).get('ma_period', 5) }}"
+                                           min="1" max="60">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 保存按钮 -->
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary btn-lg config-save-btn">
+                            <i class="fas fa-save"></i> 保存配置
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- 快捷链接 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-link"></i> 快捷链接
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <a href="/system/logs" class="btn btn-outline-primary btn-lg w-100">
+                            <i class="fas fa-file-alt"></i><br>
+                            <small>系统日志</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <a href="/system/tasks" class="btn btn-outline-success btn-lg w-100">
+                            <i class="fas fa-tasks"></i><br>
+                            <small>任务历史</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <a href="/data" class="btn btn-outline-info btn-lg w-100">
+                            <i class="fas fa-database"></i><br>
+                            <small>数据管理</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <button class="btn btn-outline-warning btn-lg w-100" onclick="location.reload()">
+                            <i class="fas fa-sync-alt"></i><br>
+                            <small>刷新页面</small>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 配置表单提交
+document.getElementById('configForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const config = {};
+    
+    // 解析表单数据
+    for (let [key, value] of formData.entries()) {
+        const keys = key.split('.');
+        let current = config;
+        
+        for (let i = 0; i < keys.length - 1; i++) {
+            if (!current[keys[i]]) {
+                current[keys[i]] = {};
+            }
+            current = current[keys[i]];
+        }
+        
+        // 转换数据类型
+        const lastKey = keys[keys.length - 1];
+        if (value === 'true') {
+            value = true;
+        } else if (value === 'false') {
+            value = false;
+        } else if (!isNaN(parseFloat(value)) && isFinite(value)) {
+            value = parseFloat(value);
+        }
+        
+        current[lastKey] = value;
+    }
+    
+    // 发送更新请求
+    fetch('/api/system/config', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(config)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+        } else {
+            alert('保存失败: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('请求失败: ' + error.message);
+    });
+});
+</script>
+{% endblock %}

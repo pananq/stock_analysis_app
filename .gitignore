@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# 数据文件
+data/*.db
+data/*.duckdb
+data/backups/
+
+# 日志文件
+logs/*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 配置文件（如果包含敏感信息）
+# config.yaml
+
+# 测试
+.pytest_cache/
+.coverage
+htmlcov/

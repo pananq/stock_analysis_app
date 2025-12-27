@@ -1,0 +1,60 @@
+app_mode:
+  mode: development
+  development_stock_limit: 100
+datasource:
+  type: tushare
+  tushare:
+    token: a998c8f9aa86387141ffd1e2de9d257c4c471b299b3181a0597026b1
+database:
+  type: mysql
+  duckdb_path: ./data/market_data.duckdb
+  mysql:
+    host: localhost
+    port: 3306
+    database: stock_analysis
+    username: stock_user
+    password: your_password
+    pool:
+      size: 50
+      max_overflow: 10
+      timeout: 30
+      recycle: 3600
+    charset: utf8mb4
+    collation: utf8mb4_unicode_ci
+api_rate_limit:
+  min_delay: 1.5
+  max_delay: 2
+  max_retries: 3
+  retry_delay_increment: 1
+scheduler:
+  enable_auto_update: false
+  stock_list_update_time: '18:00'
+  market_data_update_time: '18:30'
+  timezone: Asia/Shanghai
+web:
+  port: 8000
+  host: 0.0.0.0
+  debug: false
+  session_timeout: 3600
+  enable_cors: true
+  secret_key: dev-secret-key-change-in-production
+api:
+  port: 5000
+  host: 0.0.0.0
+  debug: false
+  cors_origins: '*'
+logging:
+  level: INFO
+  file_path: ./logs/app.log
+  max_file_size: 10
+  backup_count: 30
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+data_management:
+  data_retention_years: 5
+  enable_auto_backup: true
+  backup_dir: ./data/backups
+  backup_retention_days: 30
+strategy_defaults:
+  rise_threshold: 8
+  observation_days: 3
+  ma_period: 5

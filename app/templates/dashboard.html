@@ -1,0 +1,495 @@
+{% extends "base.html" %}
+
+{% block title %}仪表板 - 股票分析系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-tachometer-alt"></i> 系统仪表板</h2>
+        <hr>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert alert-warning">
+    <i class="fas fa-exclamation-triangle"></i> 无法连接到API服务器: {{ error }}
+</div>
+{% endif %}
+
+<!-- 统计卡片 -->
+<div class="row">
+    <!-- 股票总数 -->
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="card stat-card border-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-label">股票总数</div>
+                        <div class="stat-value text-primary">
+                            {{ stats.get('stocks', {}).get('total', 0) }}
+                        </div>
+                    </div>
+                    <div class="stat-icon text-primary">
+                        <i class="fas fa-list"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 策略总数 -->
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="card stat-card border-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-label">策略总数</div>
+                        <div class="stat-value text-success">
+                            {{ stats.get('strategies', {}).get('total', 0) }}
+                        </div>
+                        <small class="text-muted">
+                            启用: {{ stats.get('strategies', {}).get('enabled', 0) }}
+                        </small>
+                    </div>
+                    <div class="stat-icon text-success">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 行情记录数 -->
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="card stat-card border-info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-label">行情记录</div>
+                        <div class="stat-value text-info">
+                            {{ (stats.get('market_data', {}).get('record_count', 0) / 10000) | round(1) }}万
+                        </div>
+                    </div>
+                    <div class="stat-icon text-info">
+                        <i class="fas fa-database"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 任务日志数 -->
+    <div class="col-md-3 col-sm-6 mb-4">
+        <div class="card stat-card border-warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-label">任务日志</div>
+                        <div class="stat-value text-warning">
+                            {{ stats.get('job_logs', {}).get('total', 0) }}
+                        </div>
+                    </div>
+                    <div class="stat-icon text-warning">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 系统信息 -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i> 系统信息
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th width="40%">系统名称</th>
+                        <td>{{ system_info.get('name', '-') }}</td>
+                    </tr>
+                    <tr>
+                        <th>版本</th>
+                        <td>{{ system_info.get('version', '-') }}</td>
+                    </tr>
+                    <tr>
+                        <th>数据源</th>
+                        <td>
+                            <span class="badge bg-primary">{{ system_info.get('datasource', '-') }}</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>数据范围</th>
+                        <td>
+                            {% if stats.get('market_data', {}).get('earliest_date') %}
+                            {{ stats.get('market_data', {}).get('earliest_date') }} 至 
+                            {{ stats.get('market_data', {}).get('latest_date') }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 调度任务 -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-clock"></i> 调度任务
+            </div>
+            <div class="card-body">
+                {% if jobs %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>任务名称</th>
+                                <th>下次执行</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for job in jobs %}
+                            <tr>
+                                <td>
+                                    <i class="fas fa-check-circle text-success"></i>
+                                    {{ job.name }}
+                                </td>
+                                <td>
+                                    <small>{{ job.next_run_time or '-' }}</small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-clock"></i>
+                    <p>暂无调度任务</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 最近任务日志 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-history"></i> 最近任务执行</span>
+                <a href="/system/tasks" class="btn btn-sm btn-outline-primary">
+                    查看全部 <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_logs %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>任务名称</th>
+                                <th>状态</th>
+                                <th>开始时间</th>
+                                <th>耗时</th>
+                                <th>消息</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in recent_logs %}
+                            <tr>
+                                <td>{{ log.job_name }}</td>
+                                <td>
+                                    {% if log.status == 'success' %}
+                                    <span class="badge bg-success">成功</span>
+                                    {% elif log.status == 'failed' %}
+                                    <span class="badge bg-danger">失败</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ log.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ log.started_at | datetime }}</td>
+                                <td>{{ log.duration | number(1) }}秒</td>
+                                <td>
+                                    <small>{{ log.message or '-' }}</small>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewTaskDetails({{ log.id }}, '{{ log.job_name }}')">
+                                        <i class="fas fa-eye"></i> 查看详情
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-history"></i>
+                    <p>暂无任务执行记录</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 快速操作 -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-bolt"></i> 快速操作
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <a href="/strategies" class="btn btn-outline-primary btn-lg w-100">
+                            <i class="fas fa-brain"></i><br>
+                            <small>策略管理</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <a href="/stocks" class="btn btn-outline-success btn-lg w-100">
+                            <i class="fas fa-list"></i><br>
+                            <small>股票查询</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <a href="/data" class="btn btn-outline-info btn-lg w-100">
+                            <i class="fas fa-database"></i><br>
+                            <small>数据管理</small>
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <a href="/system" class="btn btn-outline-warning btn-lg w-100">
+                            <i class="fas fa-cog"></i><br>
+                            <small>系统设置</small>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 任务详情模态框 -->
+<div class="modal fade" id="taskDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-list-alt"></i> 任务执行详情
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="taskDetailsContent">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                        <p class="mt-2">正在加载...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 查看任务详情
+function viewTaskDetails(jobLogId, jobName) {
+    const modal = new bootstrap.Modal(document.getElementById('taskDetailsModal'));
+    modal.show();
+    
+    // 加载详情
+    apiRequest(`/data/job-logs/${jobLogId}/details`, 'GET', null,
+        function(response) {
+            try {
+                console.log('任务详情响应:', response);
+                const data = response.data;
+                const jobLog = data.job_log;
+                const details = data.details || [];
+                const summary = data.summary || {};
+                
+                // 确保duration是数字类型
+                const duration = jobLog.duration ? parseFloat(jobLog.duration) : null;
+                
+                let html = `
+                    <div class="mb-4">
+                        <h6>任务信息</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <th width="150">任务名称:</th>
+                                <td>${jobLog.job_name || '-'}</td>
+                            </tr>
+                            <tr>
+                                <th>任务类型:</th>
+                                <td>${jobLog.job_type || '-'}</td>
+                            </tr>
+                            <tr>
+                                <th>状态:</th>
+                                <td>
+                                    ${jobLog.status === 'success' ? '<span class="badge bg-success">成功</span>' : 
+                                      jobLog.status === 'failed' ? '<span class="badge bg-danger">失败</span>' : 
+                                      '<span class="badge bg-secondary">' + (jobLog.status || '-') + '</span>'}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>开始时间:</th>
+                                <td>${formatDateTime(jobLog.started_at)}</td>
+                            </tr>
+                            <tr>
+                                <th>完成时间:</th>
+                                <td>${jobLog.completed_at ? formatDateTime(jobLog.completed_at) : '-'}</td>
+                            </tr>
+                            <tr>
+                                <th>耗时:</th>
+                                <td>${duration ? duration.toFixed(1) + '秒' : '-'}</td>
+                            </tr>
+                            <tr>
+                                <th>消息:</th>
+                                <td>${jobLog.message || '-'}</td>
+                            </tr>
+                            ${jobLog.error ? `<tr><th>错误:</th><td class="text-danger">${jobLog.error}</td></tr>` : ''}
+                        </table>
+                    </div>
+                `;
+                
+                // 只有当有统计数据时才显示统计部分
+                if (Object.keys(summary).length > 0) {
+                    html += `
+                        <div class="mb-4">
+                            <h6>执行统计</h6>
+                            <div class="row">
+                    `;
+                    
+                    for (const [type, count] of Object.entries(summary)) {
+                        const badgeClass = type.includes('success') ? 'bg-success' : 
+                                          type.includes('failed') ? 'bg-danger' : 'bg-info';
+                        html += `
+                            <div class="col-md-3 mb-2">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <h5><span class="badge ${badgeClass}">${count}</span></h5>
+                                        <small>${type}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    html += `
+                        </div>
+                    </div>
+                    `;
+                }
+                
+                // 详细记录部分
+                html += `
+                    <div>
+                        <h6>详细记录 (共 ${details.length} 条)</h6>
+                `;
+                
+                if (details.length > 0) {
+                    html += `
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th>股票代码</th>
+                                        <th>股票名称</th>
+                                        <th>类型</th>
+                                        <th>详细信息</th>
+                                        <th>时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+                    
+                    details.forEach(detail => {
+                        const data = detail.detail_data;
+                        let detailInfo = '';
+                        
+                        if (detail.detail_type && (detail.detail_type.includes('import') || detail.detail_type.includes('update'))) {
+                            detailInfo = `记录数: ${data.records || 0}, 日期范围: ${data.start_date || '-'} 至 ${data.end_date || '-'}`;
+                            if (data.error) {
+                                detailInfo += `<br><span class="text-danger">错误: ${data.error}</span>`;
+                            }
+                        } else if (detail.detail_type === 'strategy_match') {
+                            detailInfo = `触发日期: ${data.trigger_date}, 涨幅: ${data.trigger_pct_change}%, 观察天数: ${data.observation_days}`;
+                        }
+                        
+                        const typeClass = detail.detail_type && detail.detail_type.includes('success') ? 'text-success' : 
+                                         detail.detail_type && detail.detail_type.includes('failed') ? 'text-danger' : 'text-info';
+                        
+                        html += `
+                            <tr>
+                                <td>${detail.stock_code || '-'}</td>
+                                <td>${detail.stock_name || '-'}</td>
+                                <td><span class="${typeClass}">${detail.detail_type || '-'}</span></td>
+                                <td><small>${detailInfo || '-'}</small></td>
+                                <td><small>${formatDateTime(detail.created_at)}</small></td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += `
+                        </tbody>
+                            </table>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> 暂无详细记录
+                        </div>
+                    `;
+                }
+                
+                html += `
+                    </div>
+                `;
+                
+                document.getElementById('taskDetailsContent').innerHTML = html;
+            } catch (e) {
+                console.error('渲染任务详情失败:', e);
+                document.getElementById('taskDetailsContent').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i> 渲染失败: ${e.message}
+                    </div>
+                `;
+            }
+        },
+        function(error) {
+            console.error('加载任务详情失败:', error);
+            document.getElementById('taskDetailsContent').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> 加载失败: ${error.responseJSON?.error || error.statusText || '未知错误'}
+                </div>
+            `;
+        }
+    );
+}
+
+// 自动刷新统计数据
+setInterval(function() {
+    location.reload();
+}, 60000); // 每分钟刷新一次
+</script>
+{% endblock %}

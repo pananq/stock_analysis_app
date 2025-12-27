@@ -1,0 +1,423 @@
+{% extends "base.html" %}
+
+{% block title %}{{ stock.stock_name }}({{ stock.stock_code }}) - 股票分析系统{% endblock %}
+
+{% block extra_css %}
+<!-- ECharts CSS -->
+<link href="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h2>
+                <i class="fas fa-chart-line"></i> 
+                {{ stock.stock_name }} <small class="text-muted">({{ stock.stock_code }})</small>
+            </h2>
+            <a href="/stocks" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> 返回列表
+            </a>
+        </div>
+        <hr>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert alert-warning">
+    <i class="fas fa-exclamation-triangle"></i> {{ error }}
+</div>
+{% endif %}
+
+<!-- 股票基本信息 -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i> 基本信息
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th width="30%">股票代码</th>
+                        <td><strong>{{ stock.stock_code }}</strong></td>
+                    </tr>
+                    <tr>
+                        <th>股票名称</th>
+                        <td>{{ stock.stock_name }}</td>
+                    </tr>
+                    <tr>
+                        <th>行业</th>
+                        <td>{{ stock.industry or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>市场类型</th>
+                        <td>
+                            {% if stock.market_type == '沪市' %}
+                            <span class="badge bg-primary">沪市</span>
+                            {% elif stock.market_type == '深市' %}
+                            <span class="badge bg-success">深市</span>
+                            {% elif stock.market_type == '北交所' %}
+                            <span class="badge bg-warning">北交所</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ stock.market_type }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-calendar"></i> 上市信息
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th width="30%">上市日期</th>
+                        <td>
+                            {% if stock.list_date %}
+                            {{ stock.list_date[:4] }}-{{ stock.list_date[4:6] }}-{{ stock.list_date[6:] }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>状态</th>
+                        <td>
+                            {% if stock.status == 'active' %}
+                            <span class="badge bg-success">正常</span>
+                            {% elif stock.status == 'delisted' %}
+                            <span class="badge bg-danger">退市</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ stock.status }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>数据记录</th>
+                        <td>
+                            <span class="badge bg-info">{{ history_data|length }} 条</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- K线图 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-chart-bar"></i> K线图（最近3个月）</span>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="changeChartType('candlestick')">
+                        <i class="fas fa-chart-bar"></i> K线
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="changeChartType('line')">
+                        <i class="fas fa-chart-line"></i> 折线
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if history_data %}
+                <div id="klineChart" class="chart-container"></div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-chart-bar"></i>
+                    <p>暂无历史行情数据</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 历史行情数据表格 -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-table"></i> 历史行情数据</span>
+                <button class="btn btn-sm btn-outline-primary" onclick="exportTableToCSV('historyTable', '{{ stock.stock_code }}_history.csv')">
+                    <i class="fas fa-download"></i> 导出CSV
+                </button>
+            </div>
+            <div class="card-body">
+                {% if history_data %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover data-table" id="historyTable">
+                        <thead>
+                            <tr>
+                                <th>交易日期</th>
+                                <th>开盘价</th>
+                                <th>最高价</th>
+                                <th>最低价</th>
+                                <th>收盘价</th>
+                                <th>涨跌幅</th>
+                                <th>成交量（手）</th>
+                                <th>成交额（万元）</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in history_data %}
+                            <tr>
+                                <td>{{ item.trade_date }}</td>
+                                <td>{{ item.open_price | number(2) }}</td>
+                                <td>{{ item.high_price | number(2) }}</td>
+                                <td>{{ item.low_price | number(2) }}</td>
+                                <td><strong>{{ item.close_price | number(2) }}</strong></td>
+                                <td>{{ item.change_pct | formatPctChange | safe }}</td>
+                                <td>{{ item.volume | large_number }}</td>
+                                <td>{{ item.amount | large_number }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-table"></i>
+                    <p>暂无历史行情数据</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- ECharts -->
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+
+<script>
+// 历史行情数据
+const historyData = {{ history_data | tojson }};
+
+// 图表实例
+let klineChart = null;
+let currentChartType = 'candlestick';
+
+/**
+ * 初始化K线图
+ */
+function initKlineChart() {
+    if (historyData.length === 0) return;
+    
+    const chartDom = document.getElementById('klineChart');
+    klineChart = echarts.init(chartDom);
+    
+    // 准备数据
+    const dates = [];
+    const candleData = [];
+    const volumeData = [];
+    const lineData = [];
+    
+    historyData.reverse().forEach(item => {
+        dates.push(item.trade_date);
+        candleData.push([
+            item.open_price,
+            item.close_price,
+            item.low_price,
+            item.high_price
+        ]);
+        volumeData.push(item.volume);
+        lineData.push(item.close_price);
+    });
+    
+    // 计算涨跌颜色
+    const colors = historyData.reverse().map(item => {
+        return item.change_pct >= 0 ? '#ef5350' : '#26a69a';
+    });
+    
+    // 配置项
+    const option = {
+        title: {
+            text: '{{ stock.stock_name }}({{ stock.stock_code }})',
+            left: 'center'
+        },
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: {
+                type: 'cross'
+            },
+            formatter: function(params) {
+                if (params.length === 0) return '';
+                
+                let result = `<strong>${params[0].axisValue}</strong><br/>`;
+                
+                if (currentChartType === 'candlestick') {
+                    params.forEach(param => {
+                        if (param.seriesName === 'K线') {
+                            result += `开盘: ${param.data[1]}<br/>`;
+                            result += `收盘: ${param.data[2]}<br/>`;
+                            result += `最低: ${param.data[3]}<br/>`;
+                            result += `最高: ${param.data[4]}<br/>`;
+                        } else if (param.seriesName === '成交量') {
+                            result += `成交量: ${formatLargeNumber(param.data)} 手<br/>`;
+                        }
+                    });
+                } else {
+                    params.forEach(param => {
+                        if (param.seriesName === '收盘价') {
+                            result += `收盘价: ${param.data.toFixed(2)}<br/>`;
+                        }
+                    });
+                }
+                
+                return result;
+            }
+        },
+        legend: {
+            data: ['K线', '成交量'],
+            top: 30
+        },
+        grid: [
+            {
+                left: '10%',
+                right: '8%',
+                top: '15%',
+                height: '50%'
+            },
+            {
+                left: '10%',
+                right: '8%',
+                top: '70%',
+                height: '15%'
+            }
+        ],
+        xAxis: [
+            {
+                type: 'category',
+                data: dates,
+                scale: true,
+                boundaryGap: false,
+                axisLine: { onZero: false },
+                splitLine: { show: false },
+                min: 'dataMin',
+                max: 'dataMax'
+            },
+            {
+                type: 'category',
+                gridIndex: 1,
+                data: dates,
+                scale: true,
+                boundaryGap: false,
+                axisLine: { onZero: false },
+                axisTick: { show: false },
+                splitLine: { show: false },
+                axisLabel: { show: false },
+                min: 'dataMin',
+                max: 'dataMax'
+            }
+        ],
+        yAxis: [
+            {
+                scale: true,
+                splitArea: { show: true }
+            },
+            {
+                scale: true,
+                gridIndex: 1,
+                splitNumber: 2,
+                axisLabel: { show: false },
+                axisLine: { show: false },
+                axisTick: { show: false },
+                splitLine: { show: false }
+            }
+        ],
+        dataZoom: [
+            {
+                type: 'inside',
+                xAxisIndex: [0, 1],
+                start: 50,
+                end: 100
+            },
+            {
+                show: true,
+                xAxisIndex: [0, 1],
+                type: 'slider',
+                top: '90%',
+                start: 50,
+                end: 100
+            }
+        ],
+        series: []
+    };
+    
+    // 根据图表类型添加系列
+    if (currentChartType === 'candlestick') {
+        option.series = [
+            {
+                name: 'K线',
+                type: 'candlestick',
+                data: candleData,
+                itemStyle: {
+                    color: '#ef5350',
+                    color0: '#26a69a',
+                    borderColor: '#ef5350',
+                    borderColor0: '#26a69a'
+                }
+            },
+            {
+                name: '成交量',
+                type: 'bar',
+                xAxisIndex: 1,
+                yAxisIndex: 1,
+                data: volumeData,
+                itemStyle: {
+                    color: function(params) {
+                        const index = params.dataIndex;
+                        return historyData[index].change_pct >= 0 ? '#ef5350' : '#26a69a';
+                    }
+                }
+            }
+        ];
+    } else {
+        option.series = [
+            {
+                name: '收盘价',
+                type: 'line',
+                data: lineData,
+                smooth: true,
+                lineStyle: {
+                    width: 2
+                },
+                itemStyle: {
+                    color: '#2196f3'
+                }
+            }
+        ];
+    }
+    
+    klineChart.setOption(option);
+}
+
+/**
+ * 切换图表类型
+ */
+function changeChartType(type) {
+    currentChartType = type;
+    initKlineChart();
+}
+
+// 页面加载完成后初始化图表
+document.addEventListener('DOMContentLoaded', function() {
+    initKlineChart();
+    
+    // 窗口大小改变时重新渲染图表
+    window.addEventListener('resize', function() {
+        if (klineChart) {
+            klineChart.resize();
+        }
+    });
+});
+</script>
+{% endblock %}

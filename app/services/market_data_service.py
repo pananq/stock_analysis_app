@@ -1,0 +1,558 @@
+"""
+历史行情数据管理服务
+负责股票历史行情数据的获取、存储和查询
+"""
+from typing import List, Dict, Any, Optional, Callable
+from datetime import datetime, timedelta
+import pandas as pd
+from app.models import get_duckdb
+from app.services import get_datasource, get_stock_service
+from app.utils import get_logger, get_rate_limiter, get_config, get_stock_limit_for_mode
+
+logger = get_logger(__name__)
+
+
+class MarketDataService:
+    """历史行情数据管理服务类"""
+    
+    def __init__(self):
+        """初始化行情数据服务"""
+        self.duckdb = get_duckdb()
+        self.datasource = get_datasource()
+        self.stock_service = get_stock_service()
+        self.rate_limiter = get_rate_limiter()
+        self.config = get_config()
+        logger.info("行情数据服务初始化完成")
+    
+    def import_all_history(self, start_date: str = None, end_date: str = None,
+                          limit: int = None, skip: int = 0, 
+                          progress_callback: Callable = None,
+                          stop_event = None) -> Dict[str, Any]:
+        """
+        全量导入所有股票的历史行情数据
+        
+        Args:
+            start_date: 开始日期 (YYYY-MM-DD)，默认为3年前
+            end_date: 结束日期 (YYYY-MM-DD)，默认为今天
+            limit: 限制导入的股票数量（用于测试），如果为None则根据配置自动确定
+            skip: 跳过前N只股票
+            progress_callback: 进度回调函数 callback(progress: float, message: str)
+            stop_event: 停止事件，用于取消任务
+            
+        Returns:
+            包含执行结果的字典
+        """
+        logger.info("=" * 60)
+        logger.info("开始全量导入历史行情数据")
+        logger.info("=" * 60)
+        
+        start_time = datetime.now()
+        
+        # 检查是否已取消
+        if stop_event and stop_event.is_set():
+            return {
+                'success': False,
+                'message': '任务已取消',
+                'cancelled': True
+            }
+        
+        # 设置默认日期范围
+        if not end_date:
+            end_date = datetime.now().strftime('%Y-%m-%d')
+        if not start_date:
+            # 默认导入3年历史数据
+            start_date = (datetime.now() - timedelta(days=365*3)).strftime('%Y-%m-%d')
+        
+        logger.info(f"日期范围: {start_date} 至 {end_date}")
+        
+        if progress_callback:
+            progress_callback(0, f"准备导入数据，日期范围：{start_date} 至 {end_date}")
+        
+        # 获取所有股票列表
+        stocks = self.stock_service.get_stock_list()
+        total_stocks = len(stocks)
+        
+        # 应用skip和limit
+        if skip > 0:
+            stocks = stocks[skip:]
+            logger.info(f"跳过前{skip}只股票")
+        
+        # 如果没有显式指定limit，则根据配置自动应用限制
+        if limit is None:
+            limit = get_stock_limit_for_mode()
+            if limit:
+                logger.info(f"开发模式：限制导入{limit}只股票")
+        
+        if limit:
+            stocks = stocks[:limit]
+            logger.info(f"限制导入{limit}只股票（测试模式）")
+        
+        logger.info(f"待导入股票数量: {len(stocks)}/{total_stocks}")
+        
+        if progress_callback:
+            progress_callback(1, f"待导入 {len(stocks)} 只股票")
+        
+        # 统计信息
+        success_count = 0
+        fail_count = 0
+        total_records = 0
+        failed_stocks = []
+        
+        # 逐个股票导入
+        for idx, stock in enumerate(stocks, 1):
+            # 检查是否已取消
+            if stop_event and stop_event.is_set():
+                logger.warning(f"任务被取消，停止导入。已完成 {idx-1}/{len(stocks)} 只股票")
+                if progress_callback:
+                    progress_callback(
+                        ((idx-1) / len(stocks)) * 100,
+                        f"任务已取消。已完成 {idx-1}/{len(stocks)} 只股票"
+                    )
+                return {
+                    'success': False,
+                    'message': '任务已取消',
+                    'cancelled': True,
+                    'success_count': success_count,
+                    'fail_count': fail_count,
+                    'total_records': total_records,
+                    'failed_stocks': failed_stocks,
+                    'date_range': f"{start_date} 至 {end_date}"
+                }
+            
+            code = stock['code']
+            name = stock['name']
+            
+            try:
+                logger.info(f"[{idx}/{len(stocks)}] 正在导入 {code} - {name}")
+                
+                # API频率控制
+                self.rate_limiter.wait()
+                
+                # 获取历史行情数据
+                df = self.datasource.get_daily_data(code, start_date, end_date)
+                
+                if df.empty:
+                    logger.warning(f"  {code} 未获取到数据")
+                    fail_count += 1
+                    failed_stocks.append({'code': code, 'name': name, 'reason': '未获取到数据'})
+                    
+                    # 记录失败的详细信息
+                    if progress_callback:
+                        progress_callback(
+                            (idx / len(stocks)) * 100,
+                            f"导入 {code} 失败",
+                            stock_code=code,
+                            stock_name=name,
+                            success=False,
+                            records=0,
+                            start_date=start_date,
+                            end_date=end_date,
+                            error='未获取到数据'
+                        )
+                    continue
+                
+                # 保存到DuckDB
+                records = len(df)
+                self._save_daily_data(df, code)
+                
+                success_count += 1
+                total_records += records
+                logger.info(f"  ✓ {code} 导入成功，{records}条记录")
+                
+                # 记录成功的详细信息
+                if progress_callback:
+                    progress_callback(
+                        (idx / len(stocks)) * 100,
+                        f"导入 {code} 成功",
+                        stock_code=code,
+                        stock_name=name,
+                        success=True,
+                        records=records,
+                        start_date=start_date,
+                        end_date=end_date
+                    )
+                
+                # 每10只股票显示一次进度
+                if idx % 10 == 0:
+                    elapsed = (datetime.now() - start_time).total_seconds()
+                    avg_time = elapsed / idx
+                    remaining = avg_time * (len(stocks) - idx)
+                    progress = (idx / len(stocks)) * 100
+                    
+                    logger.info(f"进度: {idx}/{len(stocks)} ({progress:.1f}%), "
+                              f"预计剩余时间: {remaining/60:.1f}分钟")
+                    
+                    if progress_callback:
+                        progress_callback(
+                            progress, 
+                            f"正在导入... {idx}/{len(stocks)} ({progress:.1f}%), "
+                            f"预计剩余 {remaining/60:.1f} 分钟"
+                        )
+                
+            except Exception as e:
+                logger.error(f"  ✗ {code} 导入失败: {e}")
+                fail_count += 1
+                failed_stocks.append({'code': code, 'name': name, 'reason': str(e)})
+                
+                # 记录失败的详细信息
+                if progress_callback:
+                    progress_callback(
+                        (idx / len(stocks)) * 100,
+                        f"导入 {code} 失败",
+                        stock_code=code,
+                        stock_name=name,
+                        success=False,
+                        records=0,
+                        start_date=start_date,
+                        end_date=end_date,
+                        error=str(e)
+                    )
+        
+        # 完成统计
+        end_time = datetime.now()
+        duration = (end_time - start_time).total_seconds()
+        
+        logger.info("=" * 60)
+        logger.info("全量导入完成")
+        logger.info(f"总股票数: {len(stocks)}")
+        logger.info(f"成功: {success_count}")
+        logger.info(f"失败: {fail_count}")
+        logger.info(f"总记录数: {total_records}")
+        logger.info(f"耗时: {duration/60:.2f}分钟")
+        logger.info("=" * 60)
+        
+        if failed_stocks:
+            logger.warning(f"失败的股票列表（前10个）:")
+            for stock in failed_stocks[:10]:
+                logger.warning(f"  {stock['code']} - {stock['name']}: {stock['reason']}")
+        
+        if progress_callback:
+            progress_callback(100, f"导入完成！成功 {success_count} 只，失败 {fail_count} 只，共 {total_records} 条记录")
+        
+        return {
+            'success': True,
+            'total_stocks': len(stocks),
+            'success_count': success_count,
+            'fail_count': fail_count,
+            'total_records': total_records,
+            'duration': duration,
+            'failed_stocks': failed_stocks,
+            'date_range': f"{start_date} 至 {end_date}"
+        }
+    
+    def update_recent_data(self, days: int = 5, only_existing: bool = True, 
+                          progress_callback: Callable = None,
+                          stop_event = None) -> Dict[str, Any]:
+        """
+        增量更新最近N天的行情数据
+        
+        Args:
+            days: 更新最近N天的数据
+            only_existing: 是否只更新已有数据的股票（默认True）
+            progress_callback: 进度回调函数 callback(progress: float, message: str)
+            stop_event: 停止事件，用于取消任务
+            
+        Returns:
+            包含执行结果的字典
+        """
+        logger.info("=" * 60)
+        logger.info(f"开始增量更新最近{days}天的行情数据")
+        logger.info("=" * 60)
+        
+        start_time = datetime.now()
+        
+        # 检查是否已取消
+        if stop_event and stop_event.is_set():
+            return {
+                'success': False,
+                'message': '任务已取消',
+                'cancelled': True
+            }
+        
+        # 计算日期范围
+        end_date = datetime.now().strftime('%Y-%m-%d')
+        start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
+        
+        logger.info(f"日期范围: {start_date} 至 {end_date}")
+        
+        if progress_callback:
+            progress_callback(0, f"准备更新数据，日期范围：{start_date} 至 {end_date}")
+        
+        # 获取需要更新的股票列表
+        if only_existing:
+            # 只更新已有数据的股票
+            query = "SELECT DISTINCT code FROM daily_market"
+            result = self.duckdb.execute_query(query)
+            stock_codes = [row['code'] for row in result]
+            
+            # 从股票服务获取完整信息
+            all_stocks = self.stock_service.get_stock_list()
+            stocks = [s for s in all_stocks if s['code'] in stock_codes]
+            logger.info(f"只更新已有数据的股票: {len(stocks)}只")
+        else:
+            # 更新所有股票
+            stocks = self.stock_service.get_stock_list()
+            logger.info(f"更新所有股票: {len(stocks)}只")
+        
+        logger.info(f"待更新股票数量: {len(stocks)}")
+        
+        if progress_callback:
+            progress_callback(1, f"待更新 {len(stocks)} 只股票")
+        
+        # 统计信息
+        success_count = 0
+        fail_count = 0
+        total_records = 0
+        failed_stocks = []
+        
+        # 逐个股票更新
+        for idx, stock in enumerate(stocks, 1):
+            # 检查是否已取消
+            if stop_event and stop_event.is_set():
+                logger.warning(f"任务被取消，停止更新。已完成 {idx-1}/{len(stocks)} 只股票")
+                if progress_callback:
+                    progress_callback(
+                        ((idx-1) / len(stocks)) * 100,
+                        f"任务已取消。已完成 {idx-1}/{len(stocks)} 只股票"
+                    )
+                return {
+                    'success': False,
+                    'message': '任务已取消',
+                    'cancelled': True,
+                    'success_count': success_count,
+                    'fail_count': fail_count,
+                    'total_records': total_records,
+                    'failed_stocks': failed_stocks,
+                    'date_range': f"{start_date} 至 {end_date}"
+                }
+            
+            code = stock['code']
+            name = stock['name']
+            
+            try:
+                # API频率控制
+                self.rate_limiter.wait()
+                
+                # 获取最近的行情数据
+                df = self.datasource.get_daily_data(code, start_date, end_date)
+                
+                if df.empty:
+                    fail_count += 1
+                    continue
+                
+                # 删除该股票在日期范围内的旧数据
+                self._delete_data_in_range(code, start_date, end_date)
+                
+                # 保存新数据
+                records = len(df)
+                self._save_daily_data(df, code)
+                
+                success_count += 1
+                total_records += records
+                
+                # 每10只股票显示一次进度
+                if idx % 10 == 0:
+                    progress = (idx / len(stocks)) * 100
+                    logger.info(f"进度: {idx}/{len(stocks)} ({progress:.1f}%)")
+                    
+                    if progress_callback:
+                        progress_callback(
+                            progress,
+                            f"正在更新... {idx}/{len(stocks)} ({progress:.1f}%)"
+                        )
+                
+            except Exception as e:
+                logger.error(f"更新 {code} 失败: {e}")
+                fail_count += 1
+                failed_stocks.append({'code': code, 'name': name, 'reason': str(e)})
+        
+        # 完成统计
+        end_time = datetime.now()
+        duration = (end_time - start_time).total_seconds()
+        
+        logger.info("=" * 60)
+        logger.info("增量更新完成")
+        logger.info(f"总股票数: {len(stocks)}")
+        logger.info(f"成功: {success_count}")
+        logger.info(f"失败: {fail_count}")
+        logger.info(f"总记录数: {total_records}")
+        logger.info(f"耗时: {duration/60:.2f}分钟")
+        logger.info("=" * 60)
+        
+        if progress_callback:
+            progress_callback(100, f"更新完成！成功 {success_count} 只，失败 {fail_count} 只")
+        
+        return {
+            'success': True,
+            'total_stocks': len(stocks),
+            'success_count': success_count,
+            'fail_count': fail_count,
+            'total_records': total_records,
+            'duration': duration,
+            'failed_stocks': failed_stocks,
+            'date_range': f"{start_date} 至 {end_date}"
+        }
+    
+    def get_stock_data(self, code: str, start_date: str = None, 
+                      end_date: str = None, limit: int = None) -> pd.DataFrame:
+        """
+        查询股票历史行情数据
+        
+        Args:
+            code: 股票代码
+            start_date: 开始日期
+            end_date: 结束日期
+            limit: 返回记录数限制
+            
+        Returns:
+            行情数据DataFrame
+        """
+        query = f"SELECT * FROM daily_market WHERE code = '{code}'"
+        
+        if start_date:
+            query += f" AND trade_date >= '{start_date}'"
+        
+        if end_date:
+            query += f" AND trade_date <= '{end_date}'"
+        
+        query += " ORDER BY trade_date DESC"
+        
+        if limit:
+            query += f" LIMIT {limit}"
+        
+        # 使用execute_query获取结果并转换为DataFrame
+        result = self.duckdb.execute_query(query)
+        return pd.DataFrame(result)
+    
+    def get_latest_data(self, code: str) -> Optional[Dict[str, Any]]:
+        """
+        获取股票最新的行情数据
+        
+        Args:
+            code: 股票代码
+            
+        Returns:
+            最新行情数据字典
+        """
+        df = self.get_stock_data(code, limit=1)
+        if not df.empty:
+            return df.iloc[0].to_dict()
+        return None
+    
+    def get_data_date_range(self, code: str) -> Optional[Dict[str, str]]:
+        """
+        获取股票数据的日期范围
+        
+        Args:
+            code: 股票代码
+            
+        Returns:
+            包含最早和最晚日期的字典
+        """
+        query = f"""
+            SELECT 
+                MIN(trade_date) as earliest_date,
+                MAX(trade_date) as latest_date,
+                COUNT(*) as record_count
+            FROM daily_market 
+            WHERE code = '{code}'
+        """
+        result = self.duckdb.execute_query(query)
+        if result and result[0]['earliest_date']:
+            return {
+                'earliest_date': str(result[0]['earliest_date']),
+                'latest_date': str(result[0]['latest_date']),
+                'record_count': int(result[0]['record_count'])
+            }
+        return None
+    
+    def get_statistics(self) -> Dict[str, Any]:
+        """
+        获取行情数据统计信息
+        
+        Returns:
+            统计信息字典
+        """
+        # 总记录数
+        total_query = "SELECT COUNT(*) as total FROM daily_market"
+        total_result = self.duckdb.execute_query(total_query)
+        total_records = total_result[0]['total'] if total_result else 0
+        
+        # 股票数量
+        stock_query = "SELECT COUNT(DISTINCT code) as stock_count FROM daily_market"
+        stock_result = self.duckdb.execute_query(stock_query)
+        stock_count = stock_result[0]['stock_count'] if stock_result else 0
+        
+        # 日期范围
+        date_query = """
+            SELECT 
+                MIN(trade_date) as earliest_date,
+                MAX(trade_date) as latest_date
+            FROM daily_market
+        """
+        date_result = self.duckdb.execute_query(date_query)
+        
+        result = {
+            'total_records': int(total_records),
+            'stock_count': int(stock_count),
+            'earliest_date': None,
+            'latest_date': None
+        }
+        
+        if date_result and date_result[0]['earliest_date']:
+            result['earliest_date'] = str(date_result[0]['earliest_date'])
+            result['latest_date'] = str(date_result[0]['latest_date'])
+        
+        return result
+    
+    def _save_daily_data(self, df: pd.DataFrame, code: str):
+        """
+        保存日线数据到DuckDB
+        
+        Args:
+            df: 行情数据DataFrame
+            code: 股票代码
+        """
+        if df.empty:
+            return
+        
+        # 确保有code列
+        if 'code' not in df.columns:
+            df['code'] = code
+        
+        # 插入数据
+        self.duckdb.insert_dataframe('daily_market', df)
+    
+    def _delete_data_in_range(self, code: str, start_date: str, end_date: str):
+        """
+        删除指定日期范围内的数据
+        
+        Args:
+            code: 股票代码
+            start_date: 开始日期
+            end_date: 结束日期
+        """
+        query = f"""
+            DELETE FROM daily_market 
+            WHERE code = '{code}' 
+            AND trade_date >= '{start_date}' 
+            AND trade_date <= '{end_date}'
+        """
+        self.duckdb.execute_update(query)
+
+
+# 全局服务实例
+_market_data_service_instance: Optional[MarketDataService] = None
+
+
+def get_market_data_service() -> MarketDataService:
+    """
+    获取全局行情数据服务实例
+    
+    Returns:
+        MarketDataService实例
+    """
+    global _market_data_service_instance
+    if _market_data_service_instance is None:
+        _market_data_service_instance = MarketDataService()
+    return _market_data_service_instance
