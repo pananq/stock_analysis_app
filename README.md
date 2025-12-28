@@ -18,42 +18,46 @@
 - **高性能存储**: MySQL存储所有数据，使用SQLAlchemy ORM访问，支持复杂查询和事务
 - **响应式设计**: Web界面支持桌面和移动设备访问
 
-## � 项目结构4. **容器化部署**: 使用Docker/Kubernetes进行容器化部署
+## 🚀 快速开始
 
-#### Docker部署（可选）
+### 安装和部署
+
+详细的安装和部署说明请参考 **[安装部署指南 (INSTALL.md)](INSTALL.md)**，包括：
+
+- 📦 **快速安装**: 开发环境快速搭建
+- 🏭 **生产部署**: 完整的生产环境部署步骤
+- ⚙️ **配置说明**: 详细的配置项说明
+- 🔧 **故障排查**: 常见问题解决方案
+- 🐳 **Docker部署**: 容器化部署方案
+
+### 快速启动
 
 ```bash
-# 创建Dockerfile
-cat > Dockerfile << 'EOF'
-FROM python:3.9-slim
+# 1. 克隆项目
+git clone <repository-url>
+cd stock-analysis-app
 
-WORKDIR /app
+# 2. 安装依赖
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# 3. 配置和初始化
+cp config.yaml.example config.yaml
+# 编辑 config.yaml 配置数据源
+python main.py --init-db
 
-COPY . .
+# 4. 启动服务
+python main.py start
 
-EXPOSE 5000 8000
-
-CMD ["python", "main.py", "start", "--foreground"]
-EOF
-
-# 构建镜像
-docker build -t stock-analysis:latest .
-
-# 运行容器
-docker run -d \
-  --name stock-analysis \
-  -p 5000:5000 \
-  -p 8000:8000 \
-  -v /opt/stock-analysis/config.yaml:/app/config.yaml \
-  -v /opt/stock-analysis/logs:/app/logs \
-  --restart unless-stopped \
-  stock-analysis:latest
+# 5. 访问系统
+# Web界面: http://localhost:8000
+# API文档: http://localhost:5000/api/docs
 ```
 
-## �📁 项目结构
+更多详细说明请查看 [INSTALL.md](INSTALL.md)
+
+##  项目结构
 
 ```
 stock-analysis-app/
@@ -105,66 +109,6 @@ stock-analysis-app/
 ├── main.py                       # 主入口（支持后台运行）
 ├── run_api.py                    # API启动脚本
 └── run_web.py                    # Web启动脚本
-```
-
-## ⚙️ 配置说明
-
-### 配置文件 (config.yaml)
-
-```yaml
-# 数据源配置
-datasource:
-  default: akshare          # 默认数据源
-  akshare:
-    enabled: true
-  tushare:
-    enabled: false
-    token: YOUR_TUSHARE_TOKEN_HERE  # Tushare Token（请替换为实际token）
-
-# API频率控制
-api_rate_limit:
-  min_delay: 0.1            # 最小延迟（秒）
-  max_delay: 0.3            # 最大延迟（秒）
-  max_retries: 3            # 最大重试次数
-
-# 数据库配置
-database:
-  type: mysql
-  mysql:
-    host: localhost
-    port: 3306
-    username: YOUR_DB_USERNAME
-    password: YOUR_DB_PASSWORD
-    database: stock_analysis
-
-# API服务器配置
-api:
-  host: 0.0.0.0
-  port: 5000
-  debug: false
-
-# Web服务器配置
-web:
-  host: 0.0.0.0
-  port: 8000
-  debug: false
-
-# 调度任务配置
-scheduler:
-  enabled: true
-  update_stock_list:
-    hour: 18
-    minute: 0
-  update_market_data:
-    hour: 19
-    minute: 0
-
-# 日志配置
-logging:
-  level: INFO
-  file: logs/app.log
-  max_size: 10485760        # 10MB
-  backup_count: 5
 ```
 
 ## 📊 使用指南
@@ -358,7 +302,7 @@ def calculate_rsi(self, prices: List[float], period: int = 14) -> List[float]:
 - 考虑增加系统内存
 - 优化策略条件
 
-更多问题请参考 [安装部署指南 (install.md)](install.md) 中的故障排查部分。
+更多问题请参考 [安装部署指南 (INSTALL.md)](INSTALL.md) 中的故障排查部分。
 
 ## 📝 更新日志
 
