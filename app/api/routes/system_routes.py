@@ -4,7 +4,7 @@
 提供系统管理和监控功能
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 from app.scheduler import get_task_scheduler
 from app.utils import get_logger, get_config
 
@@ -82,6 +82,11 @@ def run_scheduler_job(job_id):
         执行结果
     """
     try:
+        # 仅管理员可操作
+        user = getattr(g, 'user', None)
+        if not user or user.get('role') != 'admin':
+            return jsonify({'success': False, 'error': '无权操作'}), 403
+            
         scheduler = get_task_scheduler()
         success = scheduler.run_job_now(job_id)
         
@@ -118,6 +123,11 @@ def get_system_logs():
         日志列表
     """
     try:
+        # 仅管理员可查看
+        user = getattr(g, 'user', None)
+        if not user or user.get('role') != 'admin':
+            return jsonify({'success': False, 'error': '无权访问'}), 403
+            
         import re
         from datetime import datetime
         
@@ -208,9 +218,15 @@ def get_scheduler_logs():
         limit = int(request.args.get('limit', 100))
         offset = int(request.args.get('offset', 0))
         
+        # 获取当前用户
+        user = getattr(g, 'user', None)
+        user_id = None
+        if user and user.get('role') != 'admin':
+            user_id = user.get('user_id')
+        
         scheduler = get_task_scheduler()
-        logs = scheduler.get_job_logs(limit=limit, offset=offset)
-        total = scheduler.get_job_logs_count()
+        logs = scheduler.get_job_logs(limit=limit, offset=offset, user_id=user_id)
+        total = scheduler.get_job_logs_count(user_id=user_id)
         
         return jsonify({
             'success': True,
@@ -240,6 +256,11 @@ def start_scheduler():
         操作结果
     """
     try:
+        # 仅管理员可操作
+        user = getattr(g, 'user', None)
+        if not user or user.get('role') != 'admin':
+            return jsonify({'success': False, 'error': '无权操作'}), 403
+            
         scheduler = get_task_scheduler()
         scheduler.start()
         
@@ -265,6 +286,11 @@ def stop_scheduler():
         操作结果
     """
     try:
+        # 仅管理员可操作
+        user = getattr(g, 'user', None)
+        if not user or user.get('role') != 'admin':
+            return jsonify({'success': False, 'error': '无权操作'}), 403
+            
         scheduler = get_task_scheduler()
         scheduler.shutdown(wait=False)
         
@@ -291,6 +317,9 @@ def get_config_info():
     """
     try:
         config = get_config()
+        
+        # 重新加载配置文件以获取最新配置
+        config.reload()
         
         # 返回可编辑的配置（不含敏感信息和系统级配置）
         editable_config = {
@@ -349,6 +378,11 @@ def update_config_info():
         更新结果
     """
     try:
+        # 仅管理员可操作
+        user = getattr(g, 'user', None)
+        if not user or user.get('role') != 'admin':
+            return jsonify({'success': False, 'error': '无权操作'}), 403
+            
         import yaml
         import os
         
@@ -481,6 +515,9 @@ def get_system_info_config():
     try:
         config = get_config()
         
+        # 重新加载配置文件以获取最新配置
+        config.reload()
+        
         system_info = {
             'api': {
                 'port': config.get('api', {}).get('port', 5000),
@@ -584,19 +621,25 @@ def get_system_stats():
         from app.models.database_factory import get_database
         from app.services import get_stock_service, get_strategy_service, get_market_data_service
         
+        # 获取当前用户
+        user = getattr(g, 'user', None)
+        user_id = None
+        if user and user.get('role') != 'admin':
+            user_id = user.get('user_id')
+        
         db = get_database()  # 使用工厂方法获取数据库（MySQL或SQLite）
         stock_service = get_stock_service()
         strategy_service = get_strategy_service()
         market_data_service = get_market_data_service()
         
-        # 股票数量
+        # 股票数量（公共数据，所有人可见）
         total_stocks = stock_service.count_stocks()
         
-        # 策略数量
-        strategies = strategy_service.list_strategies()
+        # 策略数量（按用户过滤）
+        strategies = strategy_service.list_strategies(user_id=user_id)
         enabled_strategies = [s for s in strategies if s.get('enabled')]
         
-        # 行情数据统计（使用MySQL）
+        # 行情数据统计（公共数据，所有人可见）
         market_stats = market_data_service.get_data_statistics()
         if market_stats is None:
             market_stats = {
@@ -606,9 +649,9 @@ def get_system_stats():
                 'max_date': None
             }
         
-        # 任务日志统计
+        # 任务日志统计（按用户过滤）
         scheduler = get_task_scheduler()
-        job_log_count = scheduler.get_job_logs_count()
+        job_log_count = scheduler.get_job_logs_count(user_id=user_id)
         
         return jsonify({
             'success': True,

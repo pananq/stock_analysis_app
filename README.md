@@ -18,109 +18,42 @@
 - **高性能存储**: MySQL存储所有数据，使用SQLAlchemy ORM访问，支持复杂查询和事务
 - **响应式设计**: Web界面支持桌面和移动设备访问
 
-## 🚀 快速开始
+## � 项目结构4. **容器化部署**: 使用Docker/Kubernetes进行容器化部署
 
-### 环境要求
-- Python 3.8+
-- pip 包管理器
-
-### 安装步骤
-
-1. **克隆项目**
-```bash
-git clone <repository-url>
-cd stock-analysis-app
-```
-
-2. **创建虚拟环境（推荐）**
-```bash
-python3 -m venv venv
-source venv/bin/activate  # Linux/Mac
-# 或
-venv\Scripts\activate  # Windows
-```
-
-3. **安装依赖**
-```bash
-pip install -r requirements.txt
-```
-
-4. **初始化配置**
-```bash
-cp config.yaml.example config.yaml
-# 编辑 config.yaml 配置数据源和其他选项
-```
-
-5. **初始化数据库**
-```bash
-python main.py --init-db
-```
-
-### 启动服务
-
-#### 方式一：使用主程序启动（推荐）
-
-**后台运行（默认）** - 适合生产环境
+#### Docker部署（可选）
 
 ```bash
-# 启动所有服务（API + Web + 调度器）- 后台运行
-python main.py
+# 创建Dockerfile
+cat > Dockerfile << 'EOF'
+FROM python:3.9-slim
 
-# 或使用显式命令
-python main.py start
+WORKDIR /app
 
-# 只启动API服务（含调度器）
-python main.py start --api-only
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# 只启动Web服务
-python main.py start --web-only
+COPY . .
+
+EXPOSE 5000 8000
+
+CMD ["python", "main.py", "start", "--foreground"]
+EOF
+
+# 构建镜像
+docker build -t stock-analysis:latest .
+
+# 运行容器
+docker run -d \
+  --name stock-analysis \
+  -p 5000:5000 \
+  -p 8000:8000 \
+  -v /opt/stock-analysis/config.yaml:/app/config.yaml \
+  -v /opt/stock-analysis/logs:/app/logs \
+  --restart unless-stopped \
+  stock-analysis:latest
 ```
 
-**前台运行** - 适合开发环境，可查看实时日志
-
-```bash
-# 启动所有服务（前台运行）
-python main.py start --foreground
-python main.py start -f
-```
-
-**服务管理命令**
-
-```bash
-# 停止服务
-python main.py stop
-
-# 查看服务状态
-python main.py status
-
-# 重启服务
-python main.py restart
-```
-
-**使用说明**：
-- 默认启动方式为后台运行，服务会在后台持续运行
-- 使用 `stop` 命令可以优雅地停止所有服务
-- 使用 `status` 命令可以查看服务运行状态和最近日志
-- 日志文件位置：`logs/app.log`
-- PID文件位置：`.stock_app.pid`
-
-详细使用说明请参考 [docs/daemon_mode_usage.md](docs/daemon_mode_usage.md)
-
-#### 方式二：分别启动服务
-
-```bash
-# 启动API服务器（端口5000）
-python run_api.py
-
-# 启动Web服务器（端口8000）
-python run_web.py
-```
-
-### 访问系统
-- **Web界面**: http://localhost:8000
-- **API文档**: http://localhost:5000/api/docs
-
-## 📁 项目结构
+## �📁 项目结构
 
 ```
 stock-analysis-app/
@@ -186,7 +119,7 @@ datasource:
     enabled: true
   tushare:
     enabled: false
-    token: your_tushare_token  # Tushare Token
+    token: YOUR_TUSHARE_TOKEN_HERE  # Tushare Token（请替换为实际token）
 
 # API频率控制
 api_rate_limit:
@@ -200,8 +133,8 @@ database:
   mysql:
     host: localhost
     port: 3306
-    username: your_username
-    password: your_password
+    username: YOUR_DB_USERNAME
+    password: YOUR_DB_PASSWORD
     database: stock_analysis
 
 # API服务器配置
@@ -403,50 +336,6 @@ def calculate_rsi(self, prices: List[float], period: int = 14) -> List[float]:
 
 ## ❓ 常见问题
 
-### 服务管理
-
-**Q: 如何启动和停止服务？**
-```bash
-# 后台启动所有服务
-python main.py
-
-# 停止服务
-python main.py stop
-
-# 查看服务状态
-python main.py status
-
-# 重启服务
-python main.py restart
-```
-
-**Q: 服务启动后看不到日志输出？**
-A: 默认启动方式为后台运行，日志会写入 `logs/app.log` 文件。你可以：
-- 使用 `tail -f logs/app.log` 查看实时日志
-- 使用 `python main.py status` 查看服务状态和最近的日志
-- 使用 `python main.py start --foreground` 前台运行查看实时输出
-
-**Q: 服务无法停止怎么办？**
-A: 检查PID文件 `.stock_app.pid` 中的进程是否还存在，如果存在可以手动杀死：
-```bash
-# 查看PID
-cat .stock_app.pid
-
-# 手动停止进程
-kill $(cat .stock_app.pid)
-
-# 或强制停止
-kill -9 $(cat .stock_app.pid)
-
-# 清理PID文件
-rm .stock_app.pid
-```
-
-**Q: 如何知道服务是否正在运行？**
-```bash
-python main.py status
-```
-
 ### 数据导入
 
 ### 1. 数据导入失败
@@ -469,10 +358,7 @@ python main.py status
 - 考虑增加系统内存
 - 优化策略条件
 
-**Q: 后台运行和前台运行有什么区别？**
-A: 
-- **后台运行**：服务在后台运行，不会占用终端窗口，适合生产环境
-- **前台运行**：服务在终端窗口运行，可以实时查看日志，适合开发环境
+更多问题请参考 [安装部署指南 (install.md)](install.md) 中的故障排查部分。
 
 ## 📝 更新日志
 

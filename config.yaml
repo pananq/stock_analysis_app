@@ -1,5 +1,5 @@
 app_mode:
-  mode: development
+  mode: production
   development_stock_limit: 100
 datasource:
   type: tushare
@@ -26,7 +26,7 @@ api_rate_limit:
   max_retries: 3
   retry_delay_increment: 1
 scheduler:
-  enable_auto_update: false
+  enable_auto_update: true
   stock_list_update_time: '18:00'
   market_data_update_time: '18:30'
 web:

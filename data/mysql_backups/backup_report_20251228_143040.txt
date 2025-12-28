@@ -1,0 +1,15 @@
+================================================================================
+                        MySQL 备份报告
+================================================================================
+
+备份时间: 2025-12-28 14:30:55
+备份状态: 成功
+
+备份文件: /data/home/aaronpan/stock-analysis-app/tools/../data/mysql_backups/stock_analysis_20251228_143040.sql.gz
+备份大小: 928K
+备份信息: /data/home/aaronpan/stock-analysis-app/tools/../data/mysql_backups/stock_analysis_20251228_143040.sql.gz.info
+
+数据库: stock_analysis
+主机: localhost:3306
+
+================================================================================

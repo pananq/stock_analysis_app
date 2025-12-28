@@ -28,7 +28,7 @@
                 </div>
                 {% endif %}
                 
-                <form method="POST" id="strategyForm" class="strategy-form">
+                <form id="strategyForm" class="strategy-form">
                     <!-- 策略名称 -->
                     <div class="mb-3">
                         <label for="name" class="form-label">
@@ -61,57 +61,40 @@
                     <h5><i class="fas fa-cogs"></i> 策略参数</h5>
                     <p class="text-muted mb-3">配置策略的筛选条件</p>
                     
-                    <!-- 涨幅范围 -->
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="min_change" class="form-label">
-                                <i class="fas fa-arrow-down"></i> 最小涨幅 (%)
-                            </label>
-                            <div class="input-group">
-                                <input type="number" 
-                                       class="form-control" 
-                                       id="min_change" 
-                                       name="min_change" 
-                                       step="0.1"
-                                       min="0"
-                                       value="{{ strategy.config.min_change if strategy else 0 }}">
-                                <span class="input-group-text">%</span>
-                            </div>
+                    <!-- 涨幅阈值 -->
+                    <div class="mb-3">
+                        <label for="rise_threshold" class="form-label">
+                            <i class="fas fa-arrow-up"></i> 涨幅阈值 (%)
+                        </label>
+                        <div class="input-group">
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="rise_threshold" 
+                                   name="rise_threshold" 
+                                   step="0.1"
+                                   min="0"
+                                   value="{{ strategy.config.min_change if strategy else 8.0 }}">
+                            <span class="input-group-text">%</span>
                         </div>
-                        <div class="col-md-6">
-                            <label for="max_change" class="form-label">
-                                <i class="fas fa-arrow-up"></i> 最大涨幅 (%)
-                            </label>
-                            <div class="input-group">
-                                <input type="number" 
-                                       class="form-control" 
-                                       id="max_change" 
-                                       name="max_change" 
-                                       step="0.1"
-                                       min="0"
-                                       value="{{ strategy.config.max_change if strategy else 10 }}">
-                                <span class="input-group-text">%</span>
-                            </div>
-                        </div>
+                        <div class="form-text">筛选单日涨幅超过此阈值的股票</div>
                     </div>
-                    <div class="form-text mb-3">筛选涨幅在此范围内的股票</div>
                     
                     <!-- 观察天数 -->
                     <div class="mb-3">
-                        <label for="days" class="form-label">
+                        <label for="observation_days" class="form-label">
                             <i class="fas fa-calendar-alt"></i> 观察天数
                         </label>
                         <div class="input-group">
                             <input type="number" 
                                    class="form-control" 
-                                   id="days" 
-                                   name="days" 
+                                   id="observation_days" 
+                                   name="observation_days" 
                                    min="1"
                                    max="365"
-                                   value="{{ strategy.config.days if strategy else 20 }}">
+                                   value="{{ strategy.config.days if strategy else 3 }}">
                             <span class="input-group-text">天</span>
                         </div>
-                        <div class="form-text">观察最近多少天的数据</div>
+                        <div class="form-text">大涨后观察多少天，要求每天收盘价都在均线之上</div>
                     </div>
                     
                     <!-- 均线周期 -->
@@ -126,7 +109,7 @@
                                    name="ma_period" 
                                    min="5"
                                    max="120"
-                                   value="{{ strategy.config.ma_period if strategy else 20 }}">
+                                   value="{{ strategy.config.ma_period if strategy else 5 }}">
                             <span class="input-group-text">日</span>
                         </div>
                         <div class="form-text">移动平均线的周期（常用：5、10、20、60日均线）</div>
@@ -170,16 +153,17 @@
             <div class="card-body">
                 <h6>筛选条件</h6>
                 <ul>
-                    <li><strong>涨幅范围：</strong>股票的涨跌幅必须在指定范围内</li>
-                    <li><strong>观察天数：</strong>使用最近N天的数据进行计算</li>
+                    <li><strong>涨幅阈值：</strong>股票单日涨幅必须超过此值</li>
+                    <li><strong>观察天数：</strong>大涨后连续N天收盘价在均线之上</li>
                     <li><strong>均线周期：</strong>计算N日移动平均线作为参考</li>
                 </ul>
                 <h6>执行流程</h6>
                 <ol>
                     <li>扫描所有股票的历史行情数据</li>
                     <li>计算指定周期的移动平均线</li>
-                    <li>筛选涨幅符合条件的股票</li>
-                    <li>返回匹配的股票列表</li>
+                    <li>筛选出现大涨（超过阈值）的日期</li>
+                    <li>检查大涨后N天内是否一直保持在均线之上</li>
+                    <li>返回符合条件的股票</li>
                 </ol>
             </div>
         </div>
@@ -190,50 +174,71 @@
 {% block extra_js %}
 <script>
 /**
- * 表单验证
+ * 表单验证与提交
  */
 document.getElementById('strategyForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
     // 获取表单值
-    const minChange = parseFloat(document.getElementById('min_change').value);
-    const maxChange = parseFloat(document.getElementById('max_change').value);
-    const days = parseInt(document.getElementById('days').value);
+    const name = document.getElementById('name').value;
+    const description = document.getElementById('description').value;
+    const riseThreshold = parseFloat(document.getElementById('rise_threshold').value);
+    const observationDays = parseInt(document.getElementById('observation_days').value);
     const maPeriod = parseInt(document.getElementById('ma_period').value);
+    const enabled = document.getElementById('enabled').checked;
     
-    // 验证涨幅范围
-    if (minChange < 0) {
-        e.preventDefault();
-        showMessage('最小涨幅不能小于0', 'danger');
+    // 验证
+    if (!name) {
+        showMessage('请输入策略名称', 'danger');
         return;
     }
     
-    if (maxChange <= 0) {
-        e.preventDefault();
-        showMessage('最大涨幅必须大于0', 'danger');
+    if (riseThreshold <= 0) {
+        showMessage('涨幅阈值必须大于0', 'danger');
         return;
     }
     
-    if (minChange >= maxChange) {
-        e.preventDefault();
-        showMessage('最小涨幅必须小于最大涨幅', 'danger');
-        return;
-    }
-    
-    // 验证观察天数
-    if (days < 1 || days > 365) {
-        e.preventDefault();
+    if (observationDays < 1 || observationDays > 365) {
         showMessage('观察天数必须在1-365之间', 'danger');
         return;
     }
     
-    // 验证均线周期
     if (maPeriod < 5 || maPeriod > 120) {
-        e.preventDefault();
         showMessage('均线周期必须在5-120之间', 'danger');
         return;
     }
     
-    // 显示加载提示
-    showLoading('{% if strategy_id %}正在更新策略...{% else %}正在创建策略...{% endif %}', false);
+    // 构造数据
+    const data = {
+        name: name,
+        description: description,
+        rise_threshold: riseThreshold,
+        observation_days: observationDays,
+        ma_period: maPeriod,
+        enabled: enabled
+    };
+    
+    // 提交
+    const isEdit = {% if strategy_id %}true{% else %}false{% endif %};
+    const url = isEdit ? `/strategies/{{ strategy_id }}` : '/strategies';
+    const method = isEdit ? 'PUT' : 'POST';
+    const loadingMsg = isEdit ? '正在更新策略...' : '正在创建策略...';
+    
+    showLoading(loadingMsg, false);
+    
+    apiRequest(url, method, data,
+        function(response) {
+            hideLoading();
+            showMessage(isEdit ? '策略更新成功' : '策略创建成功', 'success');
+            setTimeout(function() {
+                window.location.href = '/strategies';
+            }, 1000);
+        },
+        function(response) {
+            // apiRequest 函数已经显示了错误信息，这里只需要关闭加载弹窗
+            hideLoading();
+        }
+    );
 });
 </script>
 {% endblock %}

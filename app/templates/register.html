@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册 - 股票分析系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        .register-card {
+            width: 100%;
+            max-width: 400px;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            background-color: #fff;
+        }
+        .register-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .register-header i {
+            font-size: 3rem;
+            color: #0d6efd;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="register-card">
+        <div class="register-header">
+            <i class="fas fa-user-plus"></i>
+            <h3>创建账户</h3>
+            <p class="text-muted">注册一个新的账户</p>
+        </div>
+        
+        <div id="message-container"></div>
+        
+        <form id="register-form">
+            <div class="mb-3">
+                <label for="username" class="form-label">用户名</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                    <input type="text" class="form-control" id="username" name="username" required placeholder="8-16个英文字母">
+                </div>
+                <div class="form-text">用户名必须是8-16个英文字母</div>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">密码</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                    <input type="password" class="form-control" id="password" name="password" required>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="confirm-password" class="form-label">确认密码</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                    <input type="password" class="form-control" id="confirm-password" name="confirm-password" required>
+                </div>
+            </div>
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary btn-lg">注册</button>
+            </div>
+        </form>
+        
+        <div class="mt-3 text-center">
+            <p>已有账号？ <a href="/login">立即登录</a></p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+    <script>
+        $(document).ready(function() {
+            // 如果已登录，跳转到首页
+            if (getToken()) {
+                window.location.href = '/';
+            }
+            
+            $('#register-form').on('submit', function(e) {
+                e.preventDefault();
+                
+                const username = $('#username').val();
+                const password = $('#password').val();
+                const confirmPassword = $('#confirm-password').val();
+                
+                if (!username || !password) {
+                    showMessage('请输入用户名和密码', 'warning');
+                    return;
+                }
+                
+                if (password !== confirmPassword) {
+                    showMessage('两次输入的密码不一致', 'warning');
+                    return;
+                }
+                
+                // 简单的用户名格式校验
+                const usernameRegex = /^[a-zA-Z]{8,16}$/;
+                if (!usernameRegex.test(username)) {
+                    showMessage('用户名必须是8-16个英文字母', 'warning');
+                    return;
+                }
+                
+                const btn = $(this).find('button[type="submit"]');
+                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> 注册中...');
+                
+                apiRequest('/auth/register', 'POST', {
+                    username: username,
+                    password: password
+                }, function(response) {
+                    // 注册成功，跳转到登录页
+                    showMessage('注册成功，请登录', 'success');
+                    setTimeout(function() {
+                        window.location.href = '/login';
+                    }, 1500);
+                }, function(xhr, status, error) {
+                    // 注册失败，恢复按钮状态
+                    // 错误消息已由 apiRequest 函数显示，无需重复显示
+                    btn.prop('disabled', false).text('注册');
+                });
+            });
+        });
+    </script>
+</body>
+</html>

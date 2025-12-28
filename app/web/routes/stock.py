@@ -4,7 +4,7 @@
 提供股票列表、详情和行情查询功能
 """
 
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, redirect
 import requests
 from app.utils import get_logger, get_config
 
@@ -16,11 +16,19 @@ stock_bp = Blueprint('stock', __name__)
 config = get_config()
 API_BASE_URL = f"http://localhost:{config.get('api', {}).get('port', 5000)}/api"
 
+def get_auth_headers():
+    """获取认证头"""
+    token = request.cookies.get('auth_token')
+    if token:
+        return {'Authorization': f'Bearer {token}'}
+    return {}
 
 @stock_bp.route('/')
 def index():
     """股票列表页面"""
     try:
+        headers = get_auth_headers()
+        
         # 获取查询参数
         params = {}
         keyword = None
@@ -54,12 +62,14 @@ def index():
         params['limit'] = 100
         
         # 获取股票列表
-        response = requests.get(f"{API_BASE_URL}/stocks", params=params, timeout=5)
+        response = requests.get(f"{API_BASE_URL}/stocks", params=params, headers=headers, timeout=5)
         
         if response.status_code == 200:
             data = response.json()
             stocks = data.get('data', [])
             total = data.get('pagination', {}).get('total', len(stocks))
+        elif response.status_code == 401:
+            return redirect('/login')
         else:
             stocks = []
             total = 0
@@ -81,10 +91,14 @@ def index():
 def detail(stock_code):
     """股票详情页面"""
     try:
+        headers = get_auth_headers()
+        
         # 获取股票基本信息
-        response = requests.get(f"{API_BASE_URL}/stocks/{stock_code}", timeout=5)
+        response = requests.get(f"{API_BASE_URL}/stocks/{stock_code}", headers=headers, timeout=5)
         if response.status_code == 200:
             stock = response.json().get('data', {})
+        elif response.status_code == 401:
+            return redirect('/login')
         else:
             return render_template('error.html',
                                  error_code=404,
@@ -94,6 +108,7 @@ def detail(stock_code):
         history_response = requests.get(
             f"{API_BASE_URL}/stocks/{stock_code}/history",
             params={'limit': 100},
+            headers=headers,
             timeout=5
         )
         if history_response.status_code == 200:

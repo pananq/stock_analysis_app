@@ -38,11 +38,35 @@ class Stock(Base):
     )
 
 
+class User(Base):
+    """用户表"""
+    __tablename__ = 'users'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='用户ID')
+    username = Column(String(50), nullable=False, unique=True, comment='用户名')
+    password_hash = Column(String(255), nullable=False, comment='密码哈希')
+    role = Column(String(20), nullable=False, default='user', comment='角色(admin/user)')
+    created_at = Column(DateTime, default=datetime.now, comment='创建时间')
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now, comment='更新时间')
+    last_login = Column(DateTime, comment='最后登录时间')
+    
+    # 关系
+    strategies = relationship("Strategy", back_populates="user", cascade="all, delete-orphan")
+    job_logs = relationship("JobLog", back_populates="user", cascade="all, delete-orphan")
+    
+    # 索引
+    __table_args__ = (
+        Index('idx_username', 'username'),
+        Index('idx_role', 'role'),
+    )
+
+
 class Strategy(Base):
     """策略配置表"""
     __tablename__ = 'strategies'
     
     id = Column(Integer, primary_key=True, autoincrement=True, comment='策略ID')
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), comment='所属用户ID')
     name = Column(String(500), nullable=False, unique=True, comment='策略名称')
     description = Column(Text, comment='策略描述')
     config = Column(Text, nullable=False, comment='策略配置（JSON格式）')
@@ -52,11 +76,13 @@ class Strategy(Base):
     last_executed_at = Column(DateTime, comment='最后执行时间')
     
     # 关系
+    user = relationship("User", back_populates="strategies")
     results = relationship("StrategyResult", back_populates="strategy", cascade="all, delete-orphan")
     
     # 索引
     __table_args__ = (
         Index('idx_enabled', 'enabled'),
+        Index('idx_strategies_user_id', 'user_id'),
     )
 
 
@@ -131,6 +157,7 @@ class JobLog(Base):
     __tablename__ = 'job_logs'
     
     id = Column(Integer, primary_key=True, autoincrement=True, comment='日志ID')
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), comment='所属用户ID')
     job_type = Column(String(100), nullable=False, comment='任务类型')
     job_name = Column(String(200), nullable=False, comment='任务名称')
     status = Column(String(50), nullable=False, comment='状态')
@@ -140,11 +167,15 @@ class JobLog(Base):
     message = Column(Text, comment='消息')
     error = Column(Text, comment='错误信息')
     
+    # 关系
+    user = relationship("User", back_populates="job_logs")
+    
     # 索引
     __table_args__ = (
         Index('idx_job_type', 'job_type'),
         Index('idx_status', 'status'),
         Index('idx_started_at', 'started_at'),
+        Index('idx_job_logs_user_id', 'user_id'),
     )
 
 
@@ -479,6 +510,7 @@ class ORMDatabase:
             ORM模型类或None
         """
         model_map = {
+            'users': User,
             'stocks': Stock,
             'strategies': Strategy,
             'strategy_results': StrategyResult,

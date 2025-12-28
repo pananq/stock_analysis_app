@@ -1,0 +1,27 @@
+================================================================================
+                      MySQL 数据库备份信息
+================================================================================
+
+备份时间: 2025-12-28 14:30:55
+备份文件: /data/home/aaronpan/stock-analysis-app/tools/../data/mysql_backups/stock_analysis_20251228_143040.sql.gz
+备份大小: 928K
+
+数据库信息:
+  主机: localhost:3306
+  数据库: stock_analysis
+  用户: stock_user
+
+备份选项:
+  - 完整备份（表结构 + 数据）
+  - 所有表
+
+恢复命令:
+  mysql_restore.sh /data/home/aaronpan/stock-analysis-app/tools/../data/mysql_backups/stock_analysis_20251228_143040.sql.gz
+
+或手动恢复:
+  # 如果是压缩文件，先解压
+  gunzip -c /data/home/aaronpan/stock-analysis-app/tools/../data/mysql_backups/stock_analysis_20251228_143040.sql.gz | mysql -hlocalhost -P3306 -ustock_user -p stock_analysis
+  
+  # 如果未压缩
+  mysql -hlocalhost -P3306 -ustock_user -p stock_analysis < /data/home/aaronpan/stock-analysis-app/tools/../data/mysql_backups/stock_analysis_20251228_143040.sql.gz
+

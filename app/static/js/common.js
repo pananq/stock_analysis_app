@@ -6,6 +6,10 @@
 // Web服务已集成API路由，直接使用/api路径
 const API_BASE_URL = '/api';
 
+// 认证相关常量
+const TOKEN_KEY = 'auth_token';
+const USER_KEY = 'auth_user';
+
 // 全局加载模态框
 let loadingModal = null;
 
@@ -45,7 +49,104 @@ $(document).ready(function() {
     
     // 初始化工具提示
     initTooltips();
+    
+    // 检查认证状态
+    checkAuth();
 });
+
+/**
+ * 获取Token
+ */
+function getToken() {
+    return localStorage.getItem(TOKEN_KEY);
+}
+
+/**
+ * 设置Token
+ */
+function setToken(token) {
+    localStorage.setItem(TOKEN_KEY, token);
+    // 同时写入Cookie，有效期30天
+    const d = new Date();
+    d.setTime(d.getTime() + (30 * 24 * 60 * 60 * 1000));
+    const expires = "expires=" + d.toUTCString();
+    document.cookie = TOKEN_KEY + "=" + token + ";" + expires + ";path=/";
+}
+
+/**
+ * 获取用户信息
+ */
+function getUser() {
+    const userStr = localStorage.getItem(USER_KEY);
+    return userStr ? JSON.parse(userStr) : null;
+}
+
+/**
+ * 设置用户信息
+ */
+function setUser(user) {
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
+/**
+ * 清除认证信息
+ */
+function clearAuth() {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    // 清除Cookie
+    document.cookie = TOKEN_KEY + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+}
+
+/**
+ * 检查认证状态
+ */
+function checkAuth() {
+    const path = window.location.pathname;
+    const publicPaths = ['/login', '/register'];
+    
+    // 如果是静态资源，跳过检查
+    if (path.startsWith('/static/')) return;
+    
+    const token = getToken();
+    
+    if (!token && !publicPaths.includes(path)) {
+        // 未登录且不在公开页面，跳转到登录页
+        window.location.href = '/login';
+    } else if (token && publicPaths.includes(path)) {
+        // 已登录但在登录/注册页，跳转到首页
+        window.location.href = '/';
+    }
+    
+    // 更新UI上的用户信息
+    updateUserUI();
+}
+
+/**
+ * 更新UI上的用户信息
+ */
+function updateUserUI() {
+    const user = getUser();
+    if (user) {
+        $('#user-name-display').text(user.username);
+        $('#user-role-display').text(user.role === 'admin' ? '管理员' : '普通用户');
+        
+        // 控制管理员菜单显示
+        if (user.role !== 'admin') {
+            $('.admin-only').hide();
+        } else {
+            $('.admin-only').show();
+        }
+    }
+}
+
+/**
+ * 注销
+ */
+function logout() {
+    clearAuth();
+    window.location.href = '/login';
+}
 
 /**
  * 更新当前时间显示
@@ -178,8 +279,15 @@ function apiRequest(url, method = 'GET', data = null, onSuccess = null, onError 
         url: API_BASE_URL + url,
         method: method,
         contentType: 'application/json',
-        dataType: 'json'
+        dataType: 'json',
+        headers: {}
     };
+    
+    // 添加Token
+    const token = getToken();
+    if (token) {
+        options.headers['Authorization'] = 'Bearer ' + token;
+    }
     
     if (data && (method === 'POST' || method === 'PUT')) {
         options.data = JSON.stringify(data);
@@ -187,7 +295,7 @@ function apiRequest(url, method = 'GET', data = null, onSuccess = null, onError 
     
     $.ajax(options)
         .done(function(response) {
-            if (response.success) {
+            if (response.success || response.token) { // 兼容登录接口返回 token 而不是 success
                 if (onSuccess) onSuccess(response);
             } else {
                 const errorMsg = response.error || '操作失败';
@@ -196,6 +304,13 @@ function apiRequest(url, method = 'GET', data = null, onSuccess = null, onError 
             }
         })
         .fail(function(xhr, status, error) {
+            // 处理 401 未授权
+            if (xhr.status === 401) {
+                clearAuth();
+                window.location.href = '/login';
+                return;
+            }
+            
             const errorMsg = xhr.responseJSON?.error || error || '网络请求失败';
             showMessage(errorMsg, 'danger');
             if (onError) onError(xhr);

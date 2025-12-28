@@ -4,7 +4,7 @@
 提供策略的CRUD操作和执行功能
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 from app.services import get_strategy_service, get_strategy_executor
 from app.task_manager import get_task_manager
 from app.utils import get_logger
@@ -39,13 +39,23 @@ def list_strategies():
     try:
         enabled_only = request.args.get('enabled_only', 'false').lower() == 'true'
         
-        strategy_service = get_strategy_service()
-        strategies = strategy_service.list_strategies(enabled_only=enabled_only)
+        # 获取当前用户
+        user = getattr(g, 'user', None)
+        user_id = None
         
-        # 计算统计信息（始终基于所有策略）
+        if user:
+            # 如果不是管理员，只能查看自己的策略
+            if user.get('role') != 'admin':
+                user_id = user.get('user_id')
+            # 如果是管理员，默认查看所有，也可以通过参数筛选特定用户（暂未实现参数筛选）
+        
+        strategy_service = get_strategy_service()
+        strategies = strategy_service.list_strategies(enabled_only=enabled_only, user_id=user_id)
+        
+        # 计算统计信息
         if enabled_only:
             # 如果只查询启用的策略，需要重新获取所有策略来统计
-            all_strategies = strategy_service.list_strategies(enabled_only=False)
+            all_strategies = strategy_service.list_strategies(enabled_only=False, user_id=user_id)
         else:
             all_strategies = strategies
         
@@ -84,8 +94,14 @@ def get_strategy(strategy_id):
         策略详情
     """
     try:
+        # 获取当前用户
+        user = getattr(g, 'user', None)
+        user_id = None
+        if user and user.get('role') != 'admin':
+            user_id = user.get('user_id')
+            
         strategy_service = get_strategy_service()
-        strategy = strategy_service.get_strategy(strategy_id)
+        strategy = strategy_service.get_strategy(strategy_id, user_id=user_id)
         
         if strategy:
             return jsonify({
@@ -95,7 +111,7 @@ def get_strategy(strategy_id):
         else:
             return jsonify({
                 'success': False,
-                'error': '策略不存在'
+                'error': '策略不存在或无权访问'
             }), 404
             
     except Exception as e:
@@ -125,6 +141,13 @@ def create_strategy():
     try:
         data = request.get_json()
         
+        # 获取当前用户
+        user = getattr(g, 'user', None)
+        if not user:
+            return jsonify({'success': False, 'error': '未登录'}), 401
+            
+        user_id = user.get('user_id')
+        
         # 验证必填参数
         required_fields = ['name', 'rise_threshold', 'observation_days', 'ma_period']
         for field in required_fields:
@@ -135,8 +158,18 @@ def create_strategy():
                 }), 400
         
         strategy_service = get_strategy_service()
+        
+        # 检查策略名称是否已存在（同一用户下）
+        existing_strategy = strategy_service.get_strategy_by_name(data['name'], user_id=user_id)
+        if existing_strategy:
+            return jsonify({
+                'success': False,
+                'error': '策略名称已存在，请使用其他名称'
+            }), 400
+        
         strategy_id = strategy_service.create_strategy(
             name=data['name'],
+            user_id=user_id,
             description=data.get('description', ''),
             rise_threshold=float(data['rise_threshold']),
             observation_days=int(data['observation_days']),
@@ -155,7 +188,7 @@ def create_strategy():
         else:
             return jsonify({
                 'success': False,
-                'error': '策略创建失败'
+                'error': '策略创建失败，请检查参数或稍后重试'
             }), 500
             
     except Exception as e:
@@ -188,8 +221,14 @@ def update_strategy(strategy_id):
     try:
         data = request.get_json()
         
+        # 获取当前用户
+        user = getattr(g, 'user', None)
+        user_id = None
+        if user and user.get('role') != 'admin':
+            user_id = user.get('user_id')
+        
         strategy_service = get_strategy_service()
-        success = strategy_service.update_strategy(strategy_id, **data)
+        success = strategy_service.update_strategy(strategy_id, user_id=user_id, **data)
         
         if success:
             return jsonify({
@@ -199,7 +238,7 @@ def update_strategy(strategy_id):
         else:
             return jsonify({
                 'success': False,
-                'error': '策略更新失败'
+                'error': '策略更新失败或无权操作'
             }), 500
             
     except Exception as e:
@@ -222,8 +261,14 @@ def delete_strategy(strategy_id):
         删除结果
     """
     try:
+        # 获取当前用户
+        user = getattr(g, 'user', None)
+        user_id = None
+        if user and user.get('role') != 'admin':
+            user_id = user.get('user_id')
+            
         strategy_service = get_strategy_service()
-        success = strategy_service.delete_strategy(strategy_id)
+        success = strategy_service.delete_strategy(strategy_id, user_id=user_id)
         
         if success:
             return jsonify({
@@ -233,7 +278,7 @@ def delete_strategy(strategy_id):
         else:
             return jsonify({
                 'success': False,
-                'error': '策略删除失败'
+                'error': '策略删除失败或无权操作'
             }), 500
             
     except Exception as e:
@@ -262,6 +307,18 @@ def execute_strategy(strategy_id):
     try:
         data = request.get_json() or {}
         
+        # 获取当前用户
+        user = getattr(g, 'user', None)
+        user_id = None
+        if user:
+            user_id = user.get('user_id')
+            # 如果不是管理员，检查策略权限
+            if user.get('role') != 'admin':
+                strategy_service = get_strategy_service()
+                strategy = strategy_service.get_strategy(strategy_id, user_id=user_id)
+                if not strategy:
+                    return jsonify({'success': False, 'error': '策略不存在或无权访问'}), 404
+        
         from datetime import datetime, timedelta
         from app.scheduler import get_task_scheduler
         
@@ -276,7 +333,7 @@ def execute_strategy(strategy_id):
         
         # 获取策略信息
         strategy_service = get_strategy_service()
-        strategy = strategy_service.get_strategy(strategy_id)
+        strategy = strategy_service.get_strategy(strategy_id) # 这里不需要再传 user_id，因为上面已经检查过了，或者管理员可以直接获取
         if not strategy:
             return jsonify({
                 'success': False,
@@ -288,7 +345,8 @@ def execute_strategy(strategy_id):
         # 创建包装函数，用于记录任务日志
         def execute_with_logging(progress_callback=None, stop_event=None):
             scheduler = get_task_scheduler()
-            job_log_id = scheduler._log_job_start('manual_strategy', f'执行策略: {strategy_name}')
+            # 记录 user_id
+            job_log_id = scheduler._log_job_start('manual_strategy', f'执行策略: {strategy_name}', user_id=user_id)
             logger.info(f"任务开始记录: job_log_id={job_log_id}")
             
             try:
@@ -462,8 +520,14 @@ def enable_strategy(strategy_id):
         操作结果
     """
     try:
+        # 获取当前用户
+        user = getattr(g, 'user', None)
+        user_id = None
+        if user and user.get('role') != 'admin':
+            user_id = user.get('user_id')
+            
         strategy_service = get_strategy_service()
-        success = strategy_service.update_strategy(strategy_id, enabled=True)
+        success = strategy_service.update_strategy(strategy_id, user_id=user_id, enabled=True)
         
         if success:
             return jsonify({
@@ -473,7 +537,7 @@ def enable_strategy(strategy_id):
         else:
             return jsonify({
                 'success': False,
-                'error': '启用策略失败'
+                'error': '启用策略失败或无权操作'
             }), 500
             
     except Exception as e:
@@ -496,8 +560,14 @@ def disable_strategy(strategy_id):
         操作结果
     """
     try:
+        # 获取当前用户
+        user = getattr(g, 'user', None)
+        user_id = None
+        if user and user.get('role') != 'admin':
+            user_id = user.get('user_id')
+            
         strategy_service = get_strategy_service()
-        success = strategy_service.update_strategy(strategy_id, enabled=False)
+        success = strategy_service.update_strategy(strategy_id, user_id=user_id, enabled=False)
         
         if success:
             return jsonify({
@@ -507,7 +577,7 @@ def disable_strategy(strategy_id):
         else:
             return jsonify({
                 'success': False,
-                'error': '禁用策略失败'
+                'error': '禁用策略失败或无权操作'
             }), 500
             
     except Exception as e:

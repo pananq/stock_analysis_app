@@ -47,7 +47,8 @@ def create_web_app(config=None):
         strategy_bp,
         stock_bp,
         data_bp,
-        system_bp
+        system_bp,
+        auth_bp
     )
     
     app.register_blueprint(dashboard_bp)
@@ -55,6 +56,7 @@ def create_web_app(config=None):
     app.register_blueprint(stock_bp, url_prefix='/stocks')
     app.register_blueprint(data_bp, url_prefix='/data')
     app.register_blueprint(system_bp, url_prefix='/system')
+    app.register_blueprint(auth_bp)
     
     logger.info("Web路由注册完成")
     
@@ -63,13 +65,15 @@ def create_web_app(config=None):
         strategy_bp as api_strategy_bp,
         stock_bp as api_stock_bp,
         system_bp as api_system_bp,
-        data_bp as api_data_bp
+        data_bp as api_data_bp,
+        auth_bp as api_auth_bp
     )
     
     app.register_blueprint(api_strategy_bp, url_prefix='/api/strategies', name='api_strategy')
     app.register_blueprint(api_stock_bp, url_prefix='/api/stocks', name='api_stock')
     app.register_blueprint(api_system_bp, url_prefix='/api/system', name='api_system')
     app.register_blueprint(api_data_bp, url_prefix='/api/data', name='api_data')
+    app.register_blueprint(api_auth_bp, url_prefix='/api/auth', name='api_auth')
     
     logger.info("API路由注册完成")
     
@@ -79,9 +83,61 @@ def create_web_app(config=None):
     # 注册模板过滤器
     register_template_filters(app)
     
+    # 注册请求钩子
+    register_request_hooks(app)
+    
     logger.info("Flask Web应用创建完成")
     
     return app
+
+
+def register_request_hooks(app):
+    """注册请求钩子"""
+    from flask import request, jsonify, g
+    
+    @app.before_request
+    def before_request():
+        """请求前处理"""
+        # 仅对 API 请求进行认证检查
+        if not request.path.startswith('/api/'):
+            return
+            
+        # 认证逻辑
+        if request.method == 'OPTIONS':
+            return
+            
+        # 白名单
+        public_paths = [
+            '/api/auth/login',
+            '/api/auth/register',
+            '/api/system/health'
+        ]
+        
+        if request.path in public_paths:
+            return
+            
+        # 获取 Token
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            return jsonify({'error': 'Missing Authorization header'}), 401
+            
+        try:
+            parts = auth_header.split()
+            if len(parts) != 2 or parts[0].lower() != 'bearer':
+                return jsonify({'error': 'Invalid token type'}), 401
+            token = parts[1]
+        except ValueError:
+            return jsonify({'error': 'Invalid Authorization header'}), 401
+            
+        # 验证 Token
+        from app.utils.auth import AuthUtils
+        
+        payload = AuthUtils.verify_token(token)
+        if not payload:
+            return jsonify({'error': 'Invalid or expired token'}), 401
+            
+        # 设置用户信息到上下文
+        g.user = payload
 
 
 def register_error_handlers(app):

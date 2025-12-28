@@ -150,7 +150,7 @@
                                 </td>
                                 <td>
                                     <button class="btn btn-sm btn-outline-primary"
-                                            onclick="viewResult({{ result.id }})">
+                                            onclick='viewResult({{ result | tojson | safe }})'>
                                         <i class="fas fa-eye"></i> 查看详情
                                     </button>
                                 </td>
@@ -301,79 +301,68 @@ window.addEventListener('beforeunload', function() {
 /**
  * 查看执行结果详情
  */
-function viewResult(resultId) {
+function viewResult(result) {
     const modal = new bootstrap.Modal(document.getElementById('resultModal'));
     modal.show();
     
     const contentDiv = document.getElementById('resultContent');
-    contentDiv.innerHTML = `
-        <div class="text-center">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">加载中...</span>
-            </div>
-            <p class="mt-2">正在加载...</p>
+    const stocks = result.stocks || [];
+    
+    let html = `
+        <div class="mb-3">
+            <strong>执行时间：</strong> ${result.executed_at}<br>
+            <strong>匹配股票数：</strong> ${result.stock_count} 只<br>
         </div>
+        <h6>匹配股票列表：</h6>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th>股票代码</th>
+                        <th>股票名称</th>
+                        <th>触发日期</th>
+                        <th>涨幅</th>
+                        <th>MA{{ strategy.config.ma_period }}</th>
+                    </tr>
+                </thead>
+                <tbody>
     `;
     
-    // 获取结果详情
-    apiRequest(`/strategies/results/${resultId}`, 'GET', null,
-        function(response) {
-            const result = response.data;
-            const stocks = result.stocks || [];
-            
-            let html = `
-                <div class="mb-3">
-                    <strong>执行时间：</strong> ${result.executed_at}<br>
-                    <strong>匹配股票数：</strong> ${result.stock_count} 只<br>
-                    <strong>执行耗时：</strong> ${result.duration.toFixed(1)} 秒
-                </div>
-                <h6>匹配股票列表：</h6>
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover">
-                        <thead>
-                            <tr>
-                                <th>股票代码</th>
-                                <th>股票名称</th>
-                                <th>收盘价</th>
-                                <th>涨跌幅</th>
-                                <th>MA{{ document.querySelector('[data-strategy-ma-period]')?.getAttribute('data-strategy-ma-period') || 20 }}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-            
-            if (stocks.length > 0) {
-                stocks.forEach(stock => {
-                    html += `
-                        <tr>
-                            <td><strong>${stock.code}</strong></td>
-                            <td>${stock.name || '-'}</td>
-                            <td>${stock.close_price?.toFixed(2) || '-'}</td>
-                            <td>${formatPctChange(stock.change_pct)}</td>
-                            <td>${stock.ma_value?.toFixed(2) || '-'}</td>
-                        </tr>
-                    `;
-                });
-            } else {
-                html += `<tr><td colspan="5" class="text-center text-muted">无数据</td></tr>`;
+    if (stocks.length > 0) {
+        stocks.forEach(stock => {
+            // 解析 observation_result
+            let maValue = '-';
+            if (stock.observation_result && stock.observation_result.details && stock.observation_result.details.length > 0) {
+                // 取第一天的MA值作为参考，或者取触发当天的（如果有）
+                // 这里简单取第一条详情的MA值
+                const detail = stock.observation_result.details[0];
+                const maKey = `ma${stock.ma_period}`;
+                if (detail[maKey]) {
+                    maValue = detail[maKey].toFixed(2);
+                }
             }
             
             html += `
-                        </tbody>
-                    </table>
-                </div>
+                <tr>
+                    <td><strong>${stock.stock_code}</strong></td>
+                    <td>${stock.stock_name || '-'}</td>
+                    <td>${stock.trigger_date}</td>
+                    <td>${formatPctChange(stock.trigger_pct_change || stock.rise_percent)}</td>
+                    <td>${maValue}</td>
+                </tr>
             `;
-            
-            contentDiv.innerHTML = html;
-        },
-        function(error) {
-            contentDiv.innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-circle"></i> 加载失败：${error}
-                </div>
-            `;
-        }
-    );
+        });
+    } else {
+        html += `<tr><td colspan="5" class="text-center text-muted">无数据</td></tr>`;
+    }
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    contentDiv.innerHTML = html;
 }
 
 // 设置策略参数到页面

@@ -60,6 +60,7 @@ class TaskScheduler:
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     job_type VARCHAR(50) NOT NULL,
                     job_name VARCHAR(200) NOT NULL,
+                    user_id INT,
                     status VARCHAR(20) NOT NULL,
                     started_at DATETIME NOT NULL,
                     completed_at DATETIME,
@@ -309,8 +310,8 @@ class TaskScheduler:
         start_time = datetime.now()
         
         try:
-            # 记录任务开始
-            self._log_job_start('update_stock_list', '更新股票列表')
+            # 记录任务开始（系统任务，user_id=None）
+            self._log_job_start('update_stock_list', '更新股票列表', user_id=None)
             
             # 执行更新
             result = self.stock_service.update_stock_list()
@@ -351,8 +352,8 @@ class TaskScheduler:
         start_time = datetime.now()
         
         try:
-            # 记录任务开始
-            self._log_job_start('update_market_data', '更新行情数据')
+            # 记录任务开始（系统任务，user_id=None）
+            self._log_job_start('update_market_data', '更新行情数据', user_id=None)
             
             # 获取最近的交易日
             today = datetime.now().strftime('%Y-%m-%d')
@@ -393,24 +394,45 @@ class TaskScheduler:
         logger.info("开始执行: 执行所有启用的策略")
         logger.info("=" * 60)
         
-        start_time = datetime.now()
-        
         try:
-            # 记录任务开始，并保存job_log_id
-            job_log_id = self._log_job_start('execute_strategies', '执行策略')
-            logger.info(f"任务开始记录: job_log_id={job_log_id}")
-            
             # 获取所有启用的策略
             strategies = self.strategy_service.list_strategies(enabled_only=True)
             
             if not strategies:
                 logger.info("没有启用的策略需要执行")
-                self._log_job_success('execute_strategies', 0, "无启用策略")
                 return
             
-            logger.info(f"找到 {len(strategies)} 个启用的策略")
+            # 按用户分组策略
+            strategies_by_user = {}
+            for strategy in strategies:
+                user_id = strategy.get('user_id')
+                if user_id not in strategies_by_user:
+                    strategies_by_user[user_id] = []
+                strategies_by_user[user_id].append(strategy)
             
-            # 执行每个策略
+            logger.info(f"找到 {len(strategies)} 个启用的策略，归属于 {len(strategies_by_user)} 个用户")
+            
+            # 对每个用户执行策略
+            for user_id, user_strategies in strategies_by_user.items():
+                self._execute_user_strategies(user_id, user_strategies)
+                
+        except Exception as e:
+            logger.error(f"策略执行任务异常: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        logger.info("=" * 60)
+
+    def _execute_user_strategies(self, user_id: Optional[int], strategies: List[Dict]):
+        """执行指定用户的策略"""
+        start_time = datetime.now()
+        job_name = '每日执行策略'
+        
+        try:
+            # 记录任务开始
+            job_log_id = self._log_job_start('execute_strategies', job_name, user_id=user_id)
+            logger.info(f"开始执行用户 {user_id} 的策略，共 {len(strategies)} 个")
+            
             success_count = 0
             error_count = 0
             total_matches = 0
@@ -419,11 +441,10 @@ class TaskScheduler:
                 strategy_id = strategy['id']
                 strategy_name = strategy['name']
                 
-                logger.info(f"\n执行策略: {strategy_name} (ID: {strategy_id})")
+                logger.info(f"执行策略: {strategy_name} (ID: {strategy_id})")
                 
                 try:
                     # 执行策略（扫描最近30天）
-                    # limit_stocks 参数未指定，会根据配置自动应用模式限制
                     result = self.strategy_executor.execute_strategy(
                         strategy_id=strategy_id,
                         start_date=(datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d'),
@@ -433,12 +454,9 @@ class TaskScheduler:
                     if result['success']:
                         success_count += 1
                         total_matches += result['matched_count']
-                        logger.info(f"  ✓ 策略执行成功: 扫描{result['scanned_stocks']}只, 匹配{result['matched_count']}个")
                         
                         # 记录匹配的股票详情
                         if job_log_id and result.get('matches'):
-                            logger.info(f"开始记录{len(result['matches'])}个匹配的股票详情到task_execution_details表")
-                            saved_details = 0
                             for match in result['matches']:
                                 try:
                                     detail_data = {
@@ -457,43 +475,28 @@ class TaskScheduler:
                                         stock_name=match.get('stock_name'),
                                         detail_data=detail_data
                                     )
-                                    saved_details += 1
                                 except Exception as e:
-                                    logger.error(f"记录股票详情失败: {match.get('stock_code')}, 错误: {e}")
-                                    import traceback
-                                    traceback.print_exc()
-                            logger.info(f"成功记录{saved_details}条股票详情")
+                                    logger.error(f"记录股票详情失败: {e}")
                     else:
                         error_count += 1
-                        logger.error(f"  ✗ 策略执行失败: {result.get('error', '未知错误')}")
+                        logger.error(f"策略执行失败: {result.get('error')}")
                         
                 except Exception as e:
                     error_count += 1
-                    logger.error(f"  ✗ 策略执行异常: {e}")
-                    import traceback
-                    traceback.print_exc()
+                    logger.error(f"策略执行异常: {e}")
             
             # 记录任务完成
             duration = (datetime.now() - start_time).total_seconds()
-            
             summary = f"成功: {success_count}, 失败: {error_count}, 总匹配: {total_matches}"
             
             if error_count == 0:
-                self._log_job_success('execute_strategies', duration, summary)
-                logger.info(f"\n✓ 所有策略执行完成: {summary}")
+                self._log_job_success('execute_strategies', duration, summary, job_log_id)
             else:
-                self._log_job_error('execute_strategies', duration, summary)
-                logger.warning(f"\n⚠ 策略执行完成（有错误）: {summary}")
+                self._log_job_error('execute_strategies', duration, summary, job_log_id)
                 
         except Exception as e:
-            duration = (datetime.now() - start_time).total_seconds()
-            self._log_job_error('execute_strategies', duration, str(e))
-            logger.error(f"✗ 策略执行任务异常: {e}")
-            import traceback
-            traceback.print_exc()
-        
-        logger.info("=" * 60)
-    
+            logger.error(f"执行用户策略失败: {e}")
+
     def _health_check_job(self):
         """健康检查任务"""
         logger.debug("执行健康检查")
@@ -567,13 +570,14 @@ class TaskScheduler:
                 
         except Exception as e:
             logger.error(f"清理僵尸任务失败: {e}")    
-    def _log_job_start(self, job_type: str, job_name: str) -> Optional[int]:
+    def _log_job_start(self, job_type: str, job_name: str, user_id: Optional[int] = None) -> Optional[int]:
         """
         记录任务开始
 
         Args:
             job_type: 任务类型
             job_name: 任务名称
+            user_id: 用户ID
 
         Returns:
             job_log_id: 任务日志ID
@@ -585,6 +589,7 @@ class TaskScheduler:
             job_log_id = self.db.insert_one('job_logs', {
                 'job_type': job_type,
                 'job_name': job_name,
+                'user_id': user_id,
                 'status': 'running',
                 'started_at': now
             })
@@ -594,7 +599,7 @@ class TaskScheduler:
             logger.error(f"记录任务开始失败: {e}")
             return None
     
-    def _log_job_success(self, job_type: str, duration: float, message: str = ''):
+    def _log_job_success(self, job_type: str, duration: float, message: str = '', job_log_id: int = None):
         """
         记录任务成功
 
@@ -602,32 +607,44 @@ class TaskScheduler:
             job_type: 任务类型
             duration: 执行时长（秒）
             message: 消息
+            job_log_id: 任务日志ID（如果提供则直接更新，否则查找最近的）
         """
         try:
             # 直接使用系统时间，不做任何转换
             now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-            # MySQL不能在UPDATE中直接子查询同一张表，使用JOIN方式
-            sql = """
-                UPDATE job_logs j
-                INNER JOIN (
-                    SELECT id
-                    FROM job_logs
-                    WHERE job_type = ? AND status = 'running'
-                    ORDER BY started_at DESC
-                    LIMIT 1
-                ) latest ON j.id = latest.id
-                SET j.status = 'success',
-                    j.completed_at = ?,
-                    j.duration = ?,
-                    j.message = ?
-            """
-            self.db.execute_update(sql, (job_type, now, duration, message))
+            if job_log_id:
+                sql = """
+                    UPDATE job_logs
+                    SET status = 'success',
+                        completed_at = ?,
+                        duration = ?,
+                        message = ?
+                    WHERE id = ?
+                """
+                self.db.execute_update(sql, (now, duration, message, job_log_id))
+            else:
+                # 兼容旧逻辑
+                sql = """
+                    UPDATE job_logs j
+                    INNER JOIN (
+                        SELECT id
+                        FROM job_logs
+                        WHERE job_type = ? AND status = 'running'
+                        ORDER BY started_at DESC
+                        LIMIT 1
+                    ) latest ON j.id = latest.id
+                    SET j.status = 'success',
+                        j.completed_at = ?,
+                        j.duration = ?,
+                        j.message = ?
+                """
+                self.db.execute_update(sql, (job_type, now, duration, message))
 
         except Exception as e:
             logger.error(f"记录任务成功失败: {e}")
     
-    def _log_job_error(self, job_type: str, duration: float, error: str):
+    def _log_job_error(self, job_type: str, duration: float, error: str, job_log_id: int = None):
         """
         记录任务失败
 
@@ -635,27 +652,39 @@ class TaskScheduler:
             job_type: 任务类型
             duration: 执行时长（秒）
             error: 错误信息
+            job_log_id: 任务日志ID
         """
         try:
             # 直接使用系统时间，不做任何转换
             now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-            # MySQL不能在UPDATE中直接子查询同一张表，使用JOIN方式
-            sql = """
-                UPDATE job_logs j
-                INNER JOIN (
-                    SELECT id
-                    FROM job_logs
-                    WHERE job_type = ? AND status = 'running'
-                    ORDER BY started_at DESC
-                    LIMIT 1
-                ) latest ON j.id = latest.id
-                SET j.status = 'error',
-                    j.completed_at = ?,
-                    j.duration = ?,
-                    j.error = ?
-            """
-            self.db.execute_update(sql, (job_type, now, duration, error))
+            if job_log_id:
+                sql = """
+                    UPDATE job_logs
+                    SET status = 'error',
+                        completed_at = ?,
+                        duration = ?,
+                        error = ?
+                    WHERE id = ?
+                """
+                self.db.execute_update(sql, (now, duration, error, job_log_id))
+            else:
+                # 兼容旧逻辑
+                sql = """
+                    UPDATE job_logs j
+                    INNER JOIN (
+                        SELECT id
+                        FROM job_logs
+                        WHERE job_type = ? AND status = 'running'
+                        ORDER BY started_at DESC
+                        LIMIT 1
+                    ) latest ON j.id = latest.id
+                    SET j.status = 'error',
+                        j.completed_at = ?,
+                        j.duration = ?,
+                        j.error = ?
+                """
+                self.db.execute_update(sql, (job_type, now, duration, error))
 
         except Exception as e:
             logger.error(f"记录任务失败失败: {e}")
@@ -749,26 +778,37 @@ class TaskScheduler:
         else:
             logger.debug(f"任务执行完成: {event.job_id}")
     
-    def get_job_logs(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+    def get_job_logs(self, limit: int = 100, offset: int = 0, user_id: Optional[int] = None) -> List[Dict[str, Any]]:
         """
         获取任务执行日志
         
         Args:
             limit: 返回记录数
             offset: 偏移量
+            user_id: 用户ID（可选，用于过滤）
             
         Returns:
             日志列表
         """
         try:
+            # 使用 LEFT JOIN 获取用户信息
             sql = """
-                SELECT *
-                FROM job_logs
-                ORDER BY started_at DESC
-                LIMIT ? OFFSET ?
+                SELECT jl.*, 
+                       u.username, 
+                       u.role as user_role
+                FROM job_logs jl
+                LEFT JOIN users u ON jl.user_id = u.id
             """
+            params = []
+            
+            if user_id is not None:
+                sql += " WHERE jl.user_id = ?"
+                params.append(user_id)
+                
+            sql += " ORDER BY jl.started_at DESC LIMIT ? OFFSET ?"
+            params.extend([limit, offset])
 
-            logs = self.db.execute_query(sql, (limit, offset))
+            logs = self.db.execute_query(sql, tuple(params))
 
             # 将datetime对象转换为字符串，避免Flask自动转换为GMT格式
             for log in logs:
@@ -783,17 +823,25 @@ class TaskScheduler:
             logger.error(f"获取任务日志失败: {e}")
             return []
     
-    def get_job_logs_count(self) -> int:
+    def get_job_logs_count(self, user_id: Optional[int] = None) -> int:
         """
         获取任务日志数量
         
+        Args:
+            user_id: 用户ID（可选）
+            
         Returns:
             日志数量
         """
         try:
-            result = self.db.execute_query(
-                "SELECT COUNT(*) as count FROM job_logs"
-            )
+            sql = "SELECT COUNT(*) as count FROM job_logs"
+            params = []
+            
+            if user_id is not None:
+                sql += " WHERE user_id = ?"
+                params.append(user_id)
+                
+            result = self.db.execute_query(sql, tuple(params))
             
             if result:
                 return result[0]['count']

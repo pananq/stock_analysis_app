@@ -7,7 +7,7 @@ Flask应用创建和配置
 3. 系统管理API
 """
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, g
 from flask_cors import CORS
 from datetime import datetime
 from app.utils import get_config, get_logger
@@ -115,11 +115,20 @@ def create_app(config=None):
     with app.app_context():
         get_database()  # 使用工厂方法获取数据库（MySQL或SQLite）
         get_market_data_service()  # 初始化MySQL行情数据库
+        
+        # 检查并创建默认管理员
+        try:
+            from app.services.auth_service import AuthService
+            AuthService().ensure_admin_exists()
+        except Exception as e:
+            logger.error(f"初始化管理员失败: {e}")
+            
         logger.info("数据库初始化完成")
     
     # 注册蓝图
-    from app.api.routes import strategy_bp, stock_bp, system_bp, data_bp
+    from app.api.routes import strategy_bp, stock_bp, system_bp, data_bp, auth_bp
     
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(strategy_bp, url_prefix='/api/strategies')
     app.register_blueprint(stock_bp, url_prefix='/api/stocks')
     app.register_blueprint(system_bp, url_prefix='/api/system')
@@ -237,6 +246,54 @@ def register_request_hooks(app):
         """请求前处理"""
         # 记录请求信息
         logger.debug(f"Request: {request.method} {request.path}")
+        
+        # 认证逻辑
+        if request.method == 'OPTIONS':
+            return
+            
+        # 白名单
+        public_paths = [
+            '/api/auth/login',
+            '/api/auth/register',
+            '/health',
+            '/',
+            '/api/system/config',
+            '/api/system/system-info',
+            '/api/system/database-status',
+            '/api/system/scheduler/jobs',
+            '/api/system/stats'
+        ]
+        
+        # 静态文件或白名单路径直接放行
+        if request.path in public_paths or request.path.startswith('/static/'):
+            return
+            
+        # 获取 Token
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            logger.warning(f"认证失败: 缺少 Authorization header - {request.method} {request.path}")
+            return jsonify({'error': 'Missing Authorization header'}), 401
+            
+        try:
+            parts = auth_header.split()
+            if len(parts) != 2 or parts[0].lower() != 'bearer':
+                logger.warning(f"认证失败: 无效的 token 类型 - {request.method} {request.path}")
+                return jsonify({'error': 'Invalid token type'}), 401
+            token = parts[1]
+        except ValueError:
+            logger.warning(f"认证失败: 无效的 Authorization header - {request.method} {request.path}")
+            return jsonify({'error': 'Invalid Authorization header'}), 401
+            
+        # 验证 Token
+        from app.utils.auth import AuthUtils
+        
+        payload = AuthUtils.verify_token(token)
+        if not payload:
+            logger.warning(f"认证失败: 无效或过期的 token - {request.method} {request.path}")
+            return jsonify({'error': 'Invalid or expired token'}), 401
+            
+        # 设置用户信息到上下文
+        g.user = payload
     
     @app.after_request
     def after_request(response):
@@ -260,4 +317,3 @@ if __name__ == '__main__':
     app = create_app()
     logger.info(f"启动 API 服务: http://{args.host}:{args.port}")
     app.run(host=args.host, port=args.port, debug=args.debug)
-

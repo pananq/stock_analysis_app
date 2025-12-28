@@ -43,20 +43,30 @@
                             <i class="fas fa-list"></i> 股票查询
                         </a>
                     </li>
-                    <li class="nav-item">
+                    <li class="nav-item admin-only" style="display: none;">
                         <a class="nav-link {% if request.path.startswith('/data') %}active{% endif %}" href="/data">
                             <i class="fas fa-database"></i> 数据管理
                         </a>
                     </li>
-                    <li class="nav-item">
+                    <li class="nav-item admin-only" style="display: none;">
                         <a class="nav-link {% if request.path.startswith('/system') %}active{% endif %}" href="/system">
                             <i class="fas fa-cog"></i> 系统设置
                         </a>
                     </li>
                 </ul>
                 <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle"></i> <span id="user-name-display">用户</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><span class="dropdown-item-text text-muted" id="user-role-display">角色</span></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="logout()">注销</a></li>
+                        </ul>
+                    </li>
                     <li class="nav-item">
-                        <span class="navbar-text">
+                        <span class="navbar-text ms-3">
                             <i class="fas fa-clock"></i> <span id="current-time"></span>
                         </span>
                     </li>

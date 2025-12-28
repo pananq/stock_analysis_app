@@ -4,7 +4,7 @@
 提供数据导入、更新和管理功能
 """
 
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, redirect
 import requests
 from app.utils import get_logger, get_config
 
@@ -16,13 +16,24 @@ data_bp = Blueprint('data', __name__)
 config = get_config()
 API_BASE_URL = f"http://localhost:{config.get('api', {}).get('port', 5000)}/api"
 
+def get_auth_headers():
+    """获取认证头"""
+    token = request.cookies.get('auth_token')
+    if token:
+        return {'Authorization': f'Bearer {token}'}
+    return {}
 
 @data_bp.route('/')
 def index():
     """数据管理页面"""
     try:
+        headers = get_auth_headers()
+        
         # 获取数据更新状态
-        response = requests.get(f"{API_BASE_URL}/data/status", timeout=5)
+        response = requests.get(f"{API_BASE_URL}/data/status", headers=headers, timeout=5)
+        if response.status_code == 401:
+            return redirect('/login')
+            
         if response.status_code == 200:
             data = response.json()
             status = data.get('data', {})

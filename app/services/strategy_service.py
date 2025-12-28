@@ -21,7 +21,7 @@ class StrategyService:
         self.db = get_database()
         logger.info("策略服务初始化完成")
     
-    def create_strategy(self, name: str, description: str = "", 
+    def create_strategy(self, name: str, user_id: int, description: str = "", 
                        rise_threshold: float = 8.0,
                        observation_days: int = 3,
                        ma_period: int = 5,
@@ -31,6 +31,7 @@ class StrategyService:
         
         Args:
             name: 策略名称
+            user_id: 用户ID
             description: 策略描述
             rise_threshold: 涨幅阈值（百分比），默认8.0，范围0.01-20.0
             observation_days: 观察天数，默认3天，范围1-30
@@ -44,6 +45,10 @@ class StrategyService:
             # 验证参数
             if not name or not name.strip():
                 logger.error("策略名称不能为空")
+                return None
+            
+            if not user_id:
+                logger.error("用户ID不能为空")
                 return None
             
             # 验证涨幅阈值
@@ -62,14 +67,14 @@ class StrategyService:
                 logger.error(f"均线周期必须是{valid_ma_periods}之一，当前值: {ma_period}")
                 return None
             
-            # 检查策略名称是否已存在
+            # 检查策略名称是否已存在（同一用户下名称不能重复）
             existing = self.db.execute_query(
-                "SELECT id FROM strategies WHERE name = ?",
-                (name.strip(),)
+                "SELECT id FROM strategies WHERE name = ? AND user_id = ?",
+                (name.strip(), user_id)
             )
             
             if existing:
-                logger.error(f"策略名称已存在: {name}")
+                logger.error(f"策略名称已存在: {name} (user_id={user_id})")
                 return None
             
             # 构建策略配置JSON
@@ -81,15 +86,15 @@ class StrategyService:
             
             # 插入策略
             sql = """
-                INSERT INTO strategies (name, description, config, enabled, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO strategies (name, user_id, description, config, enabled, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             """
             
             now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             
             self.db.execute_update(
                 sql,
-                (name.strip(), description.strip(), json.dumps(config), 
+                (name.strip(), user_id, description.strip(), json.dumps(config), 
                  1 if enabled else 0, now, now)
             )
             
@@ -101,7 +106,7 @@ class StrategyService:
             
             if result:
                 strategy_id = result[0]['id']
-                logger.info(f"策略创建成功: {name} (ID: {strategy_id})")
+                logger.info(f"策略创建成功: {name} (ID: {strategy_id}, User: {user_id})")
                 return strategy_id
             
             return None
@@ -110,7 +115,8 @@ class StrategyService:
             logger.error(f"创建策略失败: {e}")
             return None
     
-    def update_strategy(self, strategy_id: int, name: Optional[str] = None,
+    def update_strategy(self, strategy_id: int, user_id: Optional[int] = None, 
+                       name: Optional[str] = None,
                        description: Optional[str] = None,
                        rise_threshold: Optional[float] = None,
                        observation_days: Optional[int] = None,
@@ -121,6 +127,7 @@ class StrategyService:
         
         Args:
             strategy_id: 策略ID
+            user_id: 用户ID（可选，用于权限检查）
             name: 策略名称（可选）
             description: 策略描述（可选）
             rise_threshold: 涨幅阈值（可选）
@@ -133,9 +140,9 @@ class StrategyService:
         """
         try:
             # 获取现有策略
-            strategy = self.get_strategy(strategy_id)
+            strategy = self.get_strategy(strategy_id, user_id)
             if not strategy:
-                logger.error(f"策略不存在: {strategy_id}")
+                logger.error(f"策略不存在或无权访问: {strategy_id}")
                 return False
             
             # 获取现有配置（已经是字典格式）
@@ -150,18 +157,17 @@ class StrategyService:
                     logger.error("策略名称不能为空")
                     return False
                 
-                # 检查名称是否与其他策略冲突
+                # 检查名称是否与其他策略冲突（同一用户下）
                 existing = self.db.execute_query(
-                    "SELECT id FROM strategies WHERE name = ? AND id != ?",
-                    (name.strip(), strategy_id)
+                    "SELECT id FROM strategies WHERE name = ? AND id != ? AND user_id = ?",
+                    (name.strip(), strategy_id, user_id)
                 )
                 if existing:
-                    logger.error(f"策略名称已存在: {name}")
+                    logger.error(f"策略名称已存在: {name} (user_id={user_id})")
                     return False
                 
                 update_fields.append("name = ?")
-                params.append(name.strip())
-            
+                params.append(name.strip())            
             if description is not None:
                 update_fields.append("description = ?")
                 params.append(description.strip())
@@ -212,6 +218,12 @@ class StrategyService:
             
             # 执行更新
             sql = f"UPDATE strategies SET {', '.join(update_fields)} WHERE id = ?"
+            
+            # 如果指定了 user_id，增加校验
+            if user_id is not None:
+                sql += " AND user_id = ?"
+                params.append(user_id)
+                
             self.db.execute_update(sql, tuple(params))
             
             logger.info(f"策略更新成功: ID={strategy_id}")
@@ -221,21 +233,22 @@ class StrategyService:
             logger.error(f"更新策略失败: {e}")
             return False
     
-    def delete_strategy(self, strategy_id: int) -> bool:
+    def delete_strategy(self, strategy_id: int, user_id: Optional[int] = None) -> bool:
         """
         删除策略
         
         Args:
             strategy_id: 策略ID
+            user_id: 用户ID（可选，用于权限检查）
             
         Returns:
             是否删除成功
         """
         try:
             # 检查策略是否存在
-            strategy = self.get_strategy(strategy_id)
+            strategy = self.get_strategy(strategy_id, user_id)
             if not strategy:
-                logger.error(f"策略不存在: {strategy_id}")
+                logger.error(f"策略不存在或无权访问: {strategy_id}")
                 return False
             
             # 删除策略执行结果
@@ -245,10 +258,14 @@ class StrategyService:
             )
             
             # 删除策略
-            self.db.execute_update(
-                "DELETE FROM strategies WHERE id = ?",
-                (strategy_id,)
-            )
+            sql = "DELETE FROM strategies WHERE id = ?"
+            params = [strategy_id]
+            
+            if user_id is not None:
+                sql += " AND user_id = ?"
+                params.append(user_id)
+                
+            self.db.execute_update(sql, tuple(params))
             
             logger.info(f"策略删除成功: {strategy['name']} (ID: {strategy_id})")
             return True
@@ -257,21 +274,26 @@ class StrategyService:
             logger.error(f"删除策略失败: {e}")
             return False
     
-    def get_strategy(self, strategy_id: int) -> Optional[Dict[str, Any]]:
+    def get_strategy(self, strategy_id: int, user_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
         """
         获取策略详情
         
         Args:
             strategy_id: 策略ID
+            user_id: 用户ID（可选，用于权限检查）
             
         Returns:
             策略信息字典，如果不存在返回None
         """
         try:
-            result = self.db.execute_query(
-                "SELECT * FROM strategies WHERE id = ?",
-                (strategy_id,)
-            )
+            sql = "SELECT * FROM strategies WHERE id = ?"
+            params = [strategy_id]
+            
+            if user_id is not None:
+                sql += " AND user_id = ?"
+                params.append(user_id)
+                
+            result = self.db.execute_query(sql, tuple(params))
             
             if result:
                 strategy = dict(result[0])
@@ -284,25 +306,41 @@ class StrategyService:
             
         except Exception as e:
             logger.error(f"获取策略失败: {e}")
-            return None
     
-    def list_strategies(self, enabled_only: bool = False) -> List[Dict[str, Any]]:
+    def list_strategies(self, enabled_only: bool = False, user_id: Optional[int] = None) -> List[Dict[str, Any]]:
         """
         获取策略列表
         
         Args:
             enabled_only: 是否只返回启用的策略
+            user_id: 用户ID（可选，用于过滤）
             
         Returns:
             策略列表
         """
         try:
+            conditions = []
+            params = []
+            
             if enabled_only:
-                sql = "SELECT * FROM strategies WHERE enabled = 1 ORDER BY created_at DESC"
-                result = self.db.execute_query(sql)
-            else:
-                sql = "SELECT * FROM strategies ORDER BY created_at DESC"
-                result = self.db.execute_query(sql)
+                conditions.append("enabled = 1")
+                
+            if user_id is not None:
+                conditions.append("strategies.user_id = ?")
+                params.append(user_id)
+                
+            # 添加 LEFT JOIN 获取用户名
+            sql = """
+                SELECT strategies.*, users.username, users.role as user_role
+                FROM strategies
+                LEFT JOIN users ON strategies.user_id = users.id
+            """
+            if conditions:
+                sql += " WHERE " + " AND ".join(conditions)
+            
+            sql += " ORDER BY strategies.created_at DESC"
+            
+            result = self.db.execute_query(sql, tuple(params))
             
             strategies = []
             for row in result:
@@ -317,23 +355,27 @@ class StrategyService:
             
         except Exception as e:
             logger.error(f"获取策略列表失败: {e}")
-            return []
-    
-    def get_strategy_by_name(self, name: str) -> Optional[Dict[str, Any]]:
+            return []    
+    def get_strategy_by_name(self, name: str, user_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
         """
         根据名称获取策略
         
         Args:
             name: 策略名称
+            user_id: 用户ID（可选，用于过滤）
             
         Returns:
             策略信息字典，如果不存在返回None
         """
         try:
-            result = self.db.execute_query(
-                "SELECT * FROM strategies WHERE name = ?",
-                (name.strip(),)
-            )
+            sql = "SELECT * FROM strategies WHERE name = ?"
+            params = [name.strip()]
+            
+            if user_id is not None:
+                sql += " AND user_id = ?"
+                params.append(user_id)
+                
+            result = self.db.execute_query(sql, tuple(params))
             
             if result:
                 strategy = dict(result[0])
