@@ -65,7 +65,7 @@
 </div>
 
 <!-- 策略列表 -->
-<div class="row">
+<div class="row mb-4">
     <div class="col-12">
         <div class="card">
             <div class="card-header">
@@ -162,6 +162,97 @@
                     <a href="/strategies/create" class="btn btn-primary">
                         <i class="fas fa-plus"></i> 创建策略
                     </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 策略执行记录 -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-history"></i> 策略执行记录
+            </div>
+            <div class="card-body">
+                {% if executions %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th width="5%">ID</th>
+                                <th width="15%">策略名称</th>
+                                <th width="10%">状态</th>
+                                <th width="15%">开始时间</th>
+                                <th width="15%">完成时间</th>
+                                <th width="10%">耗时</th>
+                                <th width="20%">执行结果</th>
+                                <th width="10%">详情</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for execution in executions %}
+                            <tr>
+                                <td>{{ execution.id }}</td>
+                                <td>
+                                    <small>{{ execution.job_name }}</small>
+                                </td>
+                                <td>
+                                    {% if execution.status == 'success' %}
+                                    <span class="badge bg-success">成功</span>
+                                    {% elif execution.status == 'running' %}
+                                    <span class="badge bg-secondary">执行中</span>
+                                    {% elif execution.status == 'failed' %}
+                                    <span class="badge bg-danger">失败</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ execution.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small>{{ execution.started_at | datetime }}</small>
+                                </td>
+                                <td>
+                                    {% if execution.completed_at %}
+                                    <small>{{ execution.completed_at | datetime }}</small>
+                                    {% else %}
+                                    <small class="text-muted">-</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if execution.duration %}
+                                    <small>{{ "%.2f"|format(execution.duration) }}秒</small>
+                                    {% else %}
+                                    <small class="text-muted">-</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if execution.message %}
+                                    <small>{{ execution.message }}</small>
+                                    {% elif execution.error %}
+                                    <small class="text-danger">{{ execution.error }}</small>
+                                    {% else %}
+                                    <small class="text-muted">-</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-info" 
+                                            onclick="viewExecutionDetail({{ execution.id }})"
+                                            title="查看详情">
+                                        <i class="fas fa-info-circle"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-history"></i>
+                    <h5>暂无执行记录</h5>
+                    <p>策略执行后会在这里显示执行记录</p>
                 </div>
                 {% endif %}
             </div>
@@ -281,6 +372,104 @@ function deleteStrategy(strategyId, strategyName) {
         document.body.appendChild(form);
         form.submit();
     });
+}
+
+/**
+ * 查看执行详情
+ */
+function viewExecutionDetail(jobLogId) {
+    // apiRequest会自动添加/api前缀，所以这里不需要加
+    apiRequest(`/data/job-logs/${jobLogId}/details`, 'GET', null,
+        function(response) {
+            const details = response.data.details || [];
+
+            if (details.length === 0) {
+                showMessage('暂无详情信息', 'info');
+                return;
+            }
+
+            // 构建详情HTML
+            let html = '<div class="execution-details">';
+            html += '<h5>执行详情</h5>';
+            html += '<div class="table-responsive">';
+            html += '<table class="table table-sm table-striped">';
+            html += '<thead>';
+            html += '<tr>';
+            html += '<th>股票代码</th>';
+            html += '<th>股票名称</th>';
+            html += '<th>触发日期</th>';
+            html += '<th>涨幅</th>';
+            html += '<th>观察结果</th>';
+            html += '</tr>';
+            html += '</thead>';
+            html += '<tbody>';
+
+            details.forEach(function(detail) {
+                const detailData = detail.detail_data || {};
+                html += '<tr>';
+                html += `<td>${detail.stock_code}</td>`;
+                html += `<td>${detail.stock_name}</td>`;
+                html += `<td>${detailData.trigger_date || '-'}</td>`;
+
+                const triggerPct = detailData.trigger_pct_change || 0;
+                if (triggerPct >= 0) {
+                    html += `<td class="text-rise">+${triggerPct.toFixed(2)}%</td>`;
+                } else {
+                    html += `<td class="text-fall">${triggerPct.toFixed(2)}%</td>`;
+                }
+
+                const obsResult = detailData.observation_result;
+                if (obsResult && typeof obsResult === 'object') {
+                    const daysAbove = obsResult.days_above_ma || 0;
+                    const daysChecked = obsResult.days_checked || 0;
+                    html += `<td>${daysAbove}/${daysChecked}天</td>`;
+                } else {
+                    html += `<td>-</td>`;
+                }
+                html += '</tr>';
+            });
+
+            html += '</tbody>';
+            html += '</table>';
+            html += '</div>';
+            html += '</div>';
+
+            // 使用showMessage来显示详情信息（简化实现）
+            // 或者使用一个简单的modal来显示
+            const modalHtml = `
+                <div class="modal fade" id="detailModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">执行详情</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                ${html}
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 移除已存在的modal
+            $('#detailModal').remove();
+
+            // 添加新modal
+            $('body').append(modalHtml);
+
+            // 显示modal
+            const detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
+            detailModal.show();
+        },
+        function(error) {
+            console.error('获取执行详情失败:', error);
+            showMessage('获取执行详情失败', 'error');
+        }
+    );
 }
 </script>
 {% endblock %}

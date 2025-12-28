@@ -103,29 +103,28 @@ def register_template_filters(app):
     """注册模板过滤器"""
     
     @app.template_filter('datetime')
-    def format_datetime(value, format='%Y-%m-%d %H:%M:%S GMT'):
-        """格式化日期时间为 YYYY-MM-DD HH:MM:SS GMT 格式"""
+    def format_datetime(value, format='%Y-%m-%d %H:%M:%S'):
+        """格式化日期时间"""
         if value is None:
             return ''
-        from datetime import datetime, timezone
+        # 如果是字符串，尝试解析
         if isinstance(value, str):
             try:
-                # 尝试解析ISO格式的日期字符串
-                value = datetime.fromisoformat(value.replace('Z', '+00:00'))
+                from datetime import datetime
+                # 处理带逗号的时间格式
+                value = value.replace(',', '')
+                # 只保留日期时间部分，去掉毫秒
+                if '.' in value:
+                    value = value.split('.')[0]
+                dt = datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+                return dt.strftime(format)
             except:
-                try:
-                    # 尝试解析其他常见格式（假设为UTC时间）
-                    value = datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
-                    # 标记为UTC时间
-                    value = value.replace(tzinfo=timezone.utc)
-                except:
-                    return value
-        # 如果没有时区信息，假设为UTC时间
-        if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
-        # 使用UTC时间格式化
-        utc_value = value.astimezone(timezone.utc)
-        return utc_value.strftime(format)
+                return value
+        # 如果是datetime对象，直接格式化
+        try:
+            return value.strftime(format)
+        except:
+            return value
     
     @app.template_filter('number')
     def format_number(value, decimals=2):

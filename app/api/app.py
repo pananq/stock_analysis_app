@@ -17,6 +17,68 @@ from app.services.market_data_service import get_market_data_service
 logger = get_logger(__name__)
 
 
+def configure_werkzeug_logging():
+    """
+    配置Werkzeug日志，使用容错处理器避免I/O错误
+    Werkzeug是Flask使用的WSGI工具包
+    """
+    import logging
+    from logging.handlers import RotatingFileHandler
+    
+    # 获取Werkzeug日志记录器
+    werkzeug_logger = logging.getLogger('werkzeug')
+    
+    # 移除所有现有的处理器
+    werkzeug_logger.handlers.clear()
+    
+    # 创建容错的文件处理器
+    log_path = './logs/api.log'
+    try:
+        file_handler = RotatingFileHandler(
+            log_path,
+            maxBytes=10*1024*1024,  # 10MB
+            backupCount=10,
+            encoding='utf-8'
+        )
+        
+        # 设置容错处理器
+        class SafeRotatingFileHandler(RotatingFileHandler):
+            def emit(self, record):
+                try:
+                    super().emit(record)
+                except (OSError, IOError):
+                    # 静默处理文件写入错误
+                    pass
+                except Exception:
+                    pass
+        
+        file_handler = SafeRotatingFileHandler(
+            log_path,
+            maxBytes=10*1024*1024,
+            backupCount=10,
+            encoding='utf-8'
+        )
+        
+        # 设置格式
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        )
+        file_handler.setFormatter(formatter)
+        
+        werkzeug_logger.addHandler(file_handler)
+        werkzeug_logger.setLevel(logging.INFO)
+        
+        # 禁用Werkzeug的异常传播
+        werkzeug_logger.propagate = False
+        werkzeug_logger.raiseExceptions = False
+        
+    except Exception as e:
+        # 如果配置失败，只输出到控制台
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+        werkzeug_logger.addHandler(console_handler)
+
+
 def create_app(config=None):
     """
     创建Flask应用
@@ -71,12 +133,12 @@ def create_app(config=None):
     @app.route('/')
     def index():
         """API根路径"""
-        from datetime import timezone
+        from datetime import datetime
         return jsonify({
             'name': '股票分析系统API',
             'version': '1.0.0',
             'status': 'running',
-            'timestamp': datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S GMT'),
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'endpoints': {
                 'strategies': '/api/strategies',
                 'stocks': '/api/stocks',
@@ -89,12 +151,14 @@ def create_app(config=None):
     def health():
         """健康检查"""
         try:
+            from datetime import datetime
+
             # 检查数据库连接
             db = get_database()  # 使用工厂方法获取数据库（MySQL或SQLite）
             market_data_service = get_market_data_service()
-            
+
             db_result = db.execute_query("SELECT 1")
-            
+
             # 检查MySQL行情数据
             market_db_ok = False
             try:
@@ -102,10 +166,10 @@ def create_app(config=None):
                 market_db_ok = stats is not None
             except:
                 market_db_ok = False
-            
+
             return jsonify({
                 'status': 'healthy',
-                'timestamp': datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S GMT'),
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'database': {
                     'main': 'ok' if db_result else 'error',
                     'market_data': 'ok' if market_db_ok else 'error'
@@ -192,67 +256,4 @@ if __name__ == '__main__':
     app = create_app()
     logger.info(f"启动 API 服务: http://{args.host}:{args.port}")
     app.run(host=args.host, port=args.port, debug=args.debug)
-
-
-def configure_werkzeug_logging():
-    """
-    配置Werkzeug日志，使用容错处理器避免I/O错误
-    Werkzeug是Flask使用的WSGI工具包
-    """
-    import logging
-    from logging.handlers import RotatingFileHandler
-    
-    # 获取Werkzeug日志记录器
-    werkzeug_logger = logging.getLogger('werkzeug')
-    
-    # 移除所有现有的处理器
-    werkzeug_logger.handlers.clear()
-    
-    # 创建容错的文件处理器
-    log_path = './logs/api.log'
-    try:
-        file_handler = RotatingFileHandler(
-            log_path,
-            maxBytes=10*1024*1024,  # 10MB
-            backupCount=10,
-            encoding='utf-8'
-        )
-        
-        # 设置容错处理器
-        class SafeRotatingFileHandler(RotatingFileHandler):
-            def emit(self, record):
-                try:
-                    super().emit(record)
-                except (OSError, IOError):
-                    # 静默处理文件写入错误
-                    pass
-                except Exception:
-                    pass
-        
-        file_handler = SafeRotatingFileHandler(
-            log_path,
-            maxBytes=10*1024*1024,
-            backupCount=10,
-            encoding='utf-8'
-        )
-        
-        # 设置格式
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
-        file_handler.setFormatter(formatter)
-        
-        werkzeug_logger.addHandler(file_handler)
-        werkzeug_logger.setLevel(logging.INFO)
-        
-        # 禁用Werkzeug的异常传播
-        werkzeug_logger.propagate = False
-        werkzeug_logger.raiseExceptions = False
-        
-    except Exception as e:
-        # 如果配置失败，只输出到控制台
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
-        werkzeug_logger.addHandler(console_handler)
-
 

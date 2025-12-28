@@ -40,8 +40,8 @@ class BackgroundTask:
         self.message = '等待开始'
         
         # 任务时间
-        from datetime import timezone
-        self.created_at = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S GMT')
+        from datetime import datetime
+        self.created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         self.started_at = None
         self.completed_at = None
         
@@ -55,46 +55,45 @@ class BackgroundTask:
         
     def _run_with_progress(self):
         """运行任务并支持进度更新"""
-        from datetime import timezone
+        from datetime import datetime
         try:
             self.status = 'running'
-            self.started_at = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S GMT')
+            self.started_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             self.message = '正在执行...'
             self._update()
-            
+
             # 传递进度回调函数和停止事件
             if 'progress_callback' not in self.kwargs:
                 self.kwargs['progress_callback'] = self.update_progress
-            
+
             # 传递stop_event到执行函数
             self.kwargs['stop_event'] = self._stop_event
-            
+
             # 执行任务
             self.result = self.func(*self.args, **self.kwargs)
-            
+
             # 检查是否被取消
             if self.is_stopped():
                 self.status = 'failed'
-                self.completed_at = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S GMT')
+                self.completed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 self.error = '任务已取消'
                 self.message = '任务已被取消'
                 logger.warning(f"任务 {self.task_id} ({self.task_name}) 已取消")
             else:
                 # 任务完成
                 self.status = 'completed'
-                self.completed_at = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S GMT')
+                self.completed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 self.progress = 100.0
                 self.message = '任务完成'
                 logger.info(f"任务 {self.task_id} ({self.task_name}) 完成")
-            
+
         except Exception as e:
-            from datetime import timezone
             self.status = 'failed'
-            self.completed_at = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S GMT')
+            self.completed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             self.error = str(e)
             self.message = f'任务失败: {e}'
             logger.error(f"任务 {self.task_id} ({self.task_name}) 失败: {e}")
-        
+
         finally:
             self._update()
     
@@ -254,36 +253,28 @@ class BackgroundTaskManager:
     def cleanup_completed_tasks(self, keep_hours: int = 24):
         """
         清理已完成的任务
-        
+
         Args:
             keep_hours: 保留最近几小时的任务
         """
-        from datetime import timezone
+        from datetime import datetime
+
         with self._lock:
-            current_time = datetime.now(timezone.utc)
+            current_time = datetime.now()
             to_remove = []
-            
+
             for task_id, task in self.tasks.items():
                 if task.status in ['completed', 'failed']:
                     if task.completed_at:
                         try:
-                            # 尝试解析带GMT的时间格式
+                            # 直接使用datetime对象比较，无需时区转换
                             completed_time = datetime.strptime(
-                                task.completed_at, 
-                                '%Y-%m-%d %H:%M:%S GMT'
+                                task.completed_at,
+                                '%Y-%m-%d %H:%M:%S'
                             )
-                            completed_time = completed_time.replace(tzinfo=timezone.utc)
                         except:
-                            try:
-                                # 兼容旧格式
-                                completed_time = datetime.strptime(
-                                    task.completed_at, 
-                                    '%Y-%m-%d %H:%M:%S'
-                                )
-                                completed_time = completed_time.replace(tzinfo=timezone.utc)
-                            except:
-                                continue
-                        
+                            continue
+
                         hours_elapsed = (current_time - completed_time).total_seconds() / 3600
                         if hours_elapsed > keep_hours:
                             to_remove.append(task_id)

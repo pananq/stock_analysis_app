@@ -309,7 +309,7 @@ class TechnicalIndicators:
         if 'change_pct' not in data.columns:
             data = TechnicalIndicators.calculate_change_pct(data, price_column=price_column)
         
-        # 筛选涨幅超过阈值的交易日
+        # 筛选涨幅超过阈值的交易日（只看正涨幅，排除负数）
         result = data[data['change_pct'] >= threshold].copy()
         
         logger.info(f"找到 {len(result)} 个涨幅超过 {threshold}% 的交易日")

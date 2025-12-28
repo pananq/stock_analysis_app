@@ -29,7 +29,6 @@ scheduler:
   enable_auto_update: false
   stock_list_update_time: '18:00'
   market_data_update_time: '18:30'
-  timezone: Asia/Shanghai
 web:
   port: 8000
   host: 0.0.0.0

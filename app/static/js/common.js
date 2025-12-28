@@ -203,8 +203,8 @@ function apiRequest(url, method = 'GET', data = null, onSuccess = null, onError 
 }
 
 /**
- * 格式化日期时间为 YYYY-MM-DD HH:MM:SS GMT 格式
- * @param {string} dateStr - 日期字符串（假设是UTC时间）
+ * 格式化日期时间为 YYYY-MM-DD HH:MM:SS 格式（北京时间）
+ * @param {string} dateStr - 日期字符串（北京时间）
  * @param {boolean} includeTime - 是否包含时间
  */
 function formatDateTime(dateStr, includeTime = true) {
@@ -218,16 +218,16 @@ function formatDateTime(dateStr, includeTime = true) {
         return dateStr; // 如果解析失败，返回原字符串
     }
     
-    // 使用UTC时间格式化（因为后端存储的是UTC时间）
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(date.getUTCDate()).padStart(2, '0');
+    // 使用本地时间格式化（北京时间）
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
     
     if (includeTime) {
-        const hours = String(date.getUTCHours()).padStart(2, '0');
-        const minutes = String(date.getUTCMinutes()).padStart(2, '0');
-        const seconds = String(date.getUTCSeconds()).padStart(2, '0');
-        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} GMT`;
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     } else {
         return `${year}-${month}-${day}`;
     }

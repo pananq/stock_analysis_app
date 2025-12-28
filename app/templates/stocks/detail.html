@@ -115,7 +115,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-chart-bar"></i> K线图（最近3个月）</span>
+                <span><i class="fas fa-chart-bar"></i> K线图（最近100天）</span>
                 <div>
                     <button class="btn btn-sm btn-outline-primary" onclick="changeChartType('candlestick')">
                         <i class="fas fa-chart-bar"></i> K线
@@ -166,7 +166,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for item in history_data %}
+                            {% for item in history_data[::-1] %}
                             <tr>
                                 <td>{{ item.trade_date }}</td>
                                 <td>{{ item.open_price | number(2) }}</td>
@@ -206,6 +206,28 @@ let klineChart = null;
 let currentChartType = 'candlestick';
 
 /**
+ * 计算移动平均线
+ * @param {Array} data - 收盘价数组
+ * @param {number} days - 均线天数
+ * @returns {Array} - MA数组（前面不足天数的位置为null）
+ */
+function calculateMA(data, days) {
+    const result = [];
+    for (let i = 0; i < data.length; i++) {
+        if (i < days - 1) {
+            result.push(null);
+        } else {
+            let sum = 0;
+            for (let j = 0; j < days; j++) {
+                sum += data[i - j];
+            }
+            result.push(sum / days);
+        }
+    }
+    return result;
+}
+
+/**
  * 初始化K线图
  */
 function initKlineChart() {
@@ -219,8 +241,11 @@ function initKlineChart() {
     const candleData = [];
     const volumeData = [];
     const lineData = [];
+    const closePrices = [];
     
-    historyData.reverse().forEach(item => {
+    // 数据从API返回时已经是按日期升序排列（从旧到新），直接使用即可
+    // 这样K线图横坐标时间从左到右依次递增
+    historyData.forEach(item => {
         dates.push(item.trade_date);
         candleData.push([
             item.open_price,
@@ -230,12 +255,13 @@ function initKlineChart() {
         ]);
         volumeData.push(item.volume);
         lineData.push(item.close_price);
+        closePrices.push(item.close_price);
     });
     
-    // 计算涨跌颜色
-    const colors = historyData.reverse().map(item => {
-        return item.change_pct >= 0 ? '#ef5350' : '#26a69a';
-    });
+    // 计算均线
+    const ma5 = calculateMA(closePrices, 5);
+    const ma30 = calculateMA(closePrices, 30);
+    const ma60 = calculateMA(closePrices, 60);
     
     // 配置项
     const option = {
@@ -262,6 +288,12 @@ function initKlineChart() {
                             result += `最高: ${param.data[4]}<br/>`;
                         } else if (param.seriesName === '成交量') {
                             result += `成交量: ${formatLargeNumber(param.data)} 手<br/>`;
+                        } else if (param.seriesName === 'MA5' && param.data) {
+                            result += `<span style="color:#ff9800">MA5: ${param.data.toFixed(2)}</span><br/>`;
+                        } else if (param.seriesName === 'MA30' && param.data) {
+                            result += `<span style="color:#2196f3">MA30: ${param.data.toFixed(2)}</span><br/>`;
+                        } else if (param.seriesName === 'MA60' && param.data) {
+                            result += `<span style="color:#9c27b0">MA60: ${param.data.toFixed(2)}</span><br/>`;
                         }
                     });
                 } else {
@@ -276,7 +308,7 @@ function initKlineChart() {
             }
         },
         legend: {
-            data: ['K线', '成交量'],
+            data: ['K线', 'MA5', 'MA30', 'MA60', '成交量'],
             top: 30
         },
         grid: [
@@ -365,6 +397,39 @@ function initKlineChart() {
                     borderColor: '#ef5350',
                     borderColor0: '#26a69a'
                 }
+            },
+            {
+                name: 'MA5',
+                type: 'line',
+                data: ma5,
+                smooth: true,
+                lineStyle: {
+                    width: 1,
+                    color: '#ff9800'
+                },
+                symbol: 'none'
+            },
+            {
+                name: 'MA30',
+                type: 'line',
+                data: ma30,
+                smooth: true,
+                lineStyle: {
+                    width: 1,
+                    color: '#2196f3'
+                },
+                symbol: 'none'
+            },
+            {
+                name: 'MA60',
+                type: 'line',
+                data: ma60,
+                smooth: true,
+                lineStyle: {
+                    width: 1,
+                    color: '#9c27b0'
+                },
+                symbol: 'none'
             },
             {
                 name: '成交量',

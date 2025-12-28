@@ -283,14 +283,18 @@ class TaskScheduler:
         Returns:
             任务列表
         """
+        from datetime import datetime
+
         jobs = []
-        
+
         for job in self.scheduler.get_jobs():
             next_run_time = getattr(job, 'next_run_time', None)
+            # 直接使用next_run_time字符串，不做时区转换
+            next_run_time_str = next_run_time.strftime('%Y-%m-%d %H:%M:%S') if next_run_time else None
             jobs.append({
                 'id': job.id,
                 'name': job.name,
-                'next_run_time': next_run_time.strftime('%Y-%m-%d %H:%M:%S') if next_run_time else None,
+                'next_run_time': next_run_time_str,
                 'trigger': str(job.trigger)
             })
         
@@ -509,19 +513,21 @@ class TaskScheduler:
     def _cleanup_zombie_tasks(self):
         """清理僵尸任务（状态为running但实际已停止的任务）"""
         try:
+            from datetime import datetime
+
             # 查找所有状态为running的任务
             sql = """
                 SELECT id, job_type, job_name, started_at
                 FROM job_logs
                 WHERE status = 'running'
             """
-            
+
             zombie_tasks = self.db.execute_query(sql)
-            
+
             if not zombie_tasks:
                 logger.debug("未发现僵尸任务")
                 return
-            
+
             now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             cleaned_count = 0
             
@@ -560,27 +566,22 @@ class TaskScheduler:
                 logger.info(f"共清理 {cleaned_count} 个僵尸任务")
                 
         except Exception as e:
-            logger.error(f"清理僵尸任务失败: {e}")
-    
+            logger.error(f"清理僵尸任务失败: {e}")    
     def _log_job_start(self, job_type: str, job_name: str) -> Optional[int]:
         """
         记录任务开始
-        
+
         Args:
             job_type: 任务类型
             job_name: 任务名称
-            
+
         Returns:
             job_log_id: 任务日志ID
         """
         try:
-            sql = """
-                INSERT INTO job_logs 
-                (job_type, job_name, status, started_at)
-                VALUES (?, ?, 'running', ?)
-            """
-            
-            now = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+            # 直接使用系统时间，不做任何转换
+            now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
             job_log_id = self.db.insert_one('job_logs', {
                 'job_type': job_type,
                 'job_name': job_name,
@@ -588,7 +589,7 @@ class TaskScheduler:
                 'started_at': now
             })
             return job_log_id
-            
+
         except Exception as e:
             logger.error(f"记录任务开始失败: {e}")
             return None
@@ -596,20 +597,21 @@ class TaskScheduler:
     def _log_job_success(self, job_type: str, duration: float, message: str = ''):
         """
         记录任务成功
-        
+
         Args:
             job_type: 任务类型
             duration: 执行时长（秒）
             message: 消息
         """
         try:
-            now = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-            
+            # 直接使用系统时间，不做任何转换
+            now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
             # MySQL不能在UPDATE中直接子查询同一张表，使用JOIN方式
             sql = """
                 UPDATE job_logs j
                 INNER JOIN (
-                    SELECT id 
+                    SELECT id
                     FROM job_logs
                     WHERE job_type = ? AND status = 'running'
                     ORDER BY started_at DESC
@@ -621,27 +623,28 @@ class TaskScheduler:
                     j.message = ?
             """
             self.db.execute_update(sql, (job_type, now, duration, message))
-            
+
         except Exception as e:
             logger.error(f"记录任务成功失败: {e}")
     
     def _log_job_error(self, job_type: str, duration: float, error: str):
         """
         记录任务失败
-        
+
         Args:
             job_type: 任务类型
             duration: 执行时长（秒）
             error: 错误信息
         """
         try:
-            now = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-            
+            # 直接使用系统时间，不做任何转换
+            now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
             # MySQL不能在UPDATE中直接子查询同一张表，使用JOIN方式
             sql = """
                 UPDATE job_logs j
                 INNER JOIN (
-                    SELECT id 
+                    SELECT id
                     FROM job_logs
                     WHERE job_type = ? AND status = 'running'
                     ORDER BY started_at DESC
@@ -653,7 +656,7 @@ class TaskScheduler:
                     j.error = ?
             """
             self.db.execute_update(sql, (job_type, now, duration, error))
-            
+
         except Exception as e:
             logger.error(f"记录任务失败失败: {e}")
     
@@ -707,7 +710,7 @@ class TaskScheduler:
         """
         try:
             import json
-            
+
             sql = """
                 SELECT *
                 FROM task_execution_details
@@ -715,12 +718,18 @@ class TaskScheduler:
                 ORDER BY created_at
                 LIMIT ? OFFSET ?
             """
-            
+
             details = self.db.execute_query(sql, (job_log_id, limit, offset))
-            
-            # 解析JSON数据
+
+            # 解析JSON数据并转换时间格式
             for detail in details:
                 detail['detail_data'] = json.loads(detail['detail_data'])
+                # 将datetime对象转换为字符串
+                if detail.get('created_at') and isinstance(detail['created_at'], datetime):
+                    detail['created_at'] = detail['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+                if detail.get('trigger_date'):
+                    # trigger_date已经是YYYY-MM-DD格式，不需要处理
+                    pass
             
             return details
             
@@ -758,8 +767,16 @@ class TaskScheduler:
                 ORDER BY started_at DESC
                 LIMIT ? OFFSET ?
             """
-            
+
             logs = self.db.execute_query(sql, (limit, offset))
+
+            # 将datetime对象转换为字符串，避免Flask自动转换为GMT格式
+            for log in logs:
+                if log.get('started_at') and isinstance(log['started_at'], datetime):
+                    log['started_at'] = log['started_at'].strftime('%Y-%m-%d %H:%M:%S')
+                if log.get('completed_at') and isinstance(log['completed_at'], datetime):
+                    log['completed_at'] = log['completed_at'].strftime('%Y-%m-%d %H:%M:%S')
+            
             return logs
             
         except Exception as e:

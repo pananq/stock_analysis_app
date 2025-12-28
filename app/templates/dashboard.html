@@ -17,163 +17,104 @@
 {% endif %}
 
 <!-- 统计卡片 -->
-<div class="row">
+<div class="row g-3 stats-cards-row">
     <!-- 股票总数 -->
-    <div class="col-md-3 col-sm-6 mb-4">
-        <div class="card stat-card border-primary">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="stat-label">股票总数</div>
-                        <div class="stat-value text-primary">
-                            {{ stats.get('stocks', {}).get('total', 0) }}
-                        </div>
+    <div class="col-6 col-md-3 col-lg">
+        <div class="card stat-card stat-card-compact border-primary h-100">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">股票总数</div>
+                    <div class="stat-value text-primary">
+                        {{ stats.get('stocks', {}).get('total', 0) }}
                     </div>
-                    <div class="stat-icon text-primary">
-                        <i class="fas fa-list"></i>
-                    </div>
+                </div>
+                <div class="stat-icon text-primary">
+                    <i class="fas fa-list"></i>
                 </div>
             </div>
         </div>
     </div>
     
     <!-- 策略总数 -->
-    <div class="col-md-3 col-sm-6 mb-4">
-        <div class="card stat-card border-success">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
+    <div class="col-6 col-md-3 col-lg">
+        <div class="card stat-card stat-card-compact border-success h-100">
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div class="d-flex justify-content-between align-items-start mb-2">
                     <div>
                         <div class="stat-label">策略总数</div>
                         <div class="stat-value text-success">
                             {{ stats.get('strategies', {}).get('total', 0) }}
                         </div>
-                        <small class="text-muted">
-                            启用: {{ stats.get('strategies', {}).get('enabled', 0) }}
-                        </small>
                     </div>
                     <div class="stat-icon text-success">
                         <i class="fas fa-brain"></i>
                     </div>
                 </div>
+                <small class="text-muted">
+                    启用: {{ stats.get('strategies', {}).get('enabled', 0) }}
+                </small>
             </div>
         </div>
     </div>
     
     <!-- 行情记录数 -->
-    <div class="col-md-3 col-sm-6 mb-4">
-        <div class="card stat-card border-info">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="stat-label">行情记录</div>
-                        <div class="stat-value text-info">
-                            {{ (stats.get('market_data', {}).get('record_count', 0) / 10000) | round(1) }}万
-                        </div>
+    <div class="col-6 col-md-3 col-lg">
+        <div class="card stat-card stat-card-compact border-info h-100">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">行情记录</div>
+                    <div class="stat-value text-info">
+                        {{ (stats.get('market_data', {}).get('record_count', 0) / 10000) | round(1) }}万
                     </div>
-                    <div class="stat-icon text-info">
-                        <i class="fas fa-database"></i>
-                    </div>
+                </div>
+                <div class="stat-icon text-info">
+                    <i class="fas fa-database"></i>
                 </div>
             </div>
         </div>
     </div>
     
     <!-- 任务日志数 -->
-    <div class="col-md-3 col-sm-6 mb-4">
-        <div class="card stat-card border-warning">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="stat-label">任务日志</div>
-                        <div class="stat-value text-warning">
-                            {{ stats.get('job_logs', {}).get('total', 0) }}
-                        </div>
-                    </div>
-                    <div class="stat-icon text-warning">
-                        <i class="fas fa-tasks"></i>
+    <div class="col-6 col-md-3 col-lg">
+        <div class="card stat-card stat-card-compact border-warning h-100">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">任务日志</div>
+                    <div class="stat-value text-warning">
+                        {{ stats.get('job_logs', {}).get('total', 0) }}
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row">
-    <!-- 系统信息 -->
-    <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <i class="fas fa-info-circle"></i> 系统信息
-            </div>
-            <div class="card-body">
-                <table class="table table-sm">
-                    <tr>
-                        <th width="40%">系统名称</th>
-                        <td>{{ system_info.get('name', '-') }}</td>
-                    </tr>
-                    <tr>
-                        <th>版本</th>
-                        <td>{{ system_info.get('version', '-') }}</td>
-                    </tr>
-                    <tr>
-                        <th>数据源</th>
-                        <td>
-                            <span class="badge bg-primary">{{ system_info.get('datasource', '-') }}</span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>数据范围</th>
-                        <td>
-                            {% if stats.get('market_data', {}).get('earliest_date') %}
-                            {{ stats.get('market_data', {}).get('earliest_date') }} 至 
-                            {{ stats.get('market_data', {}).get('latest_date') }}
-                            {% else %}
-                            -
-                            {% endif %}
-                        </td>
-                    </tr>
-                </table>
+                <div class="stat-icon text-warning">
+                    <i class="fas fa-tasks"></i>
+                </div>
             </div>
         </div>
     </div>
     
-    <!-- 调度任务 -->
-    <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <i class="fas fa-clock"></i> 调度任务
-            </div>
-            <div class="card-body">
-                {% if jobs %}
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover">
-                        <thead>
-                            <tr>
-                                <th>任务名称</th>
-                                <th>下次执行</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for job in jobs %}
-                            <tr>
-                                <td>
-                                    <i class="fas fa-check-circle text-success"></i>
-                                    {{ job.name }}
-                                </td>
-                                <td>
-                                    <small>{{ job.next_run_time or '-' }}</small>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+    <!-- 数据范围 -->
+    <div class="col-6 col-md-3 col-lg">
+        <div class="card stat-card stat-card-compact border-secondary h-100">
+            <div class="card-body d-flex flex-column justify-content-between">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <div class="stat-label">数据范围</div>
+                        <div class="stat-value text-secondary" style="font-size: 1.1rem;">
+                            {% if stats.get('market_data', {}).get('earliest_date') %}
+                            {{ stats.get('market_data', {}).get('earliest_date') }}<br>
+                            <span style="font-size: 0.9rem;">至</span><br>
+                            {{ stats.get('market_data', {}).get('latest_date') }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="stat-icon text-secondary">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
                 </div>
-                {% else %}
-                <div class="empty-state">
-                    <i class="fas fa-clock"></i>
-                    <p>暂无调度任务</p>
-                </div>
-                {% endif %}
+                <small class="text-muted">
+                    数据源: {{ system_info.get('datasource', '-') }}
+                </small>
             </div>
         </div>
     </div>
@@ -242,45 +183,6 @@
     </div>
 </div>
 
-<!-- 快速操作 -->
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <i class="fas fa-bolt"></i> 快速操作
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <a href="/strategies" class="btn btn-outline-primary btn-lg w-100">
-                            <i class="fas fa-brain"></i><br>
-                            <small>策略管理</small>
-                        </a>
-                    </div>
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <a href="/stocks" class="btn btn-outline-success btn-lg w-100">
-                            <i class="fas fa-list"></i><br>
-                            <small>股票查询</small>
-                        </a>
-                    </div>
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <a href="/data" class="btn btn-outline-info btn-lg w-100">
-                            <i class="fas fa-database"></i><br>
-                            <small>数据管理</small>
-                        </a>
-                    </div>
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <a href="/system" class="btn btn-outline-warning btn-lg w-100">
-                            <i class="fas fa-cog"></i><br>
-                            <small>系统设置</small>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- 任务详情模态框 -->
 <div class="modal fade" id="taskDetailsModal" tabindex="-1">
     <div class="modal-dialog modal-xl">
@@ -308,6 +210,85 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* 统计卡片样式优化 */
+.stats-cards-row {
+    margin-bottom: 1.5rem;
+}
+
+.stat-card-compact {
+    transition: all 0.3s ease;
+    border-width: 2px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.stat-card-compact:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card-compact .card-body {
+    padding: 1.25rem;
+    min-height: 100px;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.stat-icon {
+    font-size: 2rem;
+    opacity: 0.8;
+}
+
+/* 确保数据范围卡片的日期显示合理 */
+.stat-card-compact .stat-value br {
+    display: block;
+    margin: 0.25rem 0;
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+    .stat-card-compact .stat-value {
+        font-size: 1.5rem;
+    }
+    
+    .stat-icon {
+        font-size: 1.5rem;
+    }
+    
+    .stat-card-compact .card-body {
+        min-height: 90px;
+    }
+}
+
+@media (max-width: 576px) {
+    .stats-cards-row {
+        gap: 0.75rem;
+    }
+    
+    .stat-card-compact .card-body {
+        padding: 1rem;
+        min-height: 80px;
+    }
+    
+    .stat-value {
+        font-size: 1.25rem;
+    }
+}
+</style>
 {% endblock %}
 
 {% block extra_js %}

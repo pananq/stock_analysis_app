@@ -423,10 +423,10 @@ class MarketDataService:
             code: 股票代码
             start_date: 开始日期
             end_date: 结束日期
-            limit: 返回记录数限制
+            limit: 返回记录数限制（返回最新的N条数据）
             
         Returns:
-            行情数据DataFrame
+            行情数据DataFrame（按日期升序排列，从旧到新）
         """
         session = self.Session()
         try:
@@ -438,10 +438,28 @@ class MarketDataService:
             if end_date:
                 query = query.filter(DailyMarket.trade_date <= end_date)
             
-            query = query.order_by(DailyMarket.trade_date.desc())
-            
+            # 如果有limit限制，需要先获取最新的N条记录
             if limit:
-                query = query.limit(limit)
+                # 使用子查询：先按日期降序排序取最新的N条，再按日期升序排序返回
+                subq = session.query(DailyMarket.code, DailyMarket.trade_date) \
+                    .filter(DailyMarket.code == code)
+                
+                # 应用start_date和end_date过滤条件
+                if start_date:
+                    subq = subq.filter(DailyMarket.trade_date >= start_date)
+                if end_date:
+                    subq = subq.filter(DailyMarket.trade_date <= end_date)
+                
+                # 按日期降序排序，取最新的N条
+                subq = subq.order_by(DailyMarket.trade_date.desc()).limit(limit).subquery()
+                
+                # 查询最新的N条记录，并按日期升序排序返回
+                query = session.query(DailyMarket) \
+                    .join(subq, (DailyMarket.code == subq.c.code) & (DailyMarket.trade_date == subq.c.trade_date)) \
+                    .order_by(DailyMarket.trade_date.asc())
+            else:
+                # 没有limit限制，按日期升序排列（从旧到新）
+                query = query.order_by(DailyMarket.trade_date.asc())
             
             results = query.all()
             

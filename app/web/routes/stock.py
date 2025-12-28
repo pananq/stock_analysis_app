@@ -90,10 +90,10 @@ def detail(stock_code):
                                  error_code=404,
                                  error_message='股票不存在')
         
-        # 获取历史行情数据（最近3个月，约60个交易日）
+        # 获取历史行情数据（最近100天）
         history_response = requests.get(
             f"{API_BASE_URL}/stocks/{stock_code}/history",
-            params={'limit': 60},
+            params={'limit': 100},
             timeout=5
         )
         if history_response.status_code == 200:

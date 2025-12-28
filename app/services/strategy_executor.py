@@ -209,7 +209,7 @@ class StrategyExecutor:
     
     def _get_stocks_with_data(self, limit: Optional[int] = None) -> List[Dict[str, str]]:
         """
-        获取有行情数据的股票列表
+        获取有行情数据的股票列表（排除ST股票）
         
         Args:
             limit: 限制返回的股票数量
@@ -230,6 +230,8 @@ class StrategyExecutor:
                 SELECT code as stock_code, name as stock_name, market_type as market
                 FROM stocks
                 WHERE code IN ({placeholders})
+                AND name NOT LIKE 'ST%'
+                AND name NOT LIKE '*ST%'
                 ORDER BY code
             """
             
@@ -280,9 +282,6 @@ class StrategyExecutor:
             if df.empty or len(df) < ma_period + observation_days:
                 return []
             
-            # 重命名列以匹配后续处理逻辑
-            df = df.rename(columns={'change_pct': 'pct_change'})
-            
             # 确保trade_date是字符串格式，避免类型比较错误
             if len(df) > 0 and not isinstance(df['trade_date'].iloc[0], str):
                 df['trade_date'] = df['trade_date'].astype(str)
@@ -312,7 +311,7 @@ class StrategyExecutor:
             # 检查每个大涨日后续是否满足条件
             for rise_day in big_rise_days:
                 rise_date = rise_day['trade_date']
-                rise_pct = rise_day['pct_change']
+                rise_pct = rise_day['change_pct']
                 
                 # 检查后续N天是否都站在均线之上
                 is_valid, observation_result = self._check_observation_period(

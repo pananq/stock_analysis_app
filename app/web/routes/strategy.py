@@ -31,15 +31,46 @@ def index():
             strategies = []
             stats = {}
         
+        # 获取策略执行记录（从scheduler logs中筛选策略相关的记录）
+        try:
+            executions_response = requests.get(f"{API_BASE_URL}/system/scheduler/logs?limit=20&offset=0", timeout=5)
+            
+            if executions_response.status_code == 200:
+                all_logs = executions_response.json().get('data', [])
+                logger.info(f"获取策略执行记录成功，总日志数: {len(all_logs)}")
+                
+                # 筛选出策略执行相关的记录（job_type包含'strategy'或job_name包含'策略'）
+                # 同时转换数据类型，确保duration是浮点数
+                strategy_executions = []
+                for log in all_logs:
+                    if 'strategy' in log.get('job_type', '').lower() or '策略' in log.get('job_name', ''):
+                        # 确保duration是浮点数类型
+                        if isinstance(log.get('duration'), str):
+                            try:
+                                log['duration'] = float(log['duration'])
+                            except (ValueError, TypeError):
+                                log['duration'] = None
+                        strategy_executions.append(log)
+                
+                logger.info(f"筛选后的策略执行记录数: {len(strategy_executions)}")
+            else:
+                logger.warning(f"获取执行记录失败，状态码: {executions_response.status_code}")
+                strategy_executions = []
+        except Exception as e:
+            logger.error(f"获取策略执行记录异常: {e}")
+            strategy_executions = []
+        
         return render_template('strategies/index.html',
                              strategies=strategies,
-                             stats=stats)
+                             stats=stats,
+                             executions=strategy_executions)
     
     except Exception as e:
         logger.error(f"加载策略列表失败: {e}")
         return render_template('strategies/index.html',
                              strategies=[],
                              stats={},
+                             executions=[],
                              error=str(e))
 
 

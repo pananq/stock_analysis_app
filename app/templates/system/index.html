@@ -53,11 +53,71 @@
                         <th>版本</th>
                         <td><span class="badge bg-primary">v1.0.0</span></td>
                     </tr>
+                    <tr>
+                        <th>数据源</th>
+                        <td>
+                            <span class="badge bg-success">{{ system_config.get('datasource', {}).get('type', '-') }}</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>数据范围</th>
+                        <td>
+                            {% if market_stats.get('earliest_date') %}
+                            {{ market_stats.get('earliest_date') }} 至 
+                            {{ market_stats.get('latest_date') }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                    </tr>
                 </table>
             </div>
         </div>
     </div>
     
+    <!-- 调度任务 -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-clock"></i> 调度任务
+            </div>
+            <div class="card-body">
+                {% if jobs %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>任务名称</th>
+                                <th>下次执行</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for job in jobs %}
+                            <tr>
+                                <td>
+                                    <i class="fas fa-check-circle text-success"></i>
+                                    {{ job.name }}
+                                </td>
+                                <td>
+                                    <small>{{ job.next_run_time or '-' }}</small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state text-center py-4">
+                    <i class="fas fa-clock text-muted mb-2"></i>
+                    <p class="mb-0">暂无调度任务</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
@@ -71,15 +131,6 @@
                             {% set main_db = database_status.get('main_database', {}) %}
                             <span class="badge bg-{{ 'success' if main_db.get('status') == 'healthy' else 'danger' }}">
                                 {{ main_db.get('type', 'unknown') }} - {{ main_db.get('status', 'unknown') }}
-                            </span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>DuckDB数据库</th>
-                        <td>
-                            {% set duckdb = database_status.get('duckdb', {}) %}
-                            <span class="badge bg-{{ 'success' if duckdb.get('status') == 'healthy' else 'danger' }}">
-                                {{ duckdb.get('status', 'unknown') }}
                             </span>
                         </td>
                     </tr>
@@ -270,14 +321,6 @@
                                     <input type="time" class="form-control" id="scheduler_market_data_update_time" 
                                            name="scheduler.market_data_update_time"
                                            value="{{ system_config.get('scheduler', {}).get('market_data_update_time', '18:30') }}">
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label for="scheduler_timezone">时区</label>
-                                    <input type="text" class="form-control" id="scheduler_timezone" 
-                                           name="scheduler.timezone"
-                                           value="{{ system_config.get('scheduler', {}).get('timezone', 'Asia/Shanghai') }}">
                                 </div>
                             </div>
                         </div>

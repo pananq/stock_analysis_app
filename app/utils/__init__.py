@@ -18,7 +18,7 @@ __all__ = [
 def is_development_mode() -> bool:
     """
     检查当前是否为开发模式
-    
+
     Returns:
         如果是开发模式返回True，否则返回False
     """
@@ -30,7 +30,7 @@ def is_development_mode() -> bool:
 def get_stock_limit_for_mode() -> int:
     """
     根据当前模式获取股票数量限制
-    
+
     Returns:
         开发模式下返回限制数量，生产模式返回None（不限制）
     """

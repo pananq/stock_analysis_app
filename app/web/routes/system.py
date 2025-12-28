@@ -42,10 +42,21 @@ def index():
         else:
             database_status = {}
         
+        # 获取调度任务列表
+        jobs_response = requests.get(f"{API_BASE_URL}/system/scheduler/jobs", timeout=5)
+        jobs = jobs_response.json().get('data', []) if jobs_response.status_code == 200 else []
+        
+        # 获取市场统计信息（用于显示数据范围）
+        stats_response = requests.get(f"{API_BASE_URL}/system/stats", timeout=5)
+        stats = stats_response.json().get('data', {}) if stats_response.status_code == 200 else {}
+        market_stats = stats.get('market_data', {})
+        
         return render_template('system/index.html',
                              system_config=system_config,
                              system_info_config=system_info_config,
-                             database_status=database_status)
+                             database_status=database_status,
+                             jobs=jobs,
+                             market_stats=market_stats)
     
     except Exception as e:
         logger.error(f"加载系统设置页面失败: {e}")
@@ -53,6 +64,8 @@ def index():
                              system_config={},
                              system_info_config={},
                              database_status={},
+                             jobs=[],
+                             market_stats={},
                              error=str(e))
 
 

@@ -422,14 +422,14 @@ def get_strategy_results(strategy_id):
         limit = int(request.args.get('limit', 100))
         offset = int(request.args.get('offset', 0))
         
-        strategy_service = get_strategy_service()
-        results = strategy_service.get_strategy_results(
+        strategy_executor = get_strategy_executor()
+        results = strategy_executor.get_strategy_results(
             strategy_id=strategy_id,
             limit=limit,
             offset=offset
         )
         
-        total = strategy_service.get_strategy_results_count(strategy_id)
+        total = strategy_executor.get_strategy_results_count(strategy_id)
         
         return jsonify({
             'success': True,

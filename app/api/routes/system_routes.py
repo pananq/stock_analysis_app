@@ -156,11 +156,10 @@ def get_system_logs():
                     if module_filter and module_filter not in module.lower():
                         continue
                     
-                    # 解析时间戳
+            # 解析时间戳
                     try:
-                        from datetime import timezone
-                        timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S,%f')
-                        created_at = timestamp.replace(tzinfo=timezone.utc).strftime('%Y-%m-%d %H:%M:%S GMT')
+                        timestamp = timestamp_str.replace(',', '')
+                        created_at = timestamp.split('.')[0]  # 去掉毫秒部分
                     except:
                         created_at = timestamp_str
                     
@@ -311,8 +310,7 @@ def get_config_info():
             'scheduler': {
                 'enable_auto_update': config.get('scheduler', {}).get('enable_auto_update', True),
                 'stock_list_update_time': config.get('scheduler', {}).get('stock_list_update_time', '18:00'),
-                'market_data_update_time': config.get('scheduler', {}).get('market_data_update_time', '18:30'),
-                'timezone': config.get('scheduler', {}).get('timezone', 'Asia/Shanghai')
+                'market_data_update_time': config.get('scheduler', {}).get('market_data_update_time', '18:30')
             },
             'data_management': {
                 'data_retention_years': config.get('data_management', {}).get('data_retention_years', 5),

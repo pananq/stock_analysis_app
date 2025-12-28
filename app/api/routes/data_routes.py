@@ -452,6 +452,17 @@ def get_job_details(job_log_id):
                 'error': '任务日志不存在'
             }), 404
         
+        # 将datetime对象转换为字符串
+        job_log_data = job_log[0]
+        if job_log_data.get('started_at'):
+            from datetime import datetime
+            if isinstance(job_log_data['started_at'], datetime):
+                job_log_data['started_at'] = job_log_data['started_at'].strftime('%Y-%m-%d %H:%M:%S')
+        if job_log_data.get('completed_at'):
+            from datetime import datetime
+            if isinstance(job_log_data['completed_at'], datetime):
+                job_log_data['completed_at'] = job_log_data['completed_at'].strftime('%Y-%m-%d %H:%M:%S')
+        
         # 获取详细结果
         if detail_type:
             details = scheduler.db.execute_query(
@@ -484,7 +495,7 @@ def get_job_details(job_log_id):
         return jsonify({
             'success': True,
             'data': {
-                'job_log': job_log[0],
+                'job_log': job_log_data,
                 'details': details,
                 'summary': summary,
                 'pagination': {
