@@ -99,6 +99,10 @@ def create_app(config=None):
     app.config['JSON_AS_ASCII'] = False  # 支持中文
     app.config['JSON_SORT_KEYS'] = False  # 不排序键
     
+    # 配置自定义JSON提供者，格式化datetime对象
+    from app.api.json_provider import CustomJSONProvider
+    app.json = CustomJSONProvider(app)
+    
     # 配置CORS（跨域资源共享）
     api_config = config.get('api', {})
     cors_origins = api_config.get('cors_origins', '*')

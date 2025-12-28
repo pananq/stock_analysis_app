@@ -37,6 +37,10 @@ def create_web_app(config=None):
     app.config['JSON_AS_ASCII'] = False
     app.config['SECRET_KEY'] = config.get('web', {}).get('secret_key', 'dev-secret-key')
     
+    # 配置自定义JSON提供者，格式化datetime对象
+    from app.web.json_provider import CustomJSONProvider
+    app.json = CustomJSONProvider(app)
+    
     # 注册Web路由蓝图
     from app.web.routes import (
         dashboard_bp,
