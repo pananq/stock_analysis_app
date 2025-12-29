@@ -52,7 +52,23 @@ class ORMDBAdapter:
             password = self.config.get('password', '')
             charset = self.config.get('charset', 'utf8mb4')
             
-            return f"mysql+pymysql://{username}:{password}@{host}:{port}/{database}?charset={charset}"
+            # 添加额外的连接参数以避免连接问题
+            # autocommit: 自动提交
+            # connect_timeout: 连接超时
+            # read_timeout: 读取超时
+            # write_timeout: 写入超时
+            # charset: 字符集
+            extra_params = {
+                'autocommit': 'false',
+                'connect_timeout': '10',
+                'read_timeout': '30',
+                'write_timeout': '30',
+                'charset': charset
+            }
+            
+            param_str = '&'.join([f"{k}={v}" for k, v in extra_params.items()])
+            
+            return f"mysql+pymysql://{username}:{password}@{host}:{port}/{database}?{param_str}"
         
         else:
             raise ValueError(f"不支持的数据库类型: {self.db_type}，只支持mysql")

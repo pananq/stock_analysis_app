@@ -1,0 +1,151 @@
+# API服务器配置
+api:
+  # 服务器地址和端口
+  host: 0.0.0.0
+  port: 5000
+  
+  # 调试模式（生产环境设为false）
+  debug: false
+  
+  # CORS配置
+  cors_origins: "*"
+  
+  # SSL/TLS配置
+  ssl_enabled: false  # 启用SSL（需要配置证书路径）
+  ssl_cert: "/data/home/aaronpan/stock-analysis-app/ssl/server.crt"
+  ssl_key: "/data/home/aaronpan/stock-analysis-app/ssl/server.key"
+  
+  # SSL配置说明：
+  # 1. 自签名证书：使用 setup_ssl.sh 生成，适用于开发测试
+  # 2. Let's Encrypt证书：使用Nginx反向代理，此处ssl_enabled设为false
+  # 3. 商业证书：将证书和私钥路径配置到ssl_cert和ssl_key
+
+# Web服务器配置
+web:
+  # 服务器地址和端口
+  host: 0.0.0.0
+  port: 8000
+  
+  # 调试模式（生产环境设为false）
+  debug: false
+  
+  # Flask密钥（用于会话加密）
+  secret_key: "your-secret-key-here-please-change-it"
+  
+  # SSL/TLS配置
+  ssl_enabled: false  # 启用SSL（需要配置证书路径）
+  ssl_cert: "/data/home/aaronpan/stock-analysis-app/ssl/server.crt"
+  ssl_key: "/data/home/aaronpan/stock-analysis-app/ssl/server.key"
+
+# 数据库配置
+database:
+  # 数据库类型：mysql 或 sqlite
+  type: mysql
+  
+  # MySQL配置
+  mysql:
+    host: localhost
+    port: 3306
+    database: stock_analysis
+    user: saapp
+    password: your_password
+    charset: utf8mb4
+    
+    # 连接池配置
+    pool:
+      size: 10          # 连接池大小
+      max_overflow: 20  # 最大溢出连接数
+      timeout: 60       # 连接超时时间（秒）
+      recycle: 1800     # 连接回收时间（秒）
+  
+  # SQLite配置（备选）
+  sqlite:
+    path: ./data/stock_analysis.db
+
+# 数据源配置
+datasource:
+  # 数据源类型：tushare 或 akshare
+  type: tushare
+  
+  # Tushare配置
+  tushare:
+    token: "your-tushare-token-here"
+  
+  # Akshare配置
+  akshare:
+    # Akshare不需要token
+
+# 日志配置
+logging:
+  # 日志级别：DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: INFO
+  
+  # 日志格式
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  
+  # 日志文件
+  file: ./logs/app.log
+  
+  # 日志文件大小限制（MB）
+  max_bytes: 10
+  
+  # 保留的日志文件数量
+  backup_count: 10
+
+# 调度器配置
+scheduler:
+  # 是否启用调度器
+  enabled: true
+  
+  # 时区
+  timezone: Asia/Shanghai
+  
+  # 定时任务配置
+  jobs:
+    # 股票数据更新任务
+    stock_update:
+      enabled: true
+      hour: 18
+      minute: 0
+    
+    # 行情数据更新任务
+    market_data_update:
+      enabled: true
+      hour: 18
+      minute: 30
+    
+    # 策略执行任务
+    strategy_execution:
+      enabled: true
+      hour: 19
+      minute: 0
+    
+    # 健康检查任务
+    health_check:
+      enabled: true
+      interval_minutes: 30
+
+# 认证配置
+auth:
+  # JWT密钥（用于生成和验证token）
+  secret_key: "your-jwt-secret-key-please-change-it"
+  
+  # Token过期时间（小时）
+  token_expire_hours: 24
+  
+  # 是否启用注册功能
+  enable_registration: false
+
+# 性能配置
+performance:
+  # 是否启用缓存
+  enable_cache: true
+  
+  # 缓存过期时间（秒）
+  cache_expire: 300
+  
+  # 最大并发请求数
+  max_concurrent_requests: 100
+  
+  # 请求超时时间（秒）
+  request_timeout: 60

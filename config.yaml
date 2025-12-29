@@ -14,10 +14,10 @@ database:
     username: stock_user
     password: your_password
     pool:
-      size: 50
-      max_overflow: 10
-      timeout: 30
-      recycle: 3600
+      size: 10
+      max_overflow: 20
+      timeout: 60
+      recycle: 1800
     charset: utf8mb4
     collation: utf8mb4_unicode_ci
 api_rate_limit:

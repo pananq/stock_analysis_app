@@ -231,14 +231,39 @@ class ORMDatabase:
         """
         self.db_url = db_url
         
+        # 从配置中获取连接池参数
+        try:
+            from app.utils import get_config
+            config = get_config()
+            pool_config = config.get('database', {}).get('mysql', {}).get('pool', {})
+            
+            pool_size = pool_config.get('size', 10)
+            max_overflow = pool_config.get('max_overflow', 20)
+            pool_timeout = pool_config.get('timeout', 30)
+            pool_recycle = pool_config.get('recycle', 3600)
+            
+            logger.info(f"使用连接池配置: size={pool_size}, max_overflow={max_overflow}, timeout={pool_timeout}, recycle={pool_recycle}")
+        except Exception as e:
+            logger.warning(f"获取连接池配置失败，使用默认值: {e}")
+            pool_size = 10
+            max_overflow = 20
+            pool_timeout = 30
+            pool_recycle = 3600
+        
         # 创建引擎
         self.engine = create_engine(
             db_url,
             echo=False,  # 不输出SQL日志
-            pool_pre_ping=True,  # 连接前检测
-            pool_recycle=3600,  # 连接回收时间
-            pool_size=10,  # 连接池大小
-            max_overflow=20  # 最大溢出连接数
+            pool_pre_ping=True,  # 连接前检测，自动回收无效连接
+            pool_recycle=pool_recycle,  # 连接回收时间（秒）
+            pool_size=pool_size,  # 连接池大小
+            max_overflow=max_overflow,  # 最大溢出连接数
+            pool_timeout=pool_timeout,  # 获取连接的超时时间
+            connect_args={
+                'connect_timeout': 10,  # 连接超时
+                'read_timeout': 30,  # 读取超时
+                'write_timeout': 30,  # 写入超时
+            }
         )
         
         # 创建会话工厂
@@ -316,6 +341,7 @@ class ORMDatabase:
     def execute_query(self, query: str, params: tuple = None) -> list:
         """
         执行原生SQL查询（为了兼容现有代码）
+        支持自动重试机制
         
         Args:
             query: SQL查询语句
@@ -325,36 +351,48 @@ class ORMDatabase:
             查询结果列表
         """
         from sqlalchemy import text
+        from app.utils.db_retry import retry_db_operation
         
-        session = self.get_session()
-        try:
-            # 将 SQLite 的 ? 占位符转换为 SQLAlchemy 的 :param 格式
-            # 如果参数是 tuple，转换为命名参数格式
-            if params:
-                # 将 ? 替换为 :p1, :p2, :p3 等（使用字母开头）
-                param_names = [f'p{i+1}' for i in range(len(params))]
-                query_text = query
-                for i, param_name in enumerate(param_names):
-                    query_text = query_text.replace('?', f':{param_name}', 1)
+        @retry_db_operation(max_retries=3, retry_delay=0.5)
+        def _execute():
+            session = self.get_session()
+            try:
+                # 将 SQLite 的 ? 占位符转换为 SQLAlchemy 的 :param 格式
+                # 如果参数是 tuple，转换为命名参数格式
+                if params:
+                    # 将 ? 替换为 :p1, :p2, :p3 等（使用字母开头）
+                    param_names = [f'p{i+1}' for i in range(len(params))]
+                    query_text = query
+                    for i, param_name in enumerate(param_names):
+                        query_text = query_text.replace('?', f':{param_name}', 1)
+                    
+                    # 构建参数字典
+                    param_dict = {param_names[i]: params[i] for i in range(len(params))}
+                    result = session.execute(text(query_text), param_dict)
+                else:
+                    result = session.execute(text(query))
                 
-                # 构建参数字典
-                param_dict = {param_names[i]: params[i] for i in range(len(params))}
-                result = session.execute(text(query_text), param_dict)
-            else:
-                result = session.execute(text(query))
-            
-            # 获取列名
-            columns = result.keys()
-            
-            # 转换为字典列表
-            results = [dict(zip(columns, row)) for row in result.fetchall()]
-            return results
-        finally:
-            session.close()
+                # 获取列名
+                columns = result.keys()
+                
+                # 转换为字典列表
+                results = [dict(zip(columns, row)) for row in result.fetchall()]
+                return results
+            except Exception as e:
+                logger.error(f"执行查询失败: {e}, Query: {query[:100]}")
+                raise
+            finally:
+                try:
+                    session.close()
+                except Exception as e:
+                    logger.warning(f"关闭会话失败: {e}")
+        
+        return _execute()
     
     def execute_update(self, query: str, params: tuple = None) -> int:
         """
         执行原生SQL更新（为了兼容现有代码）
+        支持自动重试机制
         
         Args:
             query: SQL更新语句
@@ -364,31 +402,37 @@ class ORMDatabase:
             影响的行数
         """
         from sqlalchemy import text
+        from app.utils.db_retry import retry_db_operation
         
-        session = self.get_session()
-        try:
-            if params:
-                # 将 ? 替换为 :param 格式（使用字母开头）
-                param_names = [f'p{i+1}' for i in range(len(params))]
-                query_text = query
-                for i, param_name in enumerate(param_names):
-                    query_text = query_text.replace('?', f':{param_name}', 1)
-                
-                param_dict = {param_names[i]: params[i] for i in range(len(params))}
-                result = session.execute(text(query_text), param_dict)
-            else:
-                result = session.execute(text(query))
-            session.commit()
-            return result.rowcount
-        except Exception as e:
-            session.rollback()
-            raise
-        finally:
-            session.close()
+        @retry_db_operation(max_retries=3, retry_delay=0.5)
+        def _execute():
+            session = self.get_session()
+            try:
+                if params:
+                    # 将 ? 替换为 :param 格式（使用字母开头）
+                    param_names = [f'p{i+1}' for i in range(len(params))]
+                    query_text = query
+                    for i, param_name in enumerate(param_names):
+                        query_text = query_text.replace('?', f':{param_name}', 1)
+                    
+                    param_dict = {param_names[i]: params[i] for i in range(len(params))}
+                    result = session.execute(text(query_text), param_dict)
+                else:
+                    result = session.execute(text(query))
+                session.commit()
+                return result.rowcount
+            except Exception as e:
+                session.rollback()
+                raise
+            finally:
+                session.close()
+        
+        return _execute()
     
     def execute_many(self, query: str, params_list: list) -> int:
         """
         批量执行更新语句
+        支持自动重试机制
         
         Args:
             query: SQL更新语句
@@ -398,34 +442,40 @@ class ORMDatabase:
             影响的行数
         """
         from sqlalchemy import text
+        from app.utils.db_retry import retry_db_operation
         
-        session = self.get_session()
-        try:
-            # 将 ? 替换为 :param 格式（只替换第一个参数中的）
-            if params_list:
-                param_count = len(params_list[0])
-                param_names = [f'p{i+1}' for i in range(param_count)]
-                query_text = query
-                for i, param_name in enumerate(param_names):
-                    query_text = query_text.replace('?', f':{param_name}', 1)
+        @retry_db_operation(max_retries=3, retry_delay=0.5)
+        def _execute():
+            session = self.get_session()
+            try:
+                # 将 ? 替换为 :param 格式（只替换第一个参数中的）
+                if params_list:
+                    param_count = len(params_list[0])
+                    param_names = [f'p{i+1}' for i in range(param_count)]
+                    query_text = query
+                    for i, param_name in enumerate(param_names):
+                        query_text = query_text.replace('?', f':{param_name}', 1)
+                    
+                    # 转换所有参数为字典列表
+                    param_dicts = [{param_names[i]: params[i] for i in range(param_count)} for params in params_list]
+                    result = session.execute(text(query_text), param_dicts)
+                else:
+                    result = session.execute(text(query))
                 
-                # 转换所有参数为字典列表
-                param_dicts = [{param_names[i]: params[i] for i in range(param_count)} for params in params_list]
-                result = session.execute(text(query_text), param_dicts)
-            else:
-                result = session.execute(text(query))
-            
-            session.commit()
-            return result.rowcount
-        except Exception as e:
-            session.rollback()
-            raise
-        finally:
-            session.close()
+                session.commit()
+                return result.rowcount
+            except Exception as e:
+                session.rollback()
+                raise
+            finally:
+                session.close()
+        
+        return _execute()
     
     def insert_one(self, table: str, data: dict) -> int:
         """
         插入单条记录（使用ORM）
+        支持自动重试机制
         
         Args:
             table: 表名
@@ -434,33 +484,40 @@ class ORMDatabase:
         Returns:
             插入记录的ID
         """
-        session = self.get_session()
-        try:
-            # 根据表名获取模型类
-            model_class = self._get_model_class(table)
-            if model_class:
-                obj = model_class(**data)
-                session.add(obj)
-                session.commit()
-                session.refresh(obj)
-                return getattr(obj, 'id', 0)
-            else:
-                # 如果没有对应的ORM模型，使用原生SQL
-                columns = ', '.join(data.keys())
-                placeholders = ', '.join(['?' for _ in data])
-                query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
-                result = session.execute(query, tuple(data.values()))
-                session.commit()
-                return result.lastrowid
-        except Exception as e:
-            session.rollback()
-            raise
-        finally:
-            session.close()
+        from app.utils.db_retry import retry_db_operation
+        
+        @retry_db_operation(max_retries=3, retry_delay=0.5)
+        def _execute():
+            session = self.get_session()
+            try:
+                # 根据表名获取模型类
+                model_class = self._get_model_class(table)
+                if model_class:
+                    obj = model_class(**data)
+                    session.add(obj)
+                    session.commit()
+                    session.refresh(obj)
+                    return getattr(obj, 'id', 0)
+                else:
+                    # 如果没有对应的ORM模型，使用原生SQL
+                    columns = ', '.join(data.keys())
+                    placeholders = ', '.join(['?' for _ in data])
+                    query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
+                    result = session.execute(query, tuple(data.values()))
+                    session.commit()
+                    return result.lastrowid
+            except Exception as e:
+                session.rollback()
+                raise
+            finally:
+                session.close()
+        
+        return _execute()
     
     def update_one(self, table: str, data: dict, where: dict) -> int:
         """
         更新记录（使用ORM）
+        支持自动重试机制
         
         Args:
             table: 表名
@@ -470,40 +527,47 @@ class ORMDatabase:
         Returns:
             影响的行数
         """
-        session = self.get_session()
-        try:
-            # 根据表名获取模型类
-            model_class = self._get_model_class(table)
-            if model_class:
-                # 使用ORM更新
-                query = session.query(model_class)
-                
-                # 添加过滤条件
-                for key, value in where.items():
-                    query = query.filter(getattr(model_class, key) == value)
-                
-                # 执行更新
-                count = query.update(data)
-                session.commit()
-                return count
-            else:
-                # 如果没有对应的ORM模型，使用原生SQL
-                set_clause = ', '.join([f"{k} = ?" for k in data.keys()])
-                where_clause = ' AND '.join([f"{k} = ?" for k in where.keys()])
-                query = f"UPDATE {table} SET {set_clause} WHERE {where_clause}"
-                params = tuple(data.values()) + tuple(where.values())
-                result = session.execute(query, params)
-                session.commit()
-                return result.rowcount
-        except Exception as e:
-            session.rollback()
-            raise
-        finally:
-            session.close()
+        from app.utils.db_retry import retry_db_operation
+        
+        @retry_db_operation(max_retries=3, retry_delay=0.5)
+        def _execute():
+            session = self.get_session()
+            try:
+                # 根据表名获取模型类
+                model_class = self._get_model_class(table)
+                if model_class:
+                    # 使用ORM更新
+                    query = session.query(model_class)
+                    
+                    # 添加过滤条件
+                    for key, value in where.items():
+                        query = query.filter(getattr(model_class, key) == value)
+                    
+                    # 执行更新
+                    count = query.update(data)
+                    session.commit()
+                    return count
+                else:
+                    # 如果没有对应的ORM模型，使用原生SQL
+                    set_clause = ', '.join([f"{k} = ?" for k in data.keys()])
+                    where_clause = ' AND '.join([f"{k} = ?" for k in where.keys()])
+                    query = f"UPDATE {table} SET {set_clause} WHERE {where_clause}"
+                    params = tuple(data.values()) + tuple(where.values())
+                    result = session.execute(query, params)
+                    session.commit()
+                    return result.rowcount
+            except Exception as e:
+                session.rollback()
+                raise
+            finally:
+                session.close()
+        
+        return _execute()
     
     def delete(self, table: str, where: dict) -> int:
         """
         删除记录（使用ORM）
+        支持自动重试机制
         
         Args:
             table: 表名
@@ -512,34 +576,40 @@ class ORMDatabase:
         Returns:
             影响的行数
         """
-        session = self.get_session()
-        try:
-            # 根据表名获取模型类
-            model_class = self._get_model_class(table)
-            if model_class:
-                # 使用ORM删除
-                query = session.query(model_class)
-                
-                # 添加过滤条件
-                for key, value in where.items():
-                    query = query.filter(getattr(model_class, key) == value)
-                
-                # 执行删除
-                count = query.delete()
-                session.commit()
-                return count
-            else:
-                # 如果没有对应的ORM模型，使用原生SQL
-                where_clause = ' AND '.join([f"{k} = ?" for k in where.keys()])
-                query = f"DELETE FROM {table} WHERE {where_clause}"
-                result = session.execute(query, tuple(where.values()))
-                session.commit()
-                return result.rowcount
-        except Exception as e:
-            session.rollback()
-            raise
-        finally:
-            session.close()
+        from app.utils.db_retry import retry_db_operation
+        
+        @retry_db_operation(max_retries=3, retry_delay=0.5)
+        def _execute():
+            session = self.get_session()
+            try:
+                # 根据表名获取模型类
+                model_class = self._get_model_class(table)
+                if model_class:
+                    # 使用ORM删除
+                    query = session.query(model_class)
+                    
+                    # 添加过滤条件
+                    for key, value in where.items():
+                        query = query.filter(getattr(model_class, key) == value)
+                    
+                    # 执行删除
+                    count = query.delete()
+                    session.commit()
+                    return count
+                else:
+                    # 如果没有对应的ORM模型，使用原生SQL
+                    where_clause = ' AND '.join([f"{k} = ?" for k in where.keys()])
+                    query = f"DELETE FROM {table} WHERE {where_clause}"
+                    result = session.execute(query, tuple(where.values()))
+                    session.commit()
+                    return result.rowcount
+            except Exception as e:
+                session.rollback()
+                raise
+            finally:
+                session.close()
+        
+        return _execute()
     
     def _get_model_class(self, table_name: str):
         """
