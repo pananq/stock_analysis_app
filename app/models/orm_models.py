@@ -6,7 +6,7 @@ import re
 from datetime import datetime
 from sqlalchemy import (
     create_engine, Column, Integer, String, Text, DateTime, 
-    Date, Boolean, Float, ForeignKey, Index, Numeric, BigInteger
+    Date, Boolean, Float, Index, Numeric, BigInteger
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
@@ -55,10 +55,6 @@ class User(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now, comment='更新时间')
     last_login = Column(DateTime, comment='最后登录时间')
     
-    # 关系
-    strategies = relationship("Strategy", back_populates="user", cascade="all, delete-orphan")
-    job_logs = relationship("JobLog", back_populates="user", cascade="all, delete-orphan")
-    
     # 索引
     __table_args__ = (
         Index('idx_username', 'username'),
@@ -71,7 +67,7 @@ class Strategy(Base):
     __tablename__ = 'strategies'
     
     id = Column(Integer, primary_key=True, autoincrement=True, comment='策略ID')
-    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), comment='所属用户ID')
+    user_id = Column(Integer, comment='所属用户ID')
     name = Column(String(500), nullable=False, unique=True, comment='策略名称')
     description = Column(Text, comment='策略描述')
     config = Column(Text, nullable=False, comment='策略配置（JSON格式）')
@@ -79,10 +75,6 @@ class Strategy(Base):
     created_at = Column(DateTime, default=datetime.now, comment='创建时间')
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now, comment='更新时间')
     last_executed_at = Column(DateTime, comment='最后执行时间')
-    
-    # 关系
-    user = relationship("User", back_populates="strategies")
-    results = relationship("StrategyResult", back_populates="strategy", cascade="all, delete-orphan")
     
     # 索引
     __table_args__ = (
@@ -96,16 +88,13 @@ class StrategyResult(Base):
     __tablename__ = 'strategy_results'
     
     id = Column(Integer, primary_key=True, autoincrement=True, comment='结果ID')
-    strategy_id = Column(Integer, ForeignKey('strategies.id', ondelete='CASCADE'), nullable=False, comment='策略ID')
-    stock_code = Column(String(20), ForeignKey('stocks.code', ondelete='CASCADE'), nullable=False, comment='股票代码')
+    strategy_id = Column(Integer, nullable=False, comment='策略ID')
+    stock_code = Column(String(20), nullable=False, comment='股票代码')
     trigger_date = Column(Date, nullable=False, comment='触发日期')
     trigger_price = Column(Float(10, 4), comment='触发价格')
     rise_percent = Column(Float(10, 4), comment='涨幅')
     result_data = Column(Text, comment='结果数据（JSON格式）')
     executed_at = Column(DateTime, default=datetime.now, comment='执行时间')
-    
-    # 关系
-    strategy = relationship("Strategy", back_populates="results")
     
     # 索引
     __table_args__ = (
@@ -162,7 +151,7 @@ class JobLog(Base):
     __tablename__ = 'job_logs'
     
     id = Column(Integer, primary_key=True, autoincrement=True, comment='日志ID')
-    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), comment='所属用户ID')
+    user_id = Column(Integer, comment='所属用户ID')
     job_type = Column(String(100), nullable=False, comment='任务类型')
     job_name = Column(String(200), nullable=False, comment='任务名称')
     status = Column(String(50), nullable=False, comment='状态')
@@ -171,9 +160,6 @@ class JobLog(Base):
     duration = Column(Float(10, 4), comment='执行时长（秒）')
     message = Column(Text, comment='消息')
     error = Column(Text, comment='错误信息')
-    
-    # 关系
-    user = relationship("User", back_populates="job_logs")
     
     # 索引
     __table_args__ = (
@@ -189,7 +175,7 @@ class TaskExecutionDetail(Base):
     __tablename__ = 'task_execution_details'
     
     id = Column(Integer, primary_key=True, autoincrement=True, comment='详情ID')
-    job_log_id = Column(Integer, ForeignKey('job_logs.id', ondelete='CASCADE'), nullable=False, comment='任务日志ID')
+    job_log_id = Column(Integer, nullable=False, comment='任务日志ID')
     task_type = Column(String(100), nullable=False, comment='任务类型')
     stock_code = Column(String(20), comment='股票代码')
     stock_name = Column(String(500), comment='股票名称')
