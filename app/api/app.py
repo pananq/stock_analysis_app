@@ -261,7 +261,9 @@ def register_request_hooks(app):
             '/api/system/system-info',
             '/api/system/database-status',
             '/api/system/scheduler/jobs',
-            '/api/system/stats'
+            '/api/system/stats',
+            '/api/system/info',
+            '/api/system/scheduler/logs'
         ]
         
         # 静态文件或白名单路径直接放行
