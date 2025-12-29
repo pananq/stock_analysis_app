@@ -14,9 +14,27 @@ CREATE TABLE IF NOT EXISTS stocks (
     industry TEXT,
     market_type TEXT,
     status TEXT DEFAULT 'normal',
+    earliest_data_date TEXT,
+    latest_data_date TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 创建索引
+CREATE INDEX IF NOT EXISTS idx_stocks_status 
+ON stocks(status);
+
+CREATE INDEX IF NOT EXISTS idx_stocks_industry 
+ON stocks(industry);
+
+CREATE INDEX IF NOT EXISTS idx_stocks_market_type 
+ON stocks(market_type);
+
+CREATE INDEX IF NOT EXISTS idx_stocks_earliest_data_date 
+ON stocks(earliest_data_date);
+
+CREATE INDEX IF NOT EXISTS idx_stocks_latest_data_date 
+ON stocks(latest_data_date);
 
 -- ============================================
 -- 2. strategies 表 - 策略配置表

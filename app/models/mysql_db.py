@@ -108,11 +108,15 @@ class MySQLDB:
                     industry VARCHAR(200),
                     market_type VARCHAR(50),
                     status VARCHAR(50) DEFAULT 'normal',
+                    earliest_data_date DATE,
+                    latest_data_date DATE,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                     INDEX idx_status (status),
                     INDEX idx_industry (industry),
-                    INDEX idx_market_type (market_type)
+                    INDEX idx_market_type (market_type),
+                    INDEX idx_earliest_data_date (earliest_data_date),
+                    INDEX idx_latest_data_date (latest_data_date)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             ''')
             

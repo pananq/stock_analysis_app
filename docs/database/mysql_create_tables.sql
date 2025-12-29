@@ -19,12 +19,16 @@ CREATE TABLE `stocks` (
   `industry` VARCHAR(200) DEFAULT NULL COMMENT '所属行业',
   `market_type` VARCHAR(50) DEFAULT NULL COMMENT '市场类型',
   `status` VARCHAR(50) DEFAULT 'normal' COMMENT '股票状态',
+  `earliest_data_date` DATE DEFAULT NULL COMMENT '最早数据日期',
+  `latest_data_date` DATE DEFAULT NULL COMMENT '最近数据日期',
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`code`),
   INDEX `idx_status` (`status`),
   INDEX `idx_industry` (`industry`),
-  INDEX `idx_market_type` (`market_type`)
+  INDEX `idx_market_type` (`market_type`),
+  INDEX `idx_earliest_data_date` (`earliest_data_date`),
+  INDEX `idx_latest_data_date` (`latest_data_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='股票基础信息表';
 
 -- ============================================

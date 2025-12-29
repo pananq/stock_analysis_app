@@ -686,6 +686,132 @@ class MarketDataService:
             raise
         finally:
             session.close()
+    
+    def incremental_update(self, force_full_update: bool = False, progress_callback: Callable = None, stop_event = None) -> Dict[str, Any]:
+        """智能增量更新股票数据，根据每只股票的最新数据日期只下载缺失的数据"""
+        logger.info("=" * 60)
+        logger.info(f"开始{'全量' if force_full_update else '智能增量'}更新股票数据")
+        logger.info("=" * 60)
+        
+        start_time = datetime.now()
+        current_date = date.today()
+        
+        if stop_event and stop_event.is_set():
+            return {'success': False, 'message': '任务已取消', 'cancelled': True}
+        
+        stocks = self.stock_service.get_stock_list()
+        total_stocks = len(stocks)
+        
+        logger.info(f"股票总数: {total_stocks}")
+        if progress_callback:
+            progress_callback(0, f"准备更新 {total_stocks} 只股票")
+        
+        success_count = fail_count = skipped_count = total_records = 0
+        failed_stocks = []
+        skipped_stocks = []
+        
+        for idx, stock in enumerate(stocks, 1):
+            if stop_event and stop_event.is_set():
+                return {
+                    'success': False, 'message': '任务已取消', 'cancelled': True,
+                    'success_count': success_count, 'fail_count': fail_count,
+                    'skipped_count': skipped_count, 'total_records': total_records,
+                    'failed_stocks': failed_stocks, 'skipped_stocks': skipped_stocks
+                }
+            
+            code = stock['code']
+            name = stock['name']
+            
+            try:
+                if force_full_update:
+                    needs_update = True
+                    update_reason = "强制全量更新"
+                    start_date_str = (current_date - timedelta(days=365*3)).strftime('%Y-%m-%d')
+                else:
+                    needs_update, reason = self.date_range_service.needs_update(code, current_date)
+                    
+                    if not needs_update:
+                        skipped_count += 1
+                        skipped_stocks.append({'code': code, 'name': name, 'reason': reason})
+                        logger.debug(f"[{idx}/{len(stocks)}] 跳过 {code} - {name}: {reason}")
+                        continue
+                    
+                    start_date_obj = self.date_range_service.calculate_update_start_date(code, current_date)
+                    if start_date_obj:
+                        start_date_str = start_date_obj.strftime('%Y-%m-%d')
+                        update_reason = reason
+                    else:
+                        skipped_count += 1
+                        skipped_stocks.append({'code': code, 'name': name, 'reason': '无法计算起始日期'})
+                        continue
+                
+                end_date_str = current_date.strftime('%Y-%m-%d')
+                logger.info(f"[{idx}/{len(stocks)}] 更新 {code} - {name}: {start_date_str} ~ {end_date_str} ({update_reason})")
+                
+                self.rate_limiter.wait()
+                df = self.datasource.get_daily_data(code, start_date_str, end_date_str)
+                
+                if df.empty:
+                    logger.debug(f"  {code} 无新数据")
+                    skipped_count += 1
+                    skipped_stocks.append({'code': code, 'name': name, 'reason': '无新数据'})
+                    continue
+                
+                records = len(df)
+                self._save_daily_data(df, code, update_date_range=True)
+                
+                success_count += 1
+                total_records += records
+                logger.info(f"  ✓ {code} 更新成功，{records}条记录")
+                
+                if progress_callback:
+                    progress_callback(
+                        (idx / len(stocks)) * 100,
+                        f"更新 {code} 成功",
+                        stock_code=code,
+                        stock_name=name,
+                        success=True,
+                        records=records,
+                        update_type='full' if force_full_update else 'incremental',
+                        start_date=start_date_str,
+                        end_date=end_date_str
+                    )
+                
+                if idx % 10 == 0:
+                    elapsed = (datetime.now() - start_time).total_seconds()
+                    avg_time = elapsed / idx
+                    remaining = avg_time * (len(stocks) - idx)
+                    progress = (idx / len(stocks)) * 100
+                    
+                    logger.info(f"进度: {idx}/{len(stocks)} ({progress:.1f}%), 成功: {success_count}, 跳过: {skipped_count}")
+                    
+                    if progress_callback:
+                        progress_callback(progress, f"正在更新... {idx}/{len(stocks)} ({progress:.1f}%), 成功: {success_count}, 跳过: {skipped_count}")
+            
+            except Exception as e:
+                logger.error(f"  ✗ {code} 更新失败: {e}")
+                fail_count += 1
+                failed_stocks.append({'code': code, 'name': name, 'reason': str(e)})
+        
+        end_time = datetime.now()
+        duration = (end_time - start_time).total_seconds()
+        
+        logger.info("=" * 60)
+        logger.info(f"{'全量' if force_full_update else '智能增量'}更新完成")
+        logger.info(f"总股票数: {len(stocks)}, 成功: {success_count}, 跳过: {skipped_count}, 失败: {fail_count}")
+        logger.info(f"总记录数: {total_records}, 耗时: {duration/60:.2f}分钟")
+        logger.info("=" * 60)
+        
+        if progress_callback:
+            progress_callback(100, f"更新完成！成功 {success_count} 只，跳过 {skipped_count} 只，失败 {fail_count} 只，共 {total_records} 条记录")
+        
+        return {
+            'success': True, 'total_stocks': len(stocks), 'success_count': success_count,
+            'fail_count': fail_count, 'skipped_count': skipped_count,
+            'total_records': total_records, 'duration': duration,
+            'failed_stocks': failed_stocks, 'skipped_stocks': skipped_stocks,
+            'update_type': 'full' if force_full_update else 'incremental'
+        }
 
 
 # 全局服务实例

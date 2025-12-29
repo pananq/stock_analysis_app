@@ -27,6 +27,8 @@ class Stock(Base):
     industry = Column(String(200), comment='所属行业')
     market_type = Column(String(50), comment='市场类型')
     status = Column(String(50), default='normal', comment='状态')
+    earliest_data_date = Column(Date, comment='最早数据日期')
+    latest_data_date = Column(Date, comment='最近数据日期')
     created_at = Column(DateTime, default=datetime.now, comment='创建时间')
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now, comment='更新时间')
     
@@ -35,6 +37,8 @@ class Stock(Base):
         Index('idx_status', 'status'),
         Index('idx_industry', 'industry'),
         Index('idx_market_type', 'market_type'),
+        Index('idx_earliest_data_date', 'earliest_data_date'),
+        Index('idx_latest_data_date', 'latest_data_date'),
     )
 
 
