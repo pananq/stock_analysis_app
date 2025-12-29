@@ -36,3 +36,6 @@ python-dotenv==1.0.0
 # 认证与安全
 bcrypt==4.1.2
 PyJWT==2.8.0
+
+# 生产服务器
+gunicorn==21.2.0

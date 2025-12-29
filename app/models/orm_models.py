@@ -2,6 +2,7 @@
 SQLAlchemy ORM 模型定义
 用于 MySQL 和 SQLite 数据库的 ORM 操作
 """
+import re
 from datetime import datetime
 from sqlalchemy import (
     create_engine, Column, Integer, String, Text, DateTime, 
@@ -264,7 +265,58 @@ class ORMDatabase:
     
     def _create_tables(self):
         """创建所有表"""
+        import re
+        from sqlalchemy import text
+        
+        # 先创建数据库（如果不存在）
+        self._create_database_if_not_exists()
+        
+        # 然后创建所有表
         Base.metadata.create_all(self.engine)
+    
+    def _create_database_if_not_exists(self):
+        """如果数据库不存在则创建"""
+        from sqlalchemy import text, create_engine
+        
+        # 从 db_url 中提取数据库信息
+        # 格式: mysql+pymysql://user:password@host:port/database
+        match = re.match(
+            r'mysql\+pymysql://([^:]+):([^@]+)@([^:]+):(\d+)/([^?]+)',
+            self.db_url
+        )
+        
+        if not match:
+            logger.warning("无法解析数据库URL，跳过数据库创建")
+            return
+        
+        username, password, host, port, database = match.groups()
+        
+        # 创建一个不指定数据库的连接URL，用于连接到MySQL服务器
+        server_url = f"mysql+pymysql://{username}:{password}@{host}:{port}"
+        
+        try:
+            # 连接到MySQL服务器
+            server_engine = create_engine(server_url, isolation_level="AUTOCOMMIT")
+            
+            with server_engine.connect() as conn:
+                # 检查数据库是否存在
+                result = conn.execute(text(
+                    f"SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '{database}'"
+                ))
+                
+                if not result.fetchone():
+                    # 数据库不存在，创建它
+                    logger.info(f"数据库 '{database}' 不存在，正在创建...")
+                    conn.execute(text(f"CREATE DATABASE `{database}` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"))
+                    logger.info(f"数据库 '{database}' 创建成功")
+                else:
+                    logger.info(f"数据库 '{database}' 已存在")
+            
+            server_engine.dispose()
+            
+        except Exception as e:
+            logger.error(f"创建数据库失败: {e}")
+            raise
     
     def get_session(self):
         """

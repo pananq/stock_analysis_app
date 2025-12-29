@@ -1,0 +1,31 @@
+[Unit]
+Description=Stock Analysis API Server (Gunicorn)
+After=network.target mysql.service
+
+[Service]
+Type=notify
+User=aaronpan
+Group=aaronpan
+WorkingDirectory=/data/home/aaronpan/stock-analysis-app
+Environment=PATH=/data/home/aaronpan/stock-analysis-app/venv/bin
+ExecStart=/data/home/aaronpan/stock-analysis-app/venv/bin/gunicorn \
+    --config gunicorn_config.py \
+    --worker-class sync \
+    --workers 4 \
+    --worker-connections 1000 \
+    --timeout 30 \
+    --keepalive 2 \
+    --access-logfile - \
+    --error-logfile - \
+    --log-level info \
+    app.api.app:create_app()
+
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=30
+PrivateTmp=true
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
