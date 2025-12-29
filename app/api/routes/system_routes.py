@@ -27,7 +27,7 @@ def get_system_info():
         return jsonify({
             'success': True,
             'data': {
-                'name': '股票分析系统',
+                'name': '股海罗盘',
                 'version': '1.0.0',
                 'datasource': config.get('datasource', {}).get('type', 'unknown'),
                 'database': {

@@ -24,7 +24,7 @@ def main():
         logger = get_logger(__name__)
         
         logger.info("=" * 60)
-        logger.info("股票分析系统 - Web服务器")
+        logger.info("股海罗盘 - Web服务器")
         logger.info("=" * 60)
         
         # 初始化并启动任务调度器

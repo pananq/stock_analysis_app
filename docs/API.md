@@ -36,7 +36,7 @@
 - **响应示例**:
 ```json
 {
-  "name": "股票分析系统API",
+  "name": "股海罗盘API",
   "version": "1.0.0",
   "status": "running",
   "timestamp": "2025-12-25 20:00:00",
@@ -74,7 +74,7 @@
 {
   "success": true,
   "data": {
-    "name": "股票分析系统",
+    "name": "股海罗盘",
     "version": "1.0.0",
     "datasource": "akshare",
     "database": {

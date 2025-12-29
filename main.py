@@ -1,5 +1,5 @@
 """
-股票分析系统主程序
+股海罗盘主程序
 支持启动API服务、Web服务和调度器
 """
 import sys
@@ -240,7 +240,7 @@ def daemonize():
 def stop_services():
     """停止所有服务"""
     print("=" * 60)
-    print("停止股票分析系统")
+    print("停止股海罗盘")
     print("=" * 60)
     
     if not PID_FILE.exists():
@@ -315,7 +315,7 @@ def stop_services():
 def status_services():
     """查看服务状态"""
     print("=" * 60)
-    print("股票分析系统状态")
+    print("股海罗盘状态")
     print("=" * 60)
     
     if not PID_FILE.exists():
@@ -374,7 +374,7 @@ def signal_handler(signum, frame):
 
 def main():
     """主函数"""
-    parser = argparse.ArgumentParser(description='股票分析系统', formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(description='股海罗盘', formatter_class=argparse.RawDescriptionHelpFormatter)
     
     # 子命令
     subparsers = parser.add_subparsers(dest='command', help='可用命令')
@@ -449,12 +449,12 @@ def main():
         # 决定是否后台运行
         if not args.foreground:
             print("\n" + "=" * 60)
-            print("启动股票分析系统（后台模式）")
+            print("启动股海罗盘（后台模式）")
             print("=" * 60)
             daemonize()
         else:
             print("\n" + "=" * 60)
-            print("启动股票分析系统（前台模式）")
+            print("启动股海罗盘（前台模式）")
             print("=" * 60)
         
         logger = get_logger(__name__)

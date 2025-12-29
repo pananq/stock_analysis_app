@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ strategy.name }} - 股票分析系统{% endblock %}
+{% block title %}{{ strategy.name }} - 股海罗盘{% endblock %}
 
 {% block content %}
 <div class="row">
@@ -111,6 +111,43 @@
     </div>
 </div>
 
+<!-- 策略执行进度区域 -->
+<div class="row mb-4" id="strategy-progress-section" style="display: none;">
+    <div class="col-12">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-spinner fa-spin me-2"></i>
+                策略执行中
+                <span class="badge bg-white text-primary float-end" id="strategy-task-id">Task ID: -</span>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span id="strategy-progress-message">正在执行...</span>
+                                <span id="strategy-progress-percentage" class="fw-bold">0%</span>
+                            </div>
+                            <div class="progress" style="height: 25px;">
+                                <div id="strategy-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="text-muted small">
+                            <i class="fas fa-clock me-1"></i>
+                            开始时间: <span id="strategy-start-time">-</span>
+                            <span class="badge bg-info ms-2" id="strategy-status-badge">运行中</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <p class="mb-1 text-muted small">提示：任务在后台执行，您可以继续使用其他功能</p>
+                        <p class="mb-0 text-muted small"><i class="fas fa-info-circle me-1"></i>执行完成后将自动刷新</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- 执行结果 -->
 <div class="row">
     <div class="col-12">
@@ -209,11 +246,8 @@ let taskPollTimer = null;
  */
 function executeStrategy(strategyId) {
     showConfirm('确定要执行该策略吗？执行将在后台进行，完成后会通知您。', function() {
-        showLoading('正在创建执行任务...', false);
-        
         apiRequest(`/strategies/${strategyId}/execute`, 'POST', {},
             function(response) {
-                hideLoading();
                 const taskId = response.data.task_id;
                 showMessage('策略执行任务已创建，正在后台执行...', 'info');
                 
@@ -221,10 +255,128 @@ function executeStrategy(strategyId) {
                 pollTaskStatus(taskId, strategyId);
             },
             function(error) {
-                hideLoading();
+                showMessage('创建任务失败', 'error');
             }
         );
     });
+}
+
+/**
+ * 开始进度检查
+ */
+function startProgressCheck(taskId) {
+    // 显示进度区域
+    document.getElementById('strategy-progress-section').style.display = 'block';
+    document.getElementById('strategy-task-id').textContent = 'Task ID: ' + taskId.substring(0, 8) + '...';
+    
+    // 立即检查一次
+    checkTaskProgress(taskId);
+    
+    // 每2秒检查一次进度
+    taskPollTimer = setInterval(function() {
+        checkTaskProgress(taskId);
+    }, 2000);
+}
+
+/**
+ * 检查任务进度
+ */
+function checkTaskProgress(taskId) {
+    apiRequest(`/strategies/tasks/${taskId}`, 'GET', null,
+        function(response) {
+            if (response.success && response.data) {
+                updateProgressUI(response.data);
+                
+                // 如果任务完成或失败，停止检查
+                if (response.data.status === 'completed' || response.data.status === 'failed') {
+                    stopProgressCheck();
+                    
+                    // 显示完成消息
+                    if (response.data.status === 'completed') {
+                        if (response.data.result && response.data.result.success) {
+                            const result = response.data.result;
+                            showMessage(
+                                `策略执行完成！<br>` +
+                                `扫描股票: ${result.scanned_stocks} 只<br>` +
+                                `匹配股票: ${result.matched_count} 只<br>` +
+                                `耗时: ${result.execution_time.toFixed(1)} 秒`,
+                                'success'
+                            );
+                        } else {
+                            showMessage('策略执行完成，但未返回结果', 'warning');
+                        }
+                        
+                        // 1.5秒后刷新页面
+                        setTimeout(refreshPage, 1500);
+                    } else {
+                        showMessage(`策略执行失败: ${response.data.error || '未知错误'}`, 'error');
+                    }
+                }
+            }
+        },
+        function(error) {
+            console.error('检查任务进度失败:', error);
+        }
+    );
+}
+
+/**
+ * 更新进度UI
+ */
+function updateProgressUI(taskData) {
+    const progressBar = document.getElementById('strategy-progress-bar');
+    const percentageEl = document.getElementById('strategy-progress-percentage');
+    const messageEl = document.getElementById('strategy-progress-message');
+    const statusBadge = document.getElementById('strategy-status-badge');
+    const startTimeEl = document.getElementById('strategy-start-time');
+    
+    // 更新进度
+    const progress = Math.round(taskData.progress || 0);
+    progressBar.style.width = progress + '%';
+    percentageEl.textContent = progress + '%';
+    
+    // 更新消息
+    messageEl.textContent = taskData.message || '正在执行...';
+    
+    // 更新开始时间
+    if (taskData.started_at) {
+        startTimeEl.textContent = taskData.started_at;
+    }
+    
+    // 更新状态徽章
+    statusBadge.className = 'badge';
+    
+    switch (taskData.status) {
+        case 'pending':
+            statusBadge.classList.add('bg-secondary');
+            statusBadge.textContent = '等待中';
+            break;
+        case 'running':
+            statusBadge.classList.add('bg-info');
+            statusBadge.textContent = '运行中';
+            break;
+        case 'completed':
+            statusBadge.classList.add('bg-success');
+            statusBadge.textContent = '已完成';
+            progressBar.classList.remove('progress-bar-striped', 'progress-bar-animated');
+            break;
+        case 'failed':
+            statusBadge.classList.add('bg-danger');
+            statusBadge.textContent = '失败';
+            progressBar.classList.remove('progress-bar-striped', 'progress-bar-animated', 'bg-success');
+            progressBar.classList.add('bg-danger');
+            break;
+    }
+}
+
+/**
+ * 停止进度检查
+ */
+function stopProgressCheck() {
+    if (taskPollTimer) {
+        clearInterval(taskPollTimer);
+        taskPollTimer = null;
+    }
 }
 
 /**
@@ -232,63 +384,10 @@ function executeStrategy(strategyId) {
  */
 function pollTaskStatus(taskId, strategyId) {
     // 清除之前的定时器
-    if (taskPollTimer) {
-        clearInterval(taskPollTimer);
-    }
+    stopProgressCheck();
     
-    // 显示进度提示
-    showLoading('策略执行中，请稍候...', false);
-    
-    // 每2秒查询一次任务状态
-    taskPollTimer = setInterval(function() {
-        apiRequest(`/strategies/tasks/${taskId}`, 'GET', null,
-            function(response) {
-                const task = response.data;
-                
-                // 更新进度消息
-                if (task.status === 'running') {
-                    const progressMsg = `执行中... ${task.progress.toFixed(0)}% - ${task.message}`;
-                    showLoading(progressMsg, false);
-                } else if (task.status === 'completed') {
-                    // 任务完成
-                    clearInterval(taskPollTimer);
-                    taskPollTimer = null;
-                    hideLoading();
-                    
-                    // 显示结果
-                    if (task.result && task.result.success) {
-                        const result = task.result;
-                        showMessage(
-                            `策略执行完成！<br>` +
-                            `扫描股票: ${result.scanned_stocks} 只<br>` +
-                            `匹配股票: ${result.matched_count} 只<br>` +
-                            `耗时: ${result.execution_time.toFixed(1)} 秒`,
-                            'success'
-                        );
-                        
-                        // 1.5秒后刷新页面
-                        setTimeout(refreshPage, 1500);
-                    } else {
-                        showMessage('策略执行完成，但未返回结果', 'warning');
-                        setTimeout(refreshPage, 1500);
-                    }
-                } else if (task.status === 'failed') {
-                    // 任务失败
-                    clearInterval(taskPollTimer);
-                    taskPollTimer = null;
-                    hideLoading();
-                    showMessage(`策略执行失败: ${task.error || '未知错误'}`, 'error');
-                }
-            },
-            function(error) {
-                // 查询失败，停止轮询
-                clearInterval(taskPollTimer);
-                taskPollTimer = null;
-                hideLoading();
-                showMessage('无法获取任务状态', 'error');
-            }
-        );
-    }, 2000);
+    // 开始进度检查
+    startProgressCheck(taskId);
 }
 
 // 页面卸载时清除定时器
@@ -345,7 +444,7 @@ function viewResult(result) {
             html += `
                 <tr>
                     <td><strong>${stock.stock_code}</strong></td>
-                    <td>${stock.stock_name || '-'}</td>
+                    <td><a href="/stocks/${stock.stock_code}" target="_blank">${stock.stock_name || '-'}</a></td>
                     <td>${stock.trigger_date}</td>
                     <td>${formatPctChange(stock.trigger_pct_change || stock.rise_percent)}</td>
                     <td>${maValue}</td>

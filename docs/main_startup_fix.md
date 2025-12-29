@@ -175,7 +175,7 @@ python main.py --api-only --help 2>&1 | head
 $ python main.py --help
 usage: main.py [-h] [--api-only] [--web-only] [--init-db]
 
-股票分析系统
+股海罗盘
 
 options:
   -h, --help  show this help message and exit

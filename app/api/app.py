@@ -148,7 +148,7 @@ def create_app(config=None):
         """API根路径"""
         from datetime import datetime
         return jsonify({
-            'name': '股票分析系统API',
+            'name': '股海罗盘API',
             'version': '1.0.0',
             'status': 'running',
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
@@ -307,7 +307,7 @@ if __name__ == '__main__':
     """应用入口"""
     import argparse
     
-    parser = argparse.ArgumentParser(description='股票分析系统 API 服务')
+    parser = argparse.ArgumentParser(description='股海罗盘 API 服务')
     parser.add_argument('--host', default='0.0.0.0', help='主机地址')
     parser.add_argument('--port', type=int, default=5000, help='端口号')
     parser.add_argument('--debug', action='store_true', help='调试模式')

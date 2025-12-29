@@ -76,7 +76,7 @@ python main.py status
 输出示例：
 ```
 ============================================================
-股票分析系统状态
+股海罗盘状态
 ============================================================
 状态: 运行中
 PID: 3045584
@@ -282,7 +282,7 @@ stock-analysis-app/
 ```ini
 # /etc/systemd/system/stock-analysis.service
 [Unit]
-Description=股票分析系统
+Description=股海罗盘
 After=network.target
 
 [Service]
