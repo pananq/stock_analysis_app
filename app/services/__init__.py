@@ -22,12 +22,11 @@ def get_stock_date_range_service():
     global _stock_date_range_service_instance
     
     if _stock_date_range_service_instance is None:
-        from app.models.mysql_db import MySQLDatabase
-        database = MySQLDatabase()
+        from app.models.mysql_db import get_mysql_db
+        database = get_mysql_db()
         _stock_date_range_service_instance = StockDateRangeService(database)
     
-    return _stock_date_range_service
-
+    return _stock_date_range_service_instance
 __all__ = [
     'DataSource',
     'AkshareDataSource',

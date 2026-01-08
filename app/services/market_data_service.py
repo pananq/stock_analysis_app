@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Optional, Callable
 from datetime import datetime, timedelta, date
 import pandas as pd
 from app.models.orm_models import DailyMarket, ORMDatabase
-from app.models.mysql_db import MySQLDatabase
+from app.models.mysql_db import get_mysql_db
 from app.services import get_datasource, get_stock_service, get_stock_date_range_service
 from app.services.stock_date_range_service import StockDateRangeService
 from app.utils import get_logger, get_rate_limiter, get_config, get_stock_limit_for_mode
@@ -43,8 +43,7 @@ class MarketDataService:
         self.Session = sessionmaker(bind=self.orm_db.engine)
         
         # 创建日期范围服务
-        mysql_db = MySQLDatabase()
-        self.date_range_service = StockDateRangeService(mysql_db)
+        self.date_range_service = StockDateRangeService(get_mysql_db())
         
         logger.info("行情数据服务初始化完成")
     
