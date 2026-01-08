@@ -36,7 +36,7 @@ class StockDateRangeService:
             query = '''
                 SELECT earliest_data_date, latest_data_date
                 FROM stocks
-                WHERE code = ?
+                WHERE code = %s
             '''
             results = self.db.execute_query(query, (stock_code,))
             
@@ -100,22 +100,22 @@ class StockDateRangeService:
             params = []
             
             if new_earliest is not None:
-                updates.append("earliest_data_date = ?")
+                updates.append("earliest_data_date = %s")
                 params.append(new_earliest.strftime('%Y-%m-%d'))
             
             if new_latest is not None:
-                updates.append("latest_data_date = ?")
+                updates.append("latest_data_date = %s")
                 params.append(new_latest.strftime('%Y-%m-%d'))
             
             if not updates:
                 # 没有需要更新的字段
                 return True
             
-            updates.append("updated_at = ?")
+            updates.append("updated_at = %s")
             params.append(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
             params.append(stock_code)
             
-            query = f"UPDATE stocks SET {', '.join(updates)} WHERE code = ?"
+            query = f"UPDATE stocks SET {', '.join(updates)} WHERE code = %s"
             affected_rows = self.db.execute_update(query, tuple(params))
             
             if affected_rows > 0:

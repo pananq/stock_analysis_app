@@ -69,41 +69,40 @@ class StrategyService:
             
             # 检查策略名称是否已存在（同一用户下名称不能重复）
             existing = self.db.execute_query(
-                "SELECT id FROM strategies WHERE name = ? AND user_id = ?",
+                "SELECT id FROM strategies WHERE name = %s AND user_id = %s",
                 (name.strip(), user_id)
             )
-            
+
             if existing:
                 logger.error(f"策略名称已存在: {name} (user_id={user_id})")
                 return None
-            
+
             # 构建策略配置JSON
             config = {
                 "rise_threshold": rise_threshold,
                 "observation_days": observation_days,
                 "ma_period": ma_period
             }
-            
+
             # 插入策略
             sql = """
                 INSERT INTO strategies (name, user_id, description, config, enabled, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
             """
-            
+
             now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            
+
             self.db.execute_update(
                 sql,
-                (name.strip(), user_id, description.strip(), json.dumps(config), 
-                 1 if enabled else 0, now, now)
+                (name.strip(), user_id, description, json.dumps(config),
+                 enabled, now, now)
             )
-            
-            # 获取新创建的策略ID
+
+            # 获取新插入的策略ID
             result = self.db.execute_query(
-                "SELECT id FROM strategies WHERE name = ?",
+                "SELECT id FROM strategies WHERE name = %s",
                 (name.strip(),)
             )
-            
             if result:
                 strategy_id = result[0]['id']
                 logger.info(f"策略创建成功: {name} (ID: {strategy_id}, User: {user_id})")
@@ -159,36 +158,36 @@ class StrategyService:
                 
                 # 检查名称是否与其他策略冲突（同一用户下）
                 existing = self.db.execute_query(
-                    "SELECT id FROM strategies WHERE name = ? AND id != ? AND user_id = ?",
+                    "SELECT id FROM strategies WHERE name = %s AND id != %s AND user_id = %s",
                     (name.strip(), strategy_id, user_id)
                 )
                 if existing:
                     logger.error(f"策略名称已存在: {name} (user_id={user_id})")
                     return False
-                
-                update_fields.append("name = ?")
-                params.append(name.strip())            
+
+                update_fields.append("name = %s")
+                params.append(name.strip())
             if description is not None:
-                update_fields.append("description = ?")
+                update_fields.append("description = %s")
                 params.append(description.strip())
-            
+
             # 更新配置参数
             config_updated = False
-            
+
             if rise_threshold is not None:
                 if not (0.01 <= rise_threshold <= 20.0):
                     logger.error(f"涨幅阈值必须在0.01-20.0之间，当前值: {rise_threshold}")
                     return False
                 config['rise_threshold'] = rise_threshold
                 config_updated = True
-            
+
             if observation_days is not None:
                 if not (1 <= observation_days <= 30):
                     logger.error(f"观察天数必须在1-30之间，当前值: {observation_days}")
                     return False
                 config['observation_days'] = observation_days
                 config_updated = True
-            
+
             if ma_period is not None:
                 valid_ma_periods = [5, 10, 20, 30, 60]
                 if ma_period not in valid_ma_periods:
@@ -196,32 +195,32 @@ class StrategyService:
                     return False
                 config['ma_period'] = ma_period
                 config_updated = True
-            
+
             if config_updated:
-                update_fields.append("config = ?")
+                update_fields.append("config = %s")
                 params.append(json.dumps(config))
-            
+
             if enabled is not None:
-                update_fields.append("enabled = ?")
+                update_fields.append("enabled = %s")
                 params.append(1 if enabled else 0)
-            
+
             if not update_fields:
                 logger.warning("没有需要更新的字段")
                 return True
-            
+
             # 添加更新时间
-            update_fields.append("updated_at = ?")
+            update_fields.append("updated_at = %s")
             params.append(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-            
+
             # 添加WHERE条件
             params.append(strategy_id)
-            
+
             # 执行更新
-            sql = f"UPDATE strategies SET {', '.join(update_fields)} WHERE id = ?"
-            
+            sql = f"UPDATE strategies SET {', '.join(update_fields)} WHERE id = %s"
+
             # 如果指定了 user_id，增加校验
             if user_id is not None:
-                sql += " AND user_id = ?"
+                sql += " AND user_id = %s"
                 params.append(user_id)
                 
             self.db.execute_update(sql, tuple(params))
@@ -253,18 +252,18 @@ class StrategyService:
             
             # 删除策略执行结果
             self.db.execute_update(
-                "DELETE FROM strategy_results WHERE strategy_id = ?",
+                "DELETE FROM strategy_results WHERE strategy_id = %s",
                 (strategy_id,)
             )
-            
+
             # 删除策略
-            sql = "DELETE FROM strategies WHERE id = ?"
+            sql = "DELETE FROM strategies WHERE id = %s"
             params = [strategy_id]
-            
+
             if user_id is not None:
-                sql += " AND user_id = ?"
+                sql += " AND user_id = %s"
                 params.append(user_id)
-                
+
             self.db.execute_update(sql, tuple(params))
             
             logger.info(f"策略删除成功: {strategy['name']} (ID: {strategy_id})")
@@ -286,13 +285,13 @@ class StrategyService:
             策略信息字典，如果不存在返回None
         """
         try:
-            sql = "SELECT * FROM strategies WHERE id = ?"
+            sql = "SELECT * FROM strategies WHERE id = %s"
             params = [strategy_id]
-            
+
             if user_id is not None:
-                sql += " AND user_id = ?"
+                sql += " AND user_id = %s"
                 params.append(user_id)
-                
+
             result = self.db.execute_query(sql, tuple(params))
             
             if result:
@@ -326,7 +325,7 @@ class StrategyService:
                 conditions.append("enabled = 1")
                 
             if user_id is not None:
-                conditions.append("strategies.user_id = ?")
+                conditions.append("strategies.user_id = %s")
                 params.append(user_id)
                 
             # 添加 LEFT JOIN 获取用户名
@@ -368,13 +367,13 @@ class StrategyService:
             策略信息字典，如果不存在返回None
         """
         try:
-            sql = "SELECT * FROM strategies WHERE name = ?"
+            sql = "SELECT * FROM strategies WHERE name = %s"
             params = [name.strip()]
-            
+
             if user_id is not None:
-                sql += " AND user_id = ?"
+                sql += " AND user_id = %s"
                 params.append(user_id)
-                
+
             result = self.db.execute_query(sql, tuple(params))
             
             if result:
@@ -402,7 +401,7 @@ class StrategyService:
         try:
             now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             self.db.execute_update(
-                "UPDATE strategies SET last_executed_at = ? WHERE id = ?",
+                "UPDATE strategies SET last_executed_at = %s WHERE id = %s",
                 (now, strategy_id)
             )
             

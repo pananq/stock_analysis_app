@@ -594,11 +594,11 @@ class TaskScheduler:
                 update_sql = """
                     UPDATE job_logs
                     SET status = 'failed',
-                        completed_at = ?,
-                        duration = ?,
+                        completed_at = %s,
+                        duration = %s,
                         error = '任务被异常终止（程序重启或崩溃）',
                         message = '任务已终止'
-                    WHERE id = ?
+                    WHERE id = %s
                 """
                 
                 self.db.execute_update(
@@ -661,10 +661,10 @@ class TaskScheduler:
                 sql = """
                     UPDATE job_logs
                     SET status = 'success',
-                        completed_at = ?,
-                        duration = ?,
-                        message = ?
-                    WHERE id = ?
+                        completed_at = %s,
+                        duration = %s,
+                        message = %s
+                    WHERE id = %s
                 """
                 self.db.execute_update(sql, (now, duration, message, job_log_id))
             else:
@@ -674,14 +674,14 @@ class TaskScheduler:
                     INNER JOIN (
                         SELECT id
                         FROM job_logs
-                        WHERE job_type = ? AND status = 'running'
+                        WHERE job_type = %s AND status = 'running'
                         ORDER BY started_at DESC
                         LIMIT 1
                     ) latest ON j.id = latest.id
                     SET j.status = 'success',
-                        j.completed_at = ?,
-                        j.duration = ?,
-                        j.message = ?
+                        j.completed_at = %s,
+                        j.duration = %s,
+                        j.message = %s
                 """
                 self.db.execute_update(sql, (job_type, now, duration, message))
 
@@ -706,10 +706,10 @@ class TaskScheduler:
                 sql = """
                     UPDATE job_logs
                     SET status = 'error',
-                        completed_at = ?,
-                        duration = ?,
-                        error = ?
-                    WHERE id = ?
+                        completed_at = %s,
+                        duration = %s,
+                        error = %s
+                    WHERE id = %s
                 """
                 self.db.execute_update(sql, (now, duration, error, job_log_id))
             else:
@@ -719,14 +719,14 @@ class TaskScheduler:
                     INNER JOIN (
                         SELECT id
                         FROM job_logs
-                        WHERE job_type = ? AND status = 'running'
+                        WHERE job_type = %s AND status = 'running'
                         ORDER BY started_at DESC
                         LIMIT 1
                     ) latest ON j.id = latest.id
                     SET j.status = 'error',
-                        j.completed_at = ?,
-                        j.duration = ?,
-                        j.error = ?
+                        j.completed_at = %s,
+                        j.duration = %s,
+                        j.error = %s
                 """
                 self.db.execute_update(sql, (job_type, now, duration, error))
 
@@ -787,9 +787,9 @@ class TaskScheduler:
             sql = """
                 SELECT *
                 FROM task_execution_details
-                WHERE job_log_id = ?
+                WHERE job_log_id = %s
                 ORDER BY created_at
-                LIMIT ? OFFSET ?
+                LIMIT %s OFFSET %s
             """
 
             details = self.db.execute_query(sql, (job_log_id, limit, offset))
@@ -846,10 +846,10 @@ class TaskScheduler:
             params = []
             
             if user_id is not None:
-                sql += " WHERE jl.user_id = ?"
+                sql += " WHERE jl.user_id = %s"
                 params.append(user_id)
-                
-            sql += " ORDER BY jl.started_at DESC LIMIT ? OFFSET ?"
+
+            sql += " ORDER BY jl.started_at DESC LIMIT %s OFFSET %s"
             params.extend([limit, offset])
 
             logs = self.db.execute_query(sql, tuple(params))
@@ -882,9 +882,9 @@ class TaskScheduler:
             params = []
             
             if user_id is not None:
-                sql += " WHERE user_id = ?"
+                sql += " WHERE user_id = %s"
                 params.append(user_id)
-                
+
             result = self.db.execute_query(sql, tuple(params))
             
             if result:
@@ -908,9 +908,9 @@ class TaskScheduler:
         """
         try:
             cutoff_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
-            
+
             result = self.db.execute_update(
-                "DELETE FROM job_logs WHERE started_at < ?",
+                "DELETE FROM job_logs WHERE started_at < %s",
                 (cutoff_date,)
             )
             

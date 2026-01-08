@@ -406,7 +406,7 @@ def execute_strategy(strategy_id):
                     
                     # 获取任务开始时间
                     job_info = scheduler.db.execute_query(
-                        "SELECT started_at FROM job_logs WHERE id = ?",
+                        "SELECT started_at FROM job_logs WHERE id = %s",
                         (job_log_id,)
                     )
                     if job_info:

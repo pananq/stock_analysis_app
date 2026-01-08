@@ -86,7 +86,7 @@ class StockService:
             if insert_data:
                 query = '''
                     INSERT INTO stocks (code, name, list_date, industry, market_type, status, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
                 '''
                 self.db.execute_many(query, insert_data)
                 logger.info(f"成功插入{success_count}条股票数据")
@@ -253,7 +253,7 @@ class StockService:
             股票信息字典，如果不存在则返回None
         """
         result = self.db.execute_query(
-            "SELECT * FROM stocks WHERE code = ?",
+            "SELECT * FROM stocks WHERE code = %s",
             (code,)
         )
         return result[0] if result else None
@@ -270,10 +270,10 @@ class StockService:
             股票列表
         """
         query = """
-            SELECT * FROM stocks 
-            WHERE code LIKE ? OR name LIKE ?
+            SELECT * FROM stocks
+            WHERE code LIKE %s OR name LIKE %s
             ORDER BY code
-            LIMIT ?
+            LIMIT %s
         """
         keyword_pattern = f"%{keyword}%"
         return self.db.execute_query(query, (keyword_pattern, keyword_pattern, limit))

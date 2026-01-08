@@ -442,7 +442,7 @@ def get_job_details(job_log_id):
         
         # 获取任务日志信息
         job_log = scheduler.db.execute_query(
-            "SELECT * FROM job_logs WHERE id = ?",
+            "SELECT * FROM job_logs WHERE id = %s",
             (job_log_id,)
         )
         
@@ -468,23 +468,23 @@ def get_job_details(job_log_id):
             details = scheduler.db.execute_query(
                 """
                 SELECT * FROM task_execution_details
-                WHERE job_log_id = ? AND detail_type = ?
+                WHERE job_log_id = %s AND detail_type = %s
                 ORDER BY created_at
-                LIMIT ? OFFSET ?
+                LIMIT %s OFFSET %s
                 """,
                 (job_log_id, detail_type, limit, offset)
             )
         else:
             details = scheduler.get_task_details(job_log_id, limit, offset)
-        
+
         # 统计摘要
         summary_result = scheduler.db.execute_query(
             """
-            SELECT 
+            SELECT
                 detail_type,
                 COUNT(*) as count
             FROM task_execution_details
-            WHERE job_log_id = ?
+            WHERE job_log_id = %s
             GROUP BY detail_type
             """,
             (job_log_id,)

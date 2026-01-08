@@ -433,17 +433,17 @@ class StrategyExecutor:
             
             # 删除该策略的旧结果
             self.db.execute_update(
-                "DELETE FROM strategy_results WHERE strategy_id = ?",
+                "DELETE FROM strategy_results WHERE strategy_id = %s",
                 (strategy_id,)
             )
-            
+
             # 插入新结果
             sql = """
-                INSERT INTO strategy_results 
-                (strategy_id, stock_code, stock_name, trigger_date, 
-                 trigger_pct_change, observation_days, ma_period, 
+                INSERT INTO strategy_results
+                (strategy_id, stock_code, stock_name, trigger_date,
+                 trigger_pct_change, observation_days, ma_period,
                  observation_result, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             
             now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -507,11 +507,11 @@ class StrategyExecutor:
             sql = """
                 SELECT *
                 FROM strategy_results
-                WHERE strategy_id = ?
+                WHERE strategy_id = %s
                 ORDER BY trigger_date DESC, stock_code
-                LIMIT ? OFFSET ?
+                LIMIT %s OFFSET %s
             """
-            
+
             results = self.db.execute_query(
                 sql,
                 (strategy_id, limit, offset)
@@ -540,7 +540,7 @@ class StrategyExecutor:
         """
         try:
             result = self.db.execute_query(
-                "SELECT COUNT(*) as count FROM strategy_results WHERE strategy_id = ?",
+                "SELECT COUNT(*) as count FROM strategy_results WHERE strategy_id = %s",
                 (strategy_id,)
             )
             
@@ -565,7 +565,7 @@ class StrategyExecutor:
         """
         try:
             self.db.execute_update(
-                "DELETE FROM strategy_results WHERE strategy_id = ?",
+                "DELETE FROM strategy_results WHERE strategy_id = %s",
                 (strategy_id,)
             )
             
