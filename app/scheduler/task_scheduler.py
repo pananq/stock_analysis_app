@@ -131,15 +131,50 @@ class TaskScheduler:
         else:
             logger.warning("任务调度器未运行")
     
-    def add_daily_stock_update_job(self, hour: int = 18, minute: int = 0):
+    def _parse_schedule_time(self, time_str: str, default_hour: int = 18, default_minute: int = 0) -> tuple[int, int]:
+        """
+        从配置字符串解析时间
+        
+        Args:
+            time_str: 时间字符串，格式为 'HH:MM'
+            default_hour: 默认小时
+            default_minute: 默认分钟
+            
+        Returns:
+            (hour, minute) 元组
+        """
+        try:
+            if time_str and ':' in time_str:
+                parts = time_str.split(':')
+                hour = int(parts[0])
+                minute = int(parts[1])
+                # 验证时间有效性
+                if 0 <= hour <= 23 and 0 <= minute <= 59:
+                    return hour, minute
+                else:
+                    logger.warning(f"配置时间 {time_str} 无效，使用默认时间 {default_hour:02d}:{default_minute:02d}")
+                    return default_hour, default_minute
+            else:
+                return default_hour, default_minute
+        except Exception as e:
+            logger.warning(f"解析时间配置 '{time_str}' 失败: {e}，使用默认时间 {default_hour:02d}:{default_minute:02d}")
+            return default_hour, default_minute
+    
+    def add_daily_stock_update_job(self, hour: int = None, minute: int = None):
         """
         添加每日股票列表更新任务
         
         Args:
-            hour: 执行小时（0-23）
-            minute: 执行分钟（0-59）
+            hour: 执行小时（0-23），如果为None则从配置文件读取
+            minute: 执行分钟（0-59），如果为None则从配置文件读取
         """
         try:
+            # 如果未传入时间，则从配置文件读取
+            if hour is None or minute is None:
+                scheduler_config = self.config.get('scheduler', {})
+                time_str = scheduler_config.get('stock_list_update_time', '18:00')
+                hour, minute = self._parse_schedule_time(time_str, 18, 0)
+            
             # 使用cron触发器，每天指定时间执行
             trigger = CronTrigger(hour=hour, minute=minute)
             
@@ -157,15 +192,21 @@ class TaskScheduler:
         except Exception as e:
             logger.error(f"添加每日股票列表更新任务失败: {e}")
     
-    def add_daily_market_data_update_job(self, hour: int = 18, minute: int = 30):
+    def add_daily_market_data_update_job(self, hour: int = None, minute: int = None):
         """
         添加每日行情数据更新任务
         
         Args:
-            hour: 执行小时（0-23）
-            minute: 执行分钟（0-59）
+            hour: 执行小时（0-23），如果为None则从配置文件读取
+            minute: 执行分钟（0-59），如果为None则从配置文件读取
         """
         try:
+            # 如果未传入时间，则从配置文件读取
+            if hour is None or minute is None:
+                scheduler_config = self.config.get('scheduler', {})
+                time_str = scheduler_config.get('market_data_update_time', '18:30')
+                hour, minute = self._parse_schedule_time(time_str, 18, 30)
+            
             # 使用cron触发器，每天指定时间执行
             trigger = CronTrigger(hour=hour, minute=minute)
             
@@ -183,15 +224,21 @@ class TaskScheduler:
         except Exception as e:
             logger.error(f"添加每日行情数据更新任务失败: {e}")
     
-    def add_daily_strategy_execution_job(self, hour: int = 19, minute: int = 0):
+    def add_daily_strategy_execution_job(self, hour: int = None, minute: int = None):
         """
         添加每日策略执行任务
         
         Args:
-            hour: 执行小时（0-23）
-            minute: 执行分钟（0-59）
+            hour: 执行小时（0-23），如果为None则从配置文件读取
+            minute: 执行分钟（0-59），如果为None则从配置文件读取
         """
         try:
+            # 如果未传入时间，则从配置文件读取
+            if hour is None or minute is None:
+                scheduler_config = self.config.get('scheduler', {})
+                time_str = scheduler_config.get('strategy_execution_time', '19:00')
+                hour, minute = self._parse_schedule_time(time_str, 19, 0)
+            
             # 使用cron触发器，每天指定时间执行
             trigger = CronTrigger(hour=hour, minute=minute)
             

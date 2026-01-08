@@ -39,9 +39,9 @@ def run_api_server():
         
         # 添加定时任务
         logger.info("添加定时任务...")
-        scheduler.add_daily_stock_update_job(hour=18, minute=0)
-        scheduler.add_daily_market_data_update_job(hour=18, minute=30)
-        scheduler.add_daily_strategy_execution_job(hour=19, minute=0)
+        scheduler.add_daily_stock_update_job()
+        scheduler.add_daily_market_data_update_job()
+        scheduler.add_daily_strategy_execution_job()
         scheduler.add_periodic_health_check_job(interval_minutes=30)
         
         # 启动调度器

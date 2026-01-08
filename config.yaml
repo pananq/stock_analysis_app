@@ -29,6 +29,7 @@ scheduler:
   enable_auto_update: true
   stock_list_update_time: '18:00'
   market_data_update_time: '18:30'
+  strategy_execution_time: '19:00'
 web:
   port: 8000
   host: 0.0.0.0
