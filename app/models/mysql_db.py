@@ -136,6 +136,7 @@ class MySQLDB:
             ''')
             
             # 创建strategy_results表（策略执行结果）
+            # 先尝试创建表
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS strategy_results (
                     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -159,6 +160,30 @@ class MySQLDB:
                     INDEX idx_executed_at (executed_at)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             ''')
+            
+            # 检查并添加可能缺失的列(用于更新旧表结构)
+            columns_to_add = {
+                'stock_name': 'VARCHAR(100)',
+                'trigger_pct_change': 'DECIMAL(10,2)',
+                'observation_days': 'INT',
+                'ma_period': 'INT',
+                'observation_result': 'TEXT',
+                'result_data': 'TEXT',
+                'executed_at': 'DATETIME DEFAULT CURRENT_TIMESTAMP',
+                'created_at': 'DATETIME DEFAULT CURRENT_TIMESTAMP'
+            }
+            
+            for column, column_type in columns_to_add.items():
+                try:
+                    cursor.execute(f'''
+                        ALTER TABLE strategy_results 
+                        ADD COLUMN {column} {column_type}
+                    ''')
+                    logger.info(f"已添加字段 strategy_results.{column}")
+                except pymysql.MySQLError as e:
+                    # 如果字段已存在,会报错误代码 1060,忽略即可
+                    if e.args[0] != 1060:
+                        logger.warning(f"添加字段 {column} 时出错: {e}")
             
             # 创建system_logs表（系统日志）
             cursor.execute('''

@@ -323,9 +323,9 @@ class TaskScheduler:
                 self._log_job_success(
                     'update_stock_list',
                     duration,
-                    f"新增: {result['added']}, 更新: {result['updated']}"
+                    f"新增: {result['new_count']}, 更新: {result['update_count']}"
                 )
-                logger.info(f"✓ 股票列表更新成功: 新增{result['added']}只, 更新{result['updated']}只")
+                logger.info(f"✓ 股票列表更新成功: 新增{result['new_count']}只, 更新{result['update_count']}只")
             else:
                 self._log_job_error(
                     'update_stock_list',
@@ -355,11 +355,8 @@ class TaskScheduler:
             # 记录任务开始（系统任务，user_id=None）
             self._log_job_start('update_market_data', '更新行情数据', user_id=None)
             
-            # 获取最近的交易日
-            today = datetime.now().strftime('%Y-%m-%d')
-            
-            # 执行增量更新（最近5天）
-            result = self.market_data_service.incremental_update(days=5)
+            # 执行智能增量更新（自动判断需要更新的日期范围）
+            result = self.market_data_service.incremental_update()
             
             # 记录任务完成
             duration = (datetime.now() - start_time).total_seconds()

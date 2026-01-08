@@ -266,8 +266,8 @@ def update_stock_list():
             return jsonify({
                 'success': True,
                 'data': {
-                    'added': result['added'],
-                    'updated': result['updated']
+                    'added': result['new_count'],
+                    'updated': result['update_count']
                 },
                 'message': '股票列表更新成功'
             })
