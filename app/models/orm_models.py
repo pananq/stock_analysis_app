@@ -357,14 +357,22 @@ class ORMDatabase:
         def _execute():
             session = self.get_session()
             try:
-                # 将 SQLite 的 ? 占位符转换为 SQLAlchemy 的 :param 格式
+                # 将 SQLite 的 ? 或 MySQL 的 %s 占位符转换为 SQLAlchemy 的 :param 格式
                 # 如果参数是 tuple，转换为命名参数格式
                 if params:
-                    # 将 ? 替换为 :p1, :p2, :p3 等（使用字母开头）
-                    param_names = [f'p{i+1}' for i in range(len(params))]
-                    query_text = query
-                    for i, param_name in enumerate(param_names):
-                        query_text = query_text.replace('?', f':{param_name}', 1)
+                    # 检测使用哪种占位符
+                    if '%' in query and '%s' in query:
+                        # 使用 %s 占位符（MySQL 格式）
+                        param_names = [f'p{i+1}' for i in range(len(params))]
+                        query_text = query
+                        for i, param_name in enumerate(param_names):
+                            query_text = query_text.replace('%s', f':{param_name}', 1)
+                    else:
+                        # 使用 ? 占位符（SQLite 格式）
+                        param_names = [f'p{i+1}' for i in range(len(params))]
+                        query_text = query
+                        for i, param_name in enumerate(param_names):
+                            query_text = query_text.replace('?', f':{param_name}', 1)
                     
                     # 构建参数字典
                     param_dict = {param_names[i]: params[i] for i in range(len(params))}
@@ -409,11 +417,19 @@ class ORMDatabase:
             session = self.get_session()
             try:
                 if params:
-                    # 将 ? 替换为 :param 格式（使用字母开头）
+                    # 将 ? 或 %s 替换为 :param 格式（使用字母开头）
                     param_names = [f'p{i+1}' for i in range(len(params))]
                     query_text = query
-                    for i, param_name in enumerate(param_names):
-                        query_text = query_text.replace('?', f':{param_name}', 1)
+                    
+                    # 检测使用哪种占位符
+                    if '%' in query and '%s' in query:
+                        # 使用 %s 占位符（MySQL 格式）
+                        for i, param_name in enumerate(param_names):
+                            query_text = query_text.replace('%s', f':{param_name}', 1)
+                    else:
+                        # 使用 ? 占位符（SQLite 格式）
+                        for i, param_name in enumerate(param_names):
+                            query_text = query_text.replace('?', f':{param_name}', 1)
                     
                     param_dict = {param_names[i]: params[i] for i in range(len(params))}
                     result = session.execute(text(query_text), param_dict)
@@ -448,13 +464,21 @@ class ORMDatabase:
         def _execute():
             session = self.get_session()
             try:
-                # 将 ? 替换为 :param 格式（只替换第一个参数中的）
+                # 将 ? 或 %s 替换为 :param 格式（只替换第一个参数中的）
                 if params_list:
                     param_count = len(params_list[0])
                     param_names = [f'p{i+1}' for i in range(param_count)]
                     query_text = query
-                    for i, param_name in enumerate(param_names):
-                        query_text = query_text.replace('?', f':{param_name}', 1)
+                    
+                    # 检测使用哪种占位符
+                    if '%' in query and '%s' in query:
+                        # 使用 %s 占位符（MySQL 格式）
+                        for i, param_name in enumerate(param_names):
+                            query_text = query_text.replace('%s', f':{param_name}', 1)
+                    else:
+                        # 使用 ? 占位符（SQLite 格式）
+                        for i, param_name in enumerate(param_names):
+                            query_text = query_text.replace('?', f':{param_name}', 1)
                     
                     # 转换所有参数为字典列表
                     param_dicts = [{param_names[i]: params[i] for i in range(param_count)} for params in params_list]
