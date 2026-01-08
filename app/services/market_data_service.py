@@ -21,6 +21,7 @@ class MarketDataService:
     
     def __init__(self):
         """初始化行情数据服务"""
+        self.logger = get_logger(__name__)
         self.datasource = get_datasource()
         self.stock_service = get_stock_service()
         self.rate_limiter = get_rate_limiter()
@@ -45,7 +46,7 @@ class MarketDataService:
         # 创建日期范围服务
         self.date_range_service = StockDateRangeService(get_mysql_db())
         
-        logger.info("行情数据服务初始化完成")
+        self.logger.info("行情数据服务初始化完成")
     
     def import_all_history(self, start_date: str = None, end_date: str = None,
                           limit: int = None, skip: int = 0, 
@@ -65,9 +66,9 @@ class MarketDataService:
         Returns:
             包含执行结果的字典
         """
-        logger.info("=" * 60)
-        logger.info("开始全量导入历史行情数据")
-        logger.info("=" * 60)
+self.logger.info("=" * 60)
+self.logger.info("开始全量导入历史行情数据")
+self.logger.info("=" * 60)
         
         start_time = datetime.now()
         
@@ -86,7 +87,7 @@ class MarketDataService:
             # 默认导入3年历史数据
             start_date = (datetime.now() - timedelta(days=365*3)).strftime('%Y-%m-%d')
         
-        logger.info(f"日期范围: {start_date} 至 {end_date}")
+self.logger.info(f"日期范围: {start_date} 至 {end_date}")
         
         if progress_callback:
             progress_callback(0, f"准备导入数据，日期范围：{start_date} 至 {end_date}")
@@ -98,19 +99,19 @@ class MarketDataService:
         # 应用skip和limit
         if skip > 0:
             stocks = stocks[skip:]
-            logger.info(f"跳过前{skip}只股票")
+self.logger.info(f"跳过前{skip}只股票")
         
         # 如果没有显式指定limit，则根据配置自动应用限制
         if limit is None:
             limit = get_stock_limit_for_mode()
             if limit:
-                logger.info(f"开发模式：限制导入{limit}只股票")
+self.logger.info(f"开发模式：限制导入{limit}只股票")
         
         if limit:
             stocks = stocks[:limit]
-            logger.info(f"限制导入{limit}只股票（测试模式）")
+self.logger.info(f"限制导入{limit}只股票（测试模式）")
         
-        logger.info(f"待导入股票数量: {len(stocks)}/{total_stocks}")
+self.logger.info(f"待导入股票数量: {len(stocks)}/{total_stocks}")
         
         if progress_callback:
             progress_callback(1, f"待导入 {len(stocks)} 只股票")
@@ -125,7 +126,7 @@ class MarketDataService:
         for idx, stock in enumerate(stocks, 1):
             # 检查是否已取消
             if stop_event and stop_event.is_set():
-                logger.warning(f"任务被取消，停止导入。已完成 {idx-1}/{len(stocks)} 只股票")
+self.logger.warning(f"任务被取消，停止导入。已完成 {idx-1}/{len(stocks)} 只股票")
                 if progress_callback:
                     progress_callback(
                         ((idx-1) / len(stocks)) * 100,
@@ -146,7 +147,7 @@ class MarketDataService:
             name = stock['name']
             
             try:
-                logger.info(f"[{idx}/{len(stocks)}] 正在导入 {code} - {name}")
+self.logger.info(f"[{idx}/{len(stocks)}] 正在导入 {code} - {name}")
                 
                 # API频率控制
                 self.rate_limiter.wait()
@@ -155,7 +156,7 @@ class MarketDataService:
                 df = self.datasource.get_daily_data(code, start_date, end_date)
                 
                 if df.empty:
-                    logger.warning(f"  {code} 未获取到数据")
+self.logger.warning(f"  {code} 未获取到数据")
                     fail_count += 1
                     failed_stocks.append({'code': code, 'name': name, 'reason': '未获取到数据'})
                     
@@ -180,7 +181,7 @@ class MarketDataService:
                 
                 success_count += 1
                 total_records += records
-                logger.info(f"  ✓ {code} 导入成功，{records}条记录")
+self.logger.info(f"  ✓ {code} 导入成功，{records}条记录")
                 
                 # 记录成功的详细信息
                 if progress_callback:
@@ -202,7 +203,7 @@ class MarketDataService:
                     remaining = avg_time * (len(stocks) - idx)
                     progress = (idx / len(stocks)) * 100
                     
-                    logger.info(f"进度: {idx}/{len(stocks)} ({progress:.1f}%), "
+self.logger.info(f"进度: {idx}/{len(stocks)} ({progress:.1f}%), "
                               f"预计剩余时间: {remaining/60:.1f}分钟")
                     
                     if progress_callback:
@@ -213,7 +214,7 @@ class MarketDataService:
                         )
                 
             except Exception as e:
-                logger.error(f"  ✗ {code} 导入失败: {e}")
+self.logger.error(f"  ✗ {code} 导入失败: {e}")
                 fail_count += 1
                 failed_stocks.append({'code': code, 'name': name, 'reason': str(e)})
                 
@@ -235,19 +236,19 @@ class MarketDataService:
         end_time = datetime.now()
         duration = (end_time - start_time).total_seconds()
         
-        logger.info("=" * 60)
-        logger.info("全量导入完成")
-        logger.info(f"总股票数: {len(stocks)}")
-        logger.info(f"成功: {success_count}")
-        logger.info(f"失败: {fail_count}")
-        logger.info(f"总记录数: {total_records}")
-        logger.info(f"耗时: {duration/60:.2f}分钟")
-        logger.info("=" * 60)
+self.logger.info("=" * 60)
+self.logger.info("全量导入完成")
+self.logger.info(f"总股票数: {len(stocks)}")
+self.logger.info(f"成功: {success_count}")
+self.logger.info(f"失败: {fail_count}")
+self.logger.info(f"总记录数: {total_records}")
+self.logger.info(f"耗时: {duration/60:.2f}分钟")
+self.logger.info("=" * 60)
         
         if failed_stocks:
-            logger.warning(f"失败的股票列表（前10个）:")
+self.logger.warning(f"失败的股票列表（前10个）:")
             for stock in failed_stocks[:10]:
-                logger.warning(f"  {stock['code']} - {stock['name']}: {stock['reason']}")
+self.logger.warning(f"  {stock['code']} - {stock['name']}: {stock['reason']}")
         
         if progress_callback:
             progress_callback(100, f"导入完成！成功 {success_count} 只，失败 {fail_count} 只，共 {total_records} 条记录")
@@ -278,9 +279,9 @@ class MarketDataService:
         Returns:
             包含执行结果的字典
         """
-        logger.info("=" * 60)
-        logger.info(f"开始增量更新最近{days}天的行情数据")
-        logger.info("=" * 60)
+self.logger.info("=" * 60)
+self.logger.info(f"开始增量更新最近{days}天的行情数据")
+self.logger.info("=" * 60)
         
         start_time = datetime.now()
         
@@ -296,7 +297,7 @@ class MarketDataService:
         end_date = datetime.now().strftime('%Y-%m-%d')
         start_date = (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d')
         
-        logger.info(f"日期范围: {start_date} 至 {end_date}")
+self.logger.info(f"日期范围: {start_date} 至 {end_date}")
         
         if progress_callback:
             progress_callback(0, f"准备更新数据，日期范围：{start_date} 至 {end_date}")
@@ -312,15 +313,15 @@ class MarketDataService:
                 # 从股票服务获取完整信息
                 all_stocks = self.stock_service.get_stock_list()
                 stocks = [s for s in all_stocks if s['code'] in stock_codes]
-                logger.info(f"只更新已有数据的股票: {len(stocks)}只")
+self.logger.info(f"只更新已有数据的股票: {len(stocks)}只")
             finally:
                 session.close()
         else:
             # 更新所有股票
             stocks = self.stock_service.get_stock_list()
-            logger.info(f"更新所有股票: {len(stocks)}只")
+self.logger.info(f"更新所有股票: {len(stocks)}只")
         
-        logger.info(f"待更新股票数量: {len(stocks)}")
+self.logger.info(f"待更新股票数量: {len(stocks)}")
         
         if progress_callback:
             progress_callback(1, f"待更新 {len(stocks)} 只股票")
@@ -335,7 +336,7 @@ class MarketDataService:
         for idx, stock in enumerate(stocks, 1):
             # 检查是否已取消
             if stop_event and stop_event.is_set():
-                logger.warning(f"任务被取消，停止更新。已完成 {idx-1}/{len(stocks)} 只股票")
+self.logger.warning(f"任务被取消，停止更新。已完成 {idx-1}/{len(stocks)} 只股票")
                 if progress_callback:
                     progress_callback(
                         ((idx-1) / len(stocks)) * 100,
@@ -379,7 +380,7 @@ class MarketDataService:
                 # 每10只股票显示一次进度
                 if idx % 10 == 0:
                     progress = (idx / len(stocks)) * 100
-                    logger.info(f"进度: {idx}/{len(stocks)} ({progress:.1f}%)")
+self.logger.info(f"进度: {idx}/{len(stocks)} ({progress:.1f}%)")
                     
                     if progress_callback:
                         progress_callback(
@@ -388,7 +389,7 @@ class MarketDataService:
                         )
                 
             except Exception as e:
-                logger.error(f"更新 {code} 失败: {e}")
+self.logger.error(f"更新 {code} 失败: {e}")
                 fail_count += 1
                 failed_stocks.append({'code': code, 'name': name, 'reason': str(e)})
         
@@ -396,14 +397,14 @@ class MarketDataService:
         end_time = datetime.now()
         duration = (end_time - start_time).total_seconds()
         
-        logger.info("=" * 60)
-        logger.info("增量更新完成")
-        logger.info(f"总股票数: {len(stocks)}")
-        logger.info(f"成功: {success_count}")
-        logger.info(f"失败: {fail_count}")
-        logger.info(f"总记录数: {total_records}")
-        logger.info(f"耗时: {duration/60:.2f}分钟")
-        logger.info("=" * 60)
+self.logger.info("=" * 60)
+self.logger.info("增量更新完成")
+self.logger.info(f"总股票数: {len(stocks)}")
+self.logger.info(f"成功: {success_count}")
+self.logger.info(f"失败: {fail_count}")
+self.logger.info(f"总记录数: {total_records}")
+self.logger.info(f"耗时: {duration/60:.2f}分钟")
+self.logger.info("=" * 60)
         
         if progress_callback:
             progress_callback(100, f"更新完成！成功 {success_count} 只，失败 {fail_count} 只")
@@ -696,7 +697,7 @@ class MarketDataService:
                 DailyMarket.trade_date <= end_date
             ).delete()
             session.commit()
-            logger.debug(f"删除了 {deleted_count} 条记录: {code} {start_date}~{end_date}")
+self.logger.debug(f"删除了 {deleted_count} 条记录: {code} {start_date}~{end_date}")
         except Exception as e:
             session.rollback()
             raise
@@ -705,9 +706,9 @@ class MarketDataService:
     
     def incremental_update(self, force_full_update: bool = False, progress_callback: Callable = None, stop_event = None) -> Dict[str, Any]:
         """智能增量更新股票数据，根据每只股票的最新数据日期只下载缺失的数据"""
-        logger.info("=" * 60)
-        logger.info(f"开始{'全量' if force_full_update else '智能增量'}更新股票数据")
-        logger.info("=" * 60)
+self.logger.info("=" * 60)
+self.logger.info(f"开始{'全量' if force_full_update else '智能增量'}更新股票数据")
+self.logger.info("=" * 60)
         
         start_time = datetime.now()
         current_date = date.today()
@@ -718,7 +719,7 @@ class MarketDataService:
         stocks = self.stock_service.get_stock_list()
         total_stocks = len(stocks)
         
-        logger.info(f"股票总数: {total_stocks}")
+self.logger.info(f"股票总数: {total_stocks}")
         if progress_callback:
             progress_callback(0, f"准备更新 {total_stocks} 只股票")
         
@@ -749,7 +750,7 @@ class MarketDataService:
                     if not needs_update:
                         skipped_count += 1
                         skipped_stocks.append({'code': code, 'name': name, 'reason': reason})
-                        logger.debug(f"[{idx}/{len(stocks)}] 跳过 {code} - {name}: {reason}")
+self.logger.debug(f"[{idx}/{len(stocks)}] 跳过 {code} - {name}: {reason}")
                         continue
                     
                     start_date_obj = self.date_range_service.calculate_update_start_date(code, current_date)
@@ -762,13 +763,13 @@ class MarketDataService:
                         continue
                 
                 end_date_str = current_date.strftime('%Y-%m-%d')
-                logger.info(f"[{idx}/{len(stocks)}] 更新 {code} - {name}: {start_date_str} ~ {end_date_str} ({update_reason})")
+self.logger.info(f"[{idx}/{len(stocks)}] 更新 {code} - {name}: {start_date_str} ~ {end_date_str} ({update_reason})")
                 
                 self.rate_limiter.wait()
                 df = self.datasource.get_daily_data(code, start_date_str, end_date_str)
                 
                 if df.empty:
-                    logger.debug(f"  {code} 无新数据")
+self.logger.debug(f"  {code} 无新数据")
                     skipped_count += 1
                     skipped_stocks.append({'code': code, 'name': name, 'reason': '无新数据'})
                     continue
@@ -778,7 +779,7 @@ class MarketDataService:
                 
                 success_count += 1
                 total_records += records
-                logger.info(f"  ✓ {code} 更新成功，{records}条记录")
+self.logger.info(f"  ✓ {code} 更新成功，{records}条记录")
                 
                 if progress_callback:
                     progress_callback(
@@ -799,24 +800,24 @@ class MarketDataService:
                     remaining = avg_time * (len(stocks) - idx)
                     progress = (idx / len(stocks)) * 100
                     
-                    logger.info(f"进度: {idx}/{len(stocks)} ({progress:.1f}%), 成功: {success_count}, 跳过: {skipped_count}")
+self.logger.info(f"进度: {idx}/{len(stocks)} ({progress:.1f}%), 成功: {success_count}, 跳过: {skipped_count}")
                     
                     if progress_callback:
                         progress_callback(progress, f"正在更新... {idx}/{len(stocks)} ({progress:.1f}%), 成功: {success_count}, 跳过: {skipped_count}")
             
             except Exception as e:
-                logger.error(f"  ✗ {code} 更新失败: {e}")
+self.logger.error(f"  ✗ {code} 更新失败: {e}")
                 fail_count += 1
                 failed_stocks.append({'code': code, 'name': name, 'reason': str(e)})
         
         end_time = datetime.now()
         duration = (end_time - start_time).total_seconds()
         
-        logger.info("=" * 60)
-        logger.info(f"{'全量' if force_full_update else '智能增量'}更新完成")
-        logger.info(f"总股票数: {len(stocks)}, 成功: {success_count}, 跳过: {skipped_count}, 失败: {fail_count}")
-        logger.info(f"总记录数: {total_records}, 耗时: {duration/60:.2f}分钟")
-        logger.info("=" * 60)
+self.logger.info("=" * 60)
+self.logger.info(f"{'全量' if force_full_update else '智能增量'}更新完成")
+self.logger.info(f"总股票数: {len(stocks)}, 成功: {success_count}, 跳过: {skipped_count}, 失败: {fail_count}")
+self.logger.info(f"总记录数: {total_records}, 耗时: {duration/60:.2f}分钟")
+self.logger.info("=" * 60)
         
         if progress_callback:
             progress_callback(100, f"更新完成！成功 {success_count} 只，跳过 {skipped_count} 只，失败 {fail_count} 只，共 {total_records} 条记录")
