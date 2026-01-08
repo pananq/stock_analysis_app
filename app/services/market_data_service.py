@@ -609,13 +609,14 @@ class MarketDataService:
             'max_date': stats.get('latest_date')
         }
     
-    def _save_daily_data(self, df: pd.DataFrame, code: str):
+    def _save_daily_data(self, df: pd.DataFrame, code: str, update_date_range: bool = False):
         """
         保存日线数据到MySQL
         
         Args:
             df: 行情数据DataFrame
             code: 股票代码
+            update_date_range: 是否更新日期范围记录
         """
         if df.empty:
             return
@@ -662,6 +663,14 @@ class MarketDataService:
                     session.add(daily_market)
             
             session.commit()
+            
+            # 如果需要更新日期范围
+            if update_date_range and not df.empty:
+                trade_dates = df['trade_date'].tolist()
+                min_date = min(trade_dates)
+                max_date = max(trade_dates)
+                self.date_range_service.update_range(code, min_date, max_date)
+                
         except Exception as e:
             session.rollback()
             raise
