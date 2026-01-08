@@ -3,7 +3,7 @@
 负责股票历史行情数据的获取、存储和查询
 """
 from typing import List, Dict, Any, Optional, Callable
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import pandas as pd
 from app.models.orm_models import DailyMarket, ORMDatabase
 from app.services import get_datasource, get_stock_service
