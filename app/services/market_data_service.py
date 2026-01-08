@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, date
 import pandas as pd
 from app.models.orm_models import DailyMarket, ORMDatabase
 from app.models.mysql_db import get_mysql_db
-from app.services import get_datasource, get_stock_service, get_stock_date_range_service
+from app.services import get_datasource, get_stock_service
 from app.services.stock_date_range_service import StockDateRangeService
 from app.utils import get_logger, get_rate_limiter, get_config, get_stock_limit_for_mode
 from sqlalchemy import func
