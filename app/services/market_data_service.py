@@ -176,7 +176,7 @@ class MarketDataService:
                 
                 # 保存到DuckDB
                 records = len(df)
-                self._save_daily_data(df, code)
+                self._save_daily_data(df, code, update_date_range=True)
                 
                 success_count += 1
                 total_records += records
@@ -371,7 +371,7 @@ class MarketDataService:
                 
                 # 保存新数据
                 records = len(df)
-                self._save_daily_data(df, code)
+                self._save_daily_data(df, code, update_date_range=True)
                 
                 success_count += 1
                 total_records += records
@@ -669,7 +669,9 @@ class MarketDataService:
                 trade_dates = df['trade_date'].tolist()
                 min_date = min(trade_dates)
                 max_date = max(trade_dates)
-                self.date_range_service.update_range(code, min_date, max_date)
+                self.logger.debug(f"准备更新股票{code}的日期范围: trade_dates类型={type(trade_dates[0]) if trade_dates else None}, min_date={min_date}, max_date={max_date}")
+                result = self.date_range_service.update_stock_date_range(code, min_date, max_date)
+                self.logger.debug(f"股票{code}的日期范围更新结果: {result}")
                 
         except Exception as e:
             session.rollback()

@@ -99,16 +99,23 @@ class StockDateRangeService:
             updates = []
             params = []
             
+            self.logger.debug(f"股票{stock_code}日期范围计算结果: new_earliest={new_earliest} (type: {type(new_earliest)}), new_latest={new_latest} (type: {type(new_latest)})")
+            
             if new_earliest is not None:
                 updates.append("earliest_data_date = %s")
-                params.append(new_earliest.strftime('%Y-%m-%d'))
+                earliest_str = new_earliest.strftime('%Y-%m-%d') if isinstance(new_earliest, (date, datetime)) else str(new_earliest)
+                params.append(earliest_str)
+                self.logger.debug(f"添加earliest_data_date更新: {earliest_str}")
             
             if new_latest is not None:
                 updates.append("latest_data_date = %s")
-                params.append(new_latest.strftime('%Y-%m-%d'))
+                latest_str = new_latest.strftime('%Y-%m-%d') if isinstance(new_latest, (date, datetime)) else str(new_latest)
+                params.append(latest_str)
+                self.logger.debug(f"添加latest_data_date更新: {latest_str}")
             
             if not updates:
                 # 没有需要更新的字段
+                self.logger.debug(f"股票{stock_code}没有需要更新的字段，跳过")
                 return True
             
             updates.append("updated_at = %s")
@@ -116,7 +123,11 @@ class StockDateRangeService:
             params.append(stock_code)
             
             query = f"UPDATE stocks SET {', '.join(updates)} WHERE code = %s"
+            self.logger.debug(f"执行SQL更新: {query}")
+            self.logger.debug(f"SQL参数: {params}")
+            
             affected_rows = self.db.execute_update(query, tuple(params))
+            self.logger.debug(f"SQL执行完成，影响行数: {affected_rows}")
             
             if affected_rows > 0:
                 self.logger.debug(f"更新股票{stock_code}的日期范围: earliest={new_earliest}, latest={new_latest}")
