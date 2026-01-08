@@ -9,6 +9,25 @@ from .strategy_service import StrategyService, get_strategy_service
 from .strategy_executor import StrategyExecutor, get_strategy_executor
 from .stock_date_range_service import StockDateRangeService
 
+# 单例缓存
+_stock_date_range_service_instance = None
+
+def get_stock_date_range_service():
+    """
+    获取股票日期范围服务单例
+    
+    Returns:
+        StockDateRangeService: 日期范围服务实例
+    """
+    global _stock_date_range_service_instance
+    
+    if _stock_date_range_service_instance is None:
+        from app.models.mysql_db import MySQLDatabase
+        database = MySQLDatabase()
+        _stock_date_range_service_instance = StockDateRangeService(database)
+    
+    return _stock_date_range_service
+
 __all__ = [
     'DataSource',
     'AkshareDataSource',
@@ -23,5 +42,6 @@ __all__ = [
     'get_strategy_service',
     'StrategyExecutor',
     'get_strategy_executor',
-    'StockDateRangeService'
+    'StockDateRangeService',
+    'get_stock_date_range_service'
 ]
