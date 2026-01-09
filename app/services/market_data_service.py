@@ -179,6 +179,21 @@ class MarketDataService:
                 records = len(df)
                 self._save_daily_data(df, code)
                 
+                # 全量导入后，从 daily_market 表重新计算完整的日期范围并更新 stocks 表
+                try:
+                    earliest, latest = self.date_range_service.get_stock_date_range_from_daily_market(code)
+                    if earliest and latest:
+                        success = self.date_range_service.update_stock_date_range(
+                            code,
+                            earliest_date=earliest,
+                            latest_date=latest
+                        )
+                        if success:
+                            self.logger.debug(f"  {code} 更新日期范围: {earliest} ~ {latest}")
+                except Exception as e:
+                    # 日期字段更新失败不应影响主流程
+                    self.logger.error(f"  {code} 更新日期范围时发生错误: {e}", exc_info=True)
+                
                 success_count += 1
                 total_records += records
                 self.logger.info(f"  ✓ {code} 导入成功，{records}条记录")
@@ -610,13 +625,14 @@ class MarketDataService:
             'max_date': stats.get('latest_date')
         }
     
-    def _save_daily_data(self, df: pd.DataFrame, code: str):
+    def _save_daily_data(self, df: pd.DataFrame, code: str, update_date_range: bool = False):
         """
         保存日线数据到MySQL
         
         Args:
             df: 行情数据DataFrame
             code: 股票代码
+            update_date_range: 是否更新 stocks 表的日期字段
         """
         if df.empty:
             return
@@ -663,6 +679,47 @@ class MarketDataService:
                     session.add(daily_market)
             
             session.commit()
+            
+            # 如果需要更新日期字段
+            if update_date_range:
+                try:
+                    # 提取 DataFrame 中的交易日期
+                    dates = df['trade_date'].tolist()
+                    
+                    if dates:
+                        # 转换日期格式（如果需要）
+                        from datetime import date as DateType
+                        date_objects = []
+                        for d in dates:
+                            if isinstance(d, str):
+                                date_objects.append(datetime.strptime(d, '%Y-%m-%d').date())
+                            elif isinstance(d, datetime):
+                                date_objects.append(d.date())
+                            elif isinstance(d, DateType):
+                                date_objects.append(d)
+                            else:
+                                date_objects.append(d)
+                        
+                        # 计算最小和最大日期
+                        earliest_date = min(date_objects)
+                        latest_date = max(date_objects)
+                        
+                        # 使用日期范围服务更新 stocks 表
+                        success = self.date_range_service.update_stock_date_range(
+                            code,
+                            earliest_date=earliest_date,
+                            latest_date=latest_date
+                        )
+                        
+                        if success:
+                            self.logger.debug(f"更新股票{code}的日期范围: {earliest_date} ~ {latest_date}")
+                        else:
+                            self.logger.warning(f"更新股票{code}的日期范围失败")
+                
+                except Exception as e:
+                    # 日期字段更新失败不应影响主流程
+                    self.logger.error(f"更新股票{code}的日期范围时发生错误: {e}", exc_info=True)
+        
         except Exception as e:
             session.rollback()
             raise
