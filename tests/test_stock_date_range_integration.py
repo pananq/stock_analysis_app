@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.services.stock_date_range_service import StockDateRangeService
 from app.services.market_data_service import MarketDataService
 from app.models.mysql_db import get_mysql_db
-from app.utils.config import load_config
+from app.utils.config import get_config
 
 
 class TestStockDateRangeIntegration(unittest.TestCase):
@@ -31,7 +31,7 @@ class TestStockDateRangeIntegration(unittest.TestCase):
         cls.test_stock_codes = ['600000', '600519']
         
         try:
-            config = load_config()
+            config = get_config()
             cls.db = get_mysql_db()
             cls.date_range_service = StockDateRangeService(cls.db)
             cls.market_data_service = MarketDataService()

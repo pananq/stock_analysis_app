@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from datetime import datetime
 from app.utils import get_logger
-from app.utils.config import load_config
+from app.utils.config import get_config
 from app.models.database_factory import DatabaseFactory
 from app.services.stock_date_range_service import StockDateRangeService
 
@@ -25,7 +25,7 @@ def fix_null_stock_date_ranges():
     
     try:
         # 加载配置
-        config = load_config()
+        config = get_config()
         
         # 初始化数据库
         db_factory = DatabaseFactory(config)
