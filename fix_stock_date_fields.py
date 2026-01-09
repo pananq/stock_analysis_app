@@ -11,7 +11,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from datetime import datetime
-from app.utils import get_logger
+from app.utils import get_logger, setup_logging
 from app.utils.config import get_config
 from app.models.database_factory import DatabaseFactory
 from app.services.stock_date_range_service import StockDateRangeService
@@ -87,6 +87,10 @@ def fix_null_stock_date_ranges():
 
 
 if __name__ == "__main__":
+    # 加载配置并初始化日志系统
+    config = get_config()
+    setup_logging(config)
+    
     logger = get_logger(__name__)
     
     success = fix_null_stock_date_ranges()

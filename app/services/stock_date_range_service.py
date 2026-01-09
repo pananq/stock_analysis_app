@@ -510,10 +510,12 @@ class StockDateRangeService:
             set_clauses = []
             
             if cases_earliest:
-                set_clauses.append(f"earliest_data_date = CASE code {' '.join(cases_earliest)} END")
+                # 添加 ELSE 子句，保持原有值不变
+                set_clauses.append(f"earliest_data_date = CASE code {' '.join(cases_earliest)} ELSE earliest_data_date END")
             
             if cases_latest:
-                set_clauses.append(f"latest_data_date = CASE code {' '.join(cases_latest)} END")
+                # 添加 ELSE 子句，保持原有值不变
+                set_clauses.append(f"latest_data_date = CASE code {' '.join(cases_latest)} ELSE latest_data_date END")
             
             # 添加 updated_at 字段更新
             set_clauses.append(f"updated_at = %s")
