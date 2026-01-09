@@ -484,10 +484,12 @@ class StockDateRangeService:
         try:
             # 构建批量更新 SQL
             # 使用 CASE WHEN 语句实现单条 SQL 更新多条记录
+            # 注意：需要分别收集 earliest 和 latest 的参数，保证顺序正确
             cases_earliest = []
             cases_latest = []
+            params_earliest = []  # earliest 字段的参数
+            params_latest = []    # latest 字段的参数
             stock_codes = []
-            params = []
             
             for stock_code, (earliest_date, latest_date) in updates.items():
                 stock_codes.append(stock_code)
@@ -495,27 +497,31 @@ class StockDateRangeService:
                 if earliest_date is not None:
                     earliest_str = earliest_date.strftime('%Y-%m-%d') if isinstance(earliest_date, (date, datetime)) else str(earliest_date)
                     cases_earliest.append(f"WHEN %s THEN %s")
-                    params.extend([stock_code, earliest_str])
+                    params_earliest.extend([stock_code, earliest_str])
                 
                 if latest_date is not None:
                     latest_str = latest_date.strftime('%Y-%m-%d') if isinstance(latest_date, (date, datetime)) else str(latest_date)
                     cases_latest.append(f"WHEN %s THEN %s")
-                    params.extend([stock_code, latest_str])
+                    params_latest.extend([stock_code, latest_str])
             
             # 如果没有需要更新的字段，直接返回成功
             if not cases_earliest and not cases_latest:
                 return True
             
-            # 构建 SQL 语句
+            # 构建 SQL 语句和参数列表
+            # 注意：参数顺序必须与 SQL 中占位符的顺序一致
             set_clauses = []
+            params = []
             
             if cases_earliest:
                 # 添加 ELSE 子句，保持原有值不变
                 set_clauses.append(f"earliest_data_date = CASE code {' '.join(cases_earliest)} ELSE earliest_data_date END")
+                params.extend(params_earliest)
             
             if cases_latest:
                 # 添加 ELSE 子句，保持原有值不变
                 set_clauses.append(f"latest_data_date = CASE code {' '.join(cases_latest)} ELSE latest_data_date END")
+                params.extend(params_latest)
             
             # 添加 updated_at 字段更新
             set_clauses.append(f"updated_at = %s")
