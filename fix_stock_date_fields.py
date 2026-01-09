@@ -52,6 +52,7 @@ def fix_null_stock_date_ranges():
         date_ranges = date_range_service.batch_get_stock_date_range_from_daily_market(stock_codes)
         
         # 准备批量更新的数据
+        # 关键修复：即使某个字段为 None，也要更新另一个字段
         updates = {}
         for stock in null_stocks:
             stock_code = stock['code']
@@ -59,7 +60,9 @@ def fix_null_stock_date_ranges():
             
             earliest, latest = date_ranges.get(stock_code, (None, None))
             
-            if earliest and latest:
+            # 只要有一个日期字段有值，就应该更新
+            # None 值不会被包含在 CASE WHEN 中，会由 ELSE 保持原有值
+            if earliest is not None or latest is not None:
                 updates[stock_code] = (earliest, latest)
                 logger.info(f"股票 {stock_code} - {stock_name}: {earliest} ~ {latest}")
             else:
