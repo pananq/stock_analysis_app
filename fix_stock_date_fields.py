@@ -28,14 +28,12 @@ def fix_null_stock_date_ranges():
         config = get_config()
         
         # 初始化数据库
-        db_factory = DatabaseFactory(config)
-        database = db_factory.get_database()
+        db_factory = DatabaseFactory()
+        database = db_factory.get_database(config=config.get('database.mysql'))
         
         # 创建日期范围服务
         date_range_service = StockDateRangeService(database)
-        
-        logger.info("=" * 80)
-        logger.info("开始初始化修复股票日期字段")
+        logger = date_range_service.logger        logger.info("开始初始化修复股票日期字段")
         logger.info("=" * 80)
         
         # 获取日期字段为 NULL 的股票列表

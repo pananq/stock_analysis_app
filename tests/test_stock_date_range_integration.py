@@ -32,7 +32,7 @@ class TestStockDateRangeIntegration(unittest.TestCase):
         
         try:
             config = get_config()
-            cls.db = get_mysql_db()
+            cls.db = get_mysql_db(config.get('database.mysql'))
             cls.date_range_service = StockDateRangeService(cls.db)
             cls.market_data_service = MarketDataService()
             cls.logger = cls.date_range_service.logger

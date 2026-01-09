@@ -31,7 +31,7 @@ class TestStockDateRangeService(unittest.TestCase):
         
         try:
             config = get_config()
-            cls.db = get_mysql_db()
+            cls.db = get_mysql_db(config.get('database.mysql'))
             cls.service = StockDateRangeService(cls.db)
             cls.logger = cls.service.logger
             
