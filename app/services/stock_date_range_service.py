@@ -3,7 +3,7 @@
 负责管理股票的历史数据日期范围，支持增量更新判断
 """
 
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import Optional, Tuple, Dict, Any
 from app.utils import get_logger
 from app.utils.trading_day import has_trading_days_between, is_trading_day
@@ -166,7 +166,7 @@ class StockDateRangeService:
             return (False, "数据已是最新")
         
         # 判断最新日期到当前日期之间是否有交易日
-        next_day = latest + datetime.timedelta(days=1)
+        next_day = latest + timedelta(days=1)
         has_trading = has_trading_days_between(next_day, current_date)
         
         if not has_trading:
@@ -200,7 +200,7 @@ class StockDateRangeService:
             return None
         
         # 从最新日期的下一天开始更新
-        return latest + datetime.timedelta(days=1)
+        return latest + timedelta(days=1)
     
     def get_stocks_needing_update(self, current_date: date = None) -> list:
         """
