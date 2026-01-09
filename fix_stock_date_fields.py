@@ -33,7 +33,8 @@ def fix_null_stock_date_ranges():
         
         # 创建日期范围服务
         date_range_service = StockDateRangeService(database)
-        logger = date_range_service.logger        logger.info("开始初始化修复股票日期字段")
+        logger = date_range_service.logger
+        logger.info("开始初始化修复股票日期字段")
         logger.info("=" * 80)
         
         # 获取日期字段为 NULL 的股票列表
