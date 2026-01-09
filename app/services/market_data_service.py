@@ -21,6 +21,7 @@ class MarketDataService:
     
     def __init__(self):
         """初始化行情数据服务"""
+        self.logger = get_logger(__name__)
         self.datasource = get_datasource()
         self.stock_service = get_stock_service()
         self.rate_limiter = get_rate_limiter()
