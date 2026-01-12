@@ -69,7 +69,19 @@ class LoggerManager:
         file_handler.setFormatter(formatter)
         
         # 创建容错的控制台处理器
-        console_handler = logging.StreamHandler()
+        class ErrorTolerantStreamHandler(logging.StreamHandler):
+            """容错的控制台处理器"""
+            def emit(self, record):
+                try:
+                    super().emit(record)
+                except (OSError, IOError, BrokenPipeError):
+                    # 静默处理输出错误，避免影响程序运行
+                    pass
+                except Exception:
+                    # 其他异常也静默处理
+                    pass
+        
+        console_handler = ErrorTolerantStreamHandler()
         console_handler.setFormatter(formatter)
         
         # 配置根日志记录器

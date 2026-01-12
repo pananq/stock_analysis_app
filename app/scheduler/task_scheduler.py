@@ -412,9 +412,9 @@ class TaskScheduler:
                 self._log_job_success(
                     'update_market_data',
                     duration,
-                    f"更新: {result['updated_count']}条"
+                    f"更新: {result['total_records']}条"
                 )
-                logger.info(f"✓ 行情数据更新成功: 更新{result['updated_count']}条记录")
+                logger.info(f"✓ 行情数据更新成功: 更新{result['total_records']}条记录")
             else:
                 self._log_job_error(
                     'update_market_data',
