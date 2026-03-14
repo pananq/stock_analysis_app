@@ -10,8 +10,21 @@ from .strategy_service import StrategyService, get_strategy_service
 from .strategy_executor import StrategyExecutor, get_strategy_executor
 from .stock_date_range_service import StockDateRangeService
 from .watchlist_service import WatchlistService, get_watchlist_service
+from .api_token_service import ApiTokenService
 
 # 单例缓存
+_api_token_service_instance = None
+_api_token_service_lock = threading.Lock()
+
+def get_api_token_service() -> ApiTokenService:
+    global _api_token_service_instance
+    if _api_token_service_instance is None:
+        with _api_token_service_lock:
+            if _api_token_service_instance is None:
+                _api_token_service_instance = ApiTokenService()
+    return _api_token_service_instance
+
+
 _stock_date_range_service_instance = None
 
 def get_stock_date_range_service():
@@ -47,4 +60,6 @@ __all__ = [
     'get_stock_date_range_service',
     'WatchlistService',
     'get_watchlist_service',
+    'ApiTokenService',
+    'get_api_token_service',
 ]
