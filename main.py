@@ -482,7 +482,7 @@ def main():
 
             # 启动MCP进程（如果启用）
             mcp_process = None
-            if config.get('mcp', {}).get('enabled', True):
+            if get_config().get('mcp.enabled', True):
                 mcp_process = multiprocessing.Process(target=run_mcp_server)
                 mcp_process.start()
                 logger.info(f"MCP进程 PID: {mcp_process.pid}")
