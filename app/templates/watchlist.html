@@ -24,10 +24,12 @@
 </div>
 
 <!-- Watchlist -->
-<div class="row" id="watchlist-container">
-    <div class="col-12 text-center text-muted py-5" id="empty-hint">
-        <i class="fas fa-star fa-3x mb-3"></i>
-        <p>暂无关注股票，点击"添加股票"开始</p>
+<div class="card" id="watchlist-container">
+    <div class="card-body p-0">
+        <div class="text-center text-muted py-5" id="empty-hint">
+            <i class="fas fa-star fa-3x mb-3"></i>
+            <p>暂无关注股票，点击"添加股票"开始</p>
+        </div>
     </div>
 </div>
 
@@ -124,47 +126,68 @@ function filterByGroup(group, btn) {
     loadWatchlist(group);
 }
 
+function marketTypeBadge(mt) {
+    if (!mt) return '';
+    const map = {'沪市': 'bg-primary', '深市': 'bg-success', '北交所': 'bg-warning'};
+    const cls = map[mt] || 'bg-secondary';
+    return '<span class="badge ' + cls + '">' + escapeHtml(mt) + '</span>';
+}
+
 function renderWatchlist(items) {
-    const container = $('#watchlist-container');
+    const container = $('#watchlist-container .card-body');
     if (items.length === 0) {
-        container.html('<div class="col-12 text-center text-muted py-5"><i class="fas fa-star fa-3x mb-3"></i><p>暂无关注股票</p></div>');
+        container.html('<div class="text-center text-muted py-5"><i class="fas fa-star fa-3x mb-3"></i><p>暂无关注股票</p></div>');
         return;
     }
 
-    let html = '';
+    let rows = '';
     items.forEach(function(item) {
-        const tags = item.tags ? item.tags.split(',').map(t => '<span class="badge bg-secondary me-1">' + escapeHtml(t.trim()) + '</span>').join('') : '';
-        html += `
-        <div class="col-md-4 mb-3">
-            <div class="card h-100">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <h5 class="card-title">
-                            <a href="/stocks/${escapeHtml(item.stock_code)}" class="text-decoration-none">${escapeHtml(item.stock_code)}</a>
-                        </h5>
-                        <div>
-                            <button class="btn btn-sm btn-outline-secondary me-1 btn-edit"
-                                data-id="${item.id}"
-                                data-code="${escapeHtml(item.stock_code)}"
-                                data-group="${escapeHtml(item.group_name || '')}"
-                                data-tags="${escapeHtml(item.tags || '')}"
-                                data-notes="${escapeHtml(item.notes || '')}">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger btn-delete" data-id="${item.id}">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                    ${item.group_name ? '<span class="badge bg-primary mb-2">' + escapeHtml(item.group_name) + '</span>' : ''}
-                    <div class="mb-2">${tags}</div>
-                    ${item.notes ? '<p class="card-text text-muted small">' + escapeHtml(item.notes) + '</p>' : ''}
-                    <small class="text-muted">添加于 ${item.created_at ? item.created_at.substring(0,10) : '-'}</small>
-                </div>
-            </div>
-        </div>`;
+        const tags = item.tags ? item.tags.split(',').filter(t => t.trim()).map(t => '<span class="badge bg-secondary me-1">' + escapeHtml(t.trim()) + '</span>').join('') : '';
+        rows += `<tr>
+            <td><strong><a href="/stocks/${escapeHtml(item.stock_code)}" class="text-decoration-none">${escapeHtml(item.stock_code)}</a></strong></td>
+            <td>${escapeHtml(item.stock_name || '-')}</td>
+            <td>${escapeHtml(item.industry || '-')}</td>
+            <td>${marketTypeBadge(item.market_type)}</td>
+            <td>${item.group_name ? '<span class="badge bg-primary">' + escapeHtml(item.group_name) + '</span>' : '-'}</td>
+            <td>${tags || '-'}</td>
+            <td><small class="text-muted">${escapeHtml(item.notes || '-')}</small></td>
+            <td><small class="text-muted">${item.created_at ? item.created_at.substring(0, 10) : '-'}</small></td>
+            <td>
+                <button class="btn btn-sm btn-outline-secondary me-1 btn-edit"
+                    data-id="${item.id}"
+                    data-code="${escapeHtml(item.stock_code)}"
+                    data-group="${escapeHtml(item.group_name || '')}"
+                    data-tags="${escapeHtml(item.tags || '')}"
+                    data-notes="${escapeHtml(item.notes || '')}">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger btn-delete" data-id="${item.id}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>`;
     });
-    container.html(html);
+
+    container.html(`
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>股票代码</th>
+                        <th>股票名称</th>
+                        <th>行业</th>
+                        <th>市场类型</th>
+                        <th>分组</th>
+                        <th>标签</th>
+                        <th>备注</th>
+                        <th>添加时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    `);
 }
 
 function showAddModal() {
