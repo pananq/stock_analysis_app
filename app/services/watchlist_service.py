@@ -4,6 +4,7 @@
 import threading
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
+import pandas as pd
 from app.models.orm_models import ORMDatabase, Watchlist
 from app.utils import get_logger, get_config
 from sqlalchemy.orm import sessionmaker
@@ -186,12 +187,12 @@ class WatchlistService:
         for _, row in df.iterrows():
             record = {
                 'trade_date': str(row['trade_date']),
-                'open': float(row['open']) if row['open'] is not None else None,
-                'close': float(row['close']) if row['close'] is not None else None,
-                'high': float(row['high']) if row['high'] is not None else None,
-                'low': float(row['low']) if row['low'] is not None else None,
-                'volume': int(row['volume']) if row['volume'] is not None else None,
-                'change_pct': float(row['change_pct']) if row['change_pct'] is not None else None,
+                'open': round(float(row['open']), 4) if pd.notna(row.get('open')) else None,
+                'close': round(float(row['close']), 4) if pd.notna(row.get('close')) else None,
+                'high': round(float(row['high']), 4) if pd.notna(row.get('high')) else None,
+                'low': round(float(row['low']), 4) if pd.notna(row.get('low')) else None,
+                'volume': int(row['volume']) if pd.notna(row.get('volume')) else None,
+                'change_pct': round(float(row['change_pct']), 4) if pd.notna(row.get('change_pct')) else None,
             }
             records.append(record)
 
@@ -201,7 +202,7 @@ class WatchlistService:
             col = f'ma_{period}'
             if col in df.columns:
                 indicators[col] = [
-                    {'trade_date': str(df.iloc[i]['trade_date']), 'value': float(df.iloc[i][col]) if df.iloc[i][col] is not None else None}
+                    {'trade_date': str(df.iloc[i]['trade_date']), 'value': round(float(df.iloc[i][col]), 4) if pd.notna(df.iloc[i][col]) else None}
                     for i in range(len(df))
                 ]
 
