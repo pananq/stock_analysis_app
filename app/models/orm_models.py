@@ -223,13 +223,13 @@ class Watchlist(Base):
     """自选股表"""
     __tablename__ = 'watchlists'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='自选股ID')
     user_id = Column(Integer, nullable=False, comment='用户ID')
     stock_code = Column(String(20), nullable=False, comment='股票代码')
     market = Column(String(20), nullable=False, default='CN', comment='市场')
-    group_name = Column(String(100), nullable=True, comment='分组名称')
-    tags = Column(String(500), nullable=True, comment='标签，格式,tag1,tag2,')
-    notes = Column(String(500), nullable=True, comment='备注')
+    group_name = Column(String(100), comment='分组名称')
+    tags = Column(String(500), comment='标签，格式,tag1,tag2,')
+    notes = Column(String(500), comment='备注')
     created_at = Column(DateTime, default=datetime.now, comment='创建时间')
 
     __table_args__ = (
@@ -244,13 +244,13 @@ class ApiToken(Base):
     """API Token表"""
     __tablename__ = 'api_tokens'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='TokenID')
     user_id = Column(Integer, nullable=False, comment='用户ID')
     name = Column(String(100), nullable=False, comment='Token名称')
-    token_hash = Column(String(255), nullable=False, comment='Token哈希')
+    token_hash = Column(String(255), nullable=False, unique=True, comment='Token哈希')
     token_prefix = Column(String(10), nullable=False, comment='Token前缀')
     is_active = Column(Boolean, default=True, comment='是否有效')
-    last_used_at = Column(DateTime, nullable=True, comment='最后使用时间')
+    last_used_at = Column(DateTime, comment='最后使用时间')
     created_at = Column(DateTime, default=datetime.now, comment='创建时间')
 
     __table_args__ = (
