@@ -5,8 +5,8 @@ SQLAlchemy ORM 模型定义
 import re
 from datetime import datetime
 from sqlalchemy import (
-    create_engine, Column, Integer, String, Text, DateTime, 
-    Date, Boolean, Float, Index, Numeric, BigInteger
+    create_engine, Column, Integer, String, Text, DateTime,
+    Date, Boolean, Float, Index, Numeric, BigInteger, UniqueConstraint
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
@@ -217,6 +217,46 @@ class DailyMarket(Base):
     )
 
 
+
+
+class Watchlist(Base):
+    """自选股表"""
+    __tablename__ = 'watchlists'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, nullable=False, comment='用户ID')
+    stock_code = Column(String(20), nullable=False, comment='股票代码')
+    market = Column(String(20), nullable=False, default='CN', comment='市场')
+    group_name = Column(String(100), nullable=True, comment='分组名称')
+    tags = Column(String(500), nullable=True, comment='标签，格式,tag1,tag2,')
+    notes = Column(String(500), nullable=True, comment='备注')
+    created_at = Column(DateTime, default=datetime.now, comment='创建时间')
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'stock_code', 'market', name='uq_watchlist_user_stock_market'),
+        Index('idx_watchlist_user_id', 'user_id'),
+        Index('idx_watchlist_group_name', 'group_name'),
+        Index('idx_watchlist_stock_code', 'stock_code'),
+    )
+
+
+class ApiToken(Base):
+    """API Token表"""
+    __tablename__ = 'api_tokens'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, nullable=False, comment='用户ID')
+    name = Column(String(100), nullable=False, comment='Token名称')
+    token_hash = Column(String(255), nullable=False, comment='Token哈希')
+    token_prefix = Column(String(10), nullable=False, comment='Token前缀')
+    is_active = Column(Boolean, default=True, comment='是否有效')
+    last_used_at = Column(DateTime, nullable=True, comment='最后使用时间')
+    created_at = Column(DateTime, default=datetime.now, comment='创建时间')
+
+    __table_args__ = (
+        Index('idx_api_tokens_user_id', 'user_id'),
+        Index('idx_api_tokens_prefix', 'token_prefix'),
+    )
 
 
 class ORMDatabase:
@@ -655,6 +695,8 @@ class ORMDatabase:
             'job_logs': JobLog,
             'task_execution_details': TaskExecutionDetail,
             'daily_market': DailyMarket,
+            'watchlists': Watchlist,
+            'api_tokens': ApiToken,
         }
         return model_map.get(table_name)
     
