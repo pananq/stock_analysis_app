@@ -69,12 +69,32 @@
 
 {% block extra_js %}
 <script>
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 let currentGroup = null;
 let stockModal = null;
 
 $(document).ready(function() {
     stockModal = new bootstrap.Modal(document.getElementById('stockModal'));
     loadWatchlist();
+
+    $(document).on('click', '.btn-edit', function() {
+        const btn = $(this);
+        showEditModal(
+            btn.data('id'),
+            btn.data('code'),
+            btn.data('group'),
+            btn.data('tags'),
+            btn.data('notes')
+        );
+    });
+
+    $(document).on('click', '.btn-delete', function() {
+        deleteStock($(this).data('id'));
+    });
 });
 
 function loadWatchlist(group) {
@@ -113,27 +133,32 @@ function renderWatchlist(items) {
 
     let html = '';
     items.forEach(function(item) {
-        const tags = item.tags ? item.tags.split(',').map(t => '<span class="badge bg-secondary me-1">' + t + '</span>').join('') : '';
+        const tags = item.tags ? item.tags.split(',').map(t => '<span class="badge bg-secondary me-1">' + escapeHtml(t.trim()) + '</span>').join('') : '';
         html += `
         <div class="col-md-4 mb-3">
             <div class="card h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start">
                         <h5 class="card-title">
-                            <a href="/stocks/${item.stock_code}" class="text-decoration-none">${item.stock_code}</a>
+                            <a href="/stocks/${escapeHtml(item.stock_code)}" class="text-decoration-none">${escapeHtml(item.stock_code)}</a>
                         </h5>
                         <div>
-                            <button class="btn btn-sm btn-outline-secondary me-1" onclick="showEditModal(${item.id}, '${item.stock_code}', '${item.group_name || ''}', '${item.tags || ''}', '${(item.notes || '').replace(/'/g, "\\'")}')">
+                            <button class="btn btn-sm btn-outline-secondary me-1 btn-edit"
+                                data-id="${item.id}"
+                                data-code="${escapeHtml(item.stock_code)}"
+                                data-group="${escapeHtml(item.group_name || '')}"
+                                data-tags="${escapeHtml(item.tags || '')}"
+                                data-notes="${escapeHtml(item.notes || '')}">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteStock(${item.id})">
+                            <button class="btn btn-sm btn-outline-danger btn-delete" data-id="${item.id}">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
                     </div>
-                    ${item.group_name ? '<span class="badge bg-primary mb-2">' + item.group_name + '</span>' : ''}
+                    ${item.group_name ? '<span class="badge bg-primary mb-2">' + escapeHtml(item.group_name) + '</span>' : ''}
                     <div class="mb-2">${tags}</div>
-                    ${item.notes ? '<p class="card-text text-muted small">' + item.notes + '</p>' : ''}
+                    ${item.notes ? '<p class="card-text text-muted small">' + escapeHtml(item.notes) + '</p>' : ''}
                     <small class="text-muted">添加于 ${item.created_at ? item.created_at.substring(0,10) : '-'}</small>
                 </div>
             </div>

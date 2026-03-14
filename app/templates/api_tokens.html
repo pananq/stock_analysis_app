@@ -79,6 +79,11 @@
 
 {% block extra_js %}
 <script>
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 let createModal = null;
 let showTokenModal = null;
 
@@ -86,6 +91,10 @@ $(document).ready(function() {
     createModal = new bootstrap.Modal(document.getElementById('createModal'));
     showTokenModal = new bootstrap.Modal(document.getElementById('showTokenModal'));
     loadTokens();
+
+    $(document).on('click', '.btn-revoke', function() {
+        revokeToken($(this).data('id'));
+    });
 });
 
 function loadTokens() {
@@ -106,8 +115,8 @@ function renderTokens(tokens) {
     tokens.forEach(function(token) {
         const lastUsed = token.last_used_at ? token.last_used_at.substring(0, 19) : '从未使用';
         const status = token.is_active ? '<span class="badge bg-success">有效</span>' : '<span class="badge bg-secondary">已撤销</span>';
-        const revokeBtn = token.is_active ? `<button class="btn btn-sm btn-outline-danger" onclick="revokeToken(${token.id})"><i class="fas fa-ban"></i> 撤销</button>` : '';
-        html += `<tr><td>${token.name}</td><td><code>${token.prefix}</code></td><td>${lastUsed}</td><td>${status}</td><td>${revokeBtn}</td></tr>`;
+        const revokeBtn = token.is_active ? `<button class="btn btn-sm btn-outline-danger btn-revoke" data-id="${token.id}"><i class="fas fa-ban"></i> 撤销</button>` : '';
+        html += `<tr><td>${escapeHtml(token.name)}</td><td><code>${escapeHtml(token.prefix)}</code></td><td>${lastUsed}</td><td>${status}</td><td>${revokeBtn}</td></tr>`;
     });
     html += '</tbody></table>';
     container.html(html);
