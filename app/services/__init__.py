@@ -1,4 +1,5 @@
 """服务模块初始化"""
+import threading
 from .datasource import DataSource
 from .akshare_datasource import AkshareDataSource
 from .tushare_datasource import TushareDataSource
@@ -8,6 +9,7 @@ from .market_data_service import MarketDataService, get_market_data_service
 from .strategy_service import StrategyService, get_strategy_service
 from .strategy_executor import StrategyExecutor, get_strategy_executor
 from .stock_date_range_service import StockDateRangeService
+from .watchlist_service import WatchlistService, get_watchlist_service
 
 # 单例缓存
 _stock_date_range_service_instance = None
@@ -42,5 +44,7 @@ __all__ = [
     'StrategyExecutor',
     'get_strategy_executor',
     'StockDateRangeService',
-    'get_stock_date_range_service'
+    'get_stock_date_range_service',
+    'WatchlistService',
+    'get_watchlist_service',
 ]
