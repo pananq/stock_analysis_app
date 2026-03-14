@@ -57,3 +57,9 @@ strategy_defaults:
   rise_threshold: 8
   observation_days: 3
   ma_period: 5
+
+# MCP 服务配置
+mcp:
+  host: 0.0.0.0
+  port: 5002
+  enabled: true

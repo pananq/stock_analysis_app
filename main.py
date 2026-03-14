@@ -468,55 +468,76 @@ def main():
             run_web_server()
         else:
             logger.info("启动所有服务（API + Web + 调度器）")
-            
+
+            from app.mcp.server import run_mcp_server
+
             # 使用多进程同时启动API和Web服务器
             # 注意：子进程会继承父进程的进程组ID
             api_process = multiprocessing.Process(target=run_api_server)
             web_process = multiprocessing.Process(target=run_web_server)
-            
+
             # 启动进程
             api_process.start()
             web_process.start()
-            
+
+            # 启动MCP进程（如果启用）
+            mcp_process = None
+            if config.get('mcp', {}).get('enabled', True):
+                mcp_process = multiprocessing.Process(target=run_mcp_server)
+                mcp_process.start()
+                logger.info(f"MCP进程 PID: {mcp_process.pid}")
+
             # 记录子进程信息到日志
             logger.info(f"API进程 PID: {api_process.pid}")
             logger.info(f"Web进程 PID: {web_process.pid}")
             logger.info(f"主进程 PID: {os.getpid()}")
             logger.info(f"进程组 PGID: {os.getpgid(0)}")
-            
+
             if not args.foreground:
                 logger.info("所有服务已启动！")
                 logger.info(f"  - API服务器: http://localhost:5000")
                 logger.info(f"  - Web界面:   http://localhost:8000")
                 logger.info(f"  - API文档:   http://localhost:5000/api/docs")
+                if mcp_process:
+                    logger.info(f"  - MCP服务:   http://localhost:5002")
             else:
                 print("\n所有服务已启动！")
                 print(f"  - API服务器: http://localhost:5000")
                 print(f"  - Web界面:   http://localhost:8000")
                 print(f"  - API文档:   http://localhost:5000/api/docs")
+                if mcp_process:
+                    print(f"  - MCP服务:   http://localhost:5002")
                 print("\n按 Ctrl+C 停止所有服务\n")
-            
+
             # 等待进程结束
             try:
                 api_process.join()
                 web_process.join()
+                if mcp_process:
+                    mcp_process.join()
             except KeyboardInterrupt:
                 logger.info("\n收到中断信号，正在关闭所有服务...")
-                
+
                 # 终止进程
                 api_process.terminate()
                 web_process.terminate()
-                
+                if mcp_process:
+                    mcp_process.terminate()
+
                 # 等待进程结束
                 api_process.join(timeout=5)
                 web_process.join(timeout=5)
-                
+                if mcp_process:
+                    mcp_process.join(timeout=5)
+
                 # 如果进程仍在运行，强制杀死
                 if api_process.is_alive():
                     api_process.kill()
                 if web_process.is_alive():
                     web_process.kill()
-                
+                if mcp_process and mcp_process.is_alive():
+                    mcp_process.kill()
+
                 logger.info("所有服务已关闭")
 
 
