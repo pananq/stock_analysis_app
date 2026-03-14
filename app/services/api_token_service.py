@@ -3,7 +3,6 @@ API Token 管理服务
 用于生成、验证和撤销长期 API Token
 """
 import secrets
-import threading
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from sqlalchemy.orm import sessionmaker
@@ -138,6 +137,9 @@ class ApiTokenService:
             ).order_by(ApiToken.created_at.desc()).all()
 
             return [self._to_dict(t) for t in tokens]
+        except Exception as e:
+            logger.error(f"列出 API Token 失败: {e}")
+            return []
         finally:
             session.close()
 
