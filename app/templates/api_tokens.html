@@ -98,7 +98,7 @@ $(document).ready(function() {
 });
 
 function loadTokens() {
-    apiRequest('tokens', 'GET', null, function(response) {
+    apiRequest('/tokens', 'GET', null, function(response) {
         const tokens = response.data || [];
         renderTokens(tokens);
     });
@@ -134,7 +134,7 @@ function createToken() {
         return;
     }
 
-    apiRequest('tokens', 'POST', {name: name}, function(response) {
+    apiRequest('/tokens', 'POST', {name: name}, function(response) {
         createModal.hide();
         $('#token-value').val(response.token);
         showTokenModal.show();
@@ -154,7 +154,7 @@ function copyToken() {
 
 function revokeToken(id) {
     showConfirm('确认撤销此 Token？撤销后将无法恢复。', function() {
-        apiRequest('tokens/' + id, 'DELETE', null, function(response) {
+        apiRequest('/tokens/' + id, 'DELETE', null, function(response) {
             showMessage('Token 已撤销', 'success');
             loadTokens();
         });

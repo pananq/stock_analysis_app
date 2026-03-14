@@ -99,7 +99,7 @@ $(document).ready(function() {
 
 function loadWatchlist(group) {
     currentGroup = group || null;
-    let url = 'watchlist';
+    let url = '/watchlist';
     if (group) url += '?group=' + encodeURIComponent(group);
 
     apiRequest(url, 'GET', null, function(response) {
@@ -208,7 +208,7 @@ function saveStock() {
     }
 
     const method = isEdit ? 'PUT' : 'POST';
-    const url = isEdit ? 'watchlist/' + id : 'watchlist';
+    const url = isEdit ? '/watchlist/' + id : '/watchlist';
 
     apiRequest(url, method, data, function(response) {
         stockModal.hide();
@@ -219,7 +219,7 @@ function saveStock() {
 
 function deleteStock(id) {
     showConfirm('确认删除此关注条目？', function() {
-        apiRequest('watchlist/' + id, 'DELETE', null, function(response) {
+        apiRequest('/watchlist/' + id, 'DELETE', null, function(response) {
             showMessage('删除成功', 'success');
             loadWatchlist(currentGroup);
         });
