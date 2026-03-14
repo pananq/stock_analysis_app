@@ -92,12 +92,16 @@ def remove_stock(watchlist_id):
 def get_stock_data(stock_code):
     """查询股票历史数据+技术指标"""
     try:
+        user_id = g.user['user_id']
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
         ma_periods_str = request.args.get('ma_periods', '5,30,60')
         market = request.args.get('market', 'CN')
 
-        ma_periods = [int(p.strip()) for p in ma_periods_str.split(',') if p.strip()]
+        try:
+            ma_periods = [int(p.strip()) for p in ma_periods_str.split(',') if p.strip()]
+        except ValueError:
+            return jsonify({'success': False, 'error': 'ma_periods 格式无效'}), 400
 
         result = get_watchlist_service().get_stock_data_with_indicators(
             stock_code=stock_code,
