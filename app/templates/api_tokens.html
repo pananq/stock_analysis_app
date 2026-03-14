@@ -142,14 +142,33 @@ function createToken() {
 }
 
 function copyToken() {
-    const val = $('#token-value').val();
-    navigator.clipboard.writeText(val).then(function() {
-        showMessage('已复制到剪贴板', 'success');
-    }).catch(function() {
-        $('#token-value').select();
-        document.execCommand('copy');
-        showMessage('已复制', 'success');
-    });
+    const input = document.getElementById('token-value');
+    const val = input.value;
+
+    // Try modern clipboard API first (requires HTTPS or localhost)
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(val).then(function() {
+            showMessage('已复制到剪贴板', 'success');
+        }).catch(function() {
+            fallbackCopy(input);
+        });
+    } else {
+        fallbackCopy(input);
+    }
+}
+
+function fallbackCopy(input) {
+    input.removeAttribute('readonly');
+    input.select();
+    input.setSelectionRange(0, 99999);
+    try {
+        const ok = document.execCommand('copy');
+        showMessage(ok ? '已复制到剪贴板' : '复制失败，请手动选中复制', ok ? 'success' : 'warning');
+    } catch(e) {
+        showMessage('复制失败，请手动选中复制', 'warning');
+    }
+    input.setAttribute('readonly', '');
+    window.getSelection().removeAllRanges();
 }
 
 function revokeToken(id) {
