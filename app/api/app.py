@@ -126,13 +126,15 @@ def create_app(config=None):
         logger.info("数据库初始化完成")
     
     # 注册蓝图
-    from app.api.routes import strategy_bp, stock_bp, system_bp, data_bp, auth_bp
-    
+    from app.api.routes import strategy_bp, stock_bp, system_bp, data_bp, auth_bp, watchlist_bp, api_token_bp
+
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(strategy_bp, url_prefix='/api/strategies')
     app.register_blueprint(stock_bp, url_prefix='/api/stocks')
     app.register_blueprint(system_bp, url_prefix='/api/system')
     app.register_blueprint(data_bp, url_prefix='/api/data')
+    app.register_blueprint(watchlist_bp, url_prefix='/api/watchlist')
+    app.register_blueprint(api_token_bp, url_prefix='/api/tokens')
     
     logger.info("API路由注册完成")
     

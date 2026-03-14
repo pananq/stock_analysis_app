@@ -153,3 +153,14 @@ class ApiTokenService:
             'last_used_at': token.last_used_at.isoformat() if token.last_used_at else None,
             'created_at': token.created_at.isoformat() if token.created_at else None
         }
+
+
+_api_token_service: Optional['ApiTokenService'] = None
+
+
+def get_api_token_service() -> 'ApiTokenService':
+    """获取 ApiTokenService 单例"""
+    global _api_token_service
+    if _api_token_service is None:
+        _api_token_service = ApiTokenService()
+    return _api_token_service

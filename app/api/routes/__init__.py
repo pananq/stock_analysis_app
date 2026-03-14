@@ -4,11 +4,15 @@ from .stock_routes import stock_bp
 from .system_routes import system_bp
 from .data_routes import data_bp
 from .auth_routes import auth_bp
+from .watchlist_routes import watchlist_bp
+from .api_token_routes import api_token_bp
 
 __all__ = [
     'strategy_bp',
     'stock_bp',
     'system_bp',
     'data_bp',
-    'auth_bp'
+    'auth_bp',
+    'watchlist_bp',
+    'api_token_bp'
 ]
