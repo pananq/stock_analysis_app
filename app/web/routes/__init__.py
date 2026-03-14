@@ -5,6 +5,8 @@ from .stock import stock_bp
 from .system import system_bp
 from .data import data_bp
 from .auth import auth_bp
+from .watchlist_routes import watchlist_web_bp
+from .api_token_routes import api_token_web_bp
 
 __all__ = [
     'dashboard_bp',
@@ -12,5 +14,7 @@ __all__ = [
     'stock_bp',
     'system_bp',
     'data_bp',
-    'auth_bp'
+    'auth_bp',
+    'watchlist_web_bp',
+    'api_token_web_bp'
 ]

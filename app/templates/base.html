@@ -47,6 +47,16 @@
                             <i class="fas fa-list"></i> 股票查询
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/watchlist' %}active{% endif %}" href="/watchlist">
+                            <i class="fas fa-star"></i> 关注列表
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/api-tokens' %}active{% endif %}" href="/api-tokens">
+                            <i class="fas fa-key"></i> API Token
+                        </a>
+                    </li>
                     <li class="nav-item admin-only" style="display: none;">
                         <a class="nav-link {% if request.path.startswith('/data') %}active{% endif %}" href="/data">
                             <i class="fas fa-database"></i> 数据管理

@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}关注列表 - 股海罗盘{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-md-8">
+        <h2><i class="fas fa-star"></i> 关注列表</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <button class="btn btn-primary" onclick="showAddModal()">
+            <i class="fas fa-plus"></i> 添加股票
+        </button>
+    </div>
+</div>
+
+<!-- Group filter -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div id="group-filter" class="btn-group flex-wrap" role="group">
+            <button type="button" class="btn btn-outline-primary active" onclick="filterByGroup(null, this)">全部</button>
+        </div>
+    </div>
+</div>
+
+<!-- Watchlist -->
+<div class="row" id="watchlist-container">
+    <div class="col-12 text-center text-muted py-5" id="empty-hint">
+        <i class="fas fa-star fa-3x mb-3"></i>
+        <p>暂无关注股票，点击"添加股票"开始</p>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal fade" id="stockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modal-title">添加股票</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="edit-id">
+                <div class="mb-3">
+                    <label class="form-label">股票代码 <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="stock-code" placeholder="例如: 600000" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">分组</label>
+                    <input type="text" class="form-control" id="group-name" placeholder="例如: 持仓、观察">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">标签</label>
+                    <input type="text" class="form-control" id="tags" placeholder="逗号分隔，例如: 银行,价值投资">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">备注</label>
+                    <textarea class="form-control" id="notes" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveStock()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentGroup = null;
+let stockModal = null;
+
+$(document).ready(function() {
+    stockModal = new bootstrap.Modal(document.getElementById('stockModal'));
+    loadWatchlist();
+});
+
+function loadWatchlist(group) {
+    currentGroup = group || null;
+    let url = 'watchlist';
+    if (group) url += '?group=' + encodeURIComponent(group);
+
+    apiRequest(url, 'GET', null, function(response) {
+        const items = response.data || [];
+        renderWatchlist(items);
+        updateGroupFilter(items);
+    });
+}
+
+function updateGroupFilter(items) {
+    const groups = [...new Set(items.map(i => i.group_name).filter(g => g))];
+    const container = $('#group-filter');
+    container.html('<button type="button" class="btn btn-outline-primary ' + (currentGroup ? '' : 'active') + '" onclick="filterByGroup(null, this)">全部</button>');
+    groups.forEach(function(g) {
+        container.append('<button type="button" class="btn btn-outline-primary ' + (currentGroup === g ? 'active' : '') + '" onclick="filterByGroup(\'' + g + '\', this)">' + g + '</button>');
+    });
+}
+
+function filterByGroup(group, btn) {
+    $('#group-filter .btn').removeClass('active');
+    $(btn).addClass('active');
+    loadWatchlist(group);
+}
+
+function renderWatchlist(items) {
+    const container = $('#watchlist-container');
+    if (items.length === 0) {
+        container.html('<div class="col-12 text-center text-muted py-5"><i class="fas fa-star fa-3x mb-3"></i><p>暂无关注股票</p></div>');
+        return;
+    }
+
+    let html = '';
+    items.forEach(function(item) {
+        const tags = item.tags ? item.tags.split(',').map(t => '<span class="badge bg-secondary me-1">' + t + '</span>').join('') : '';
+        html += `
+        <div class="col-md-4 mb-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h5 class="card-title">
+                            <a href="/stocks/${item.stock_code}" class="text-decoration-none">${item.stock_code}</a>
+                        </h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary me-1" onclick="showEditModal(${item.id}, '${item.stock_code}', '${item.group_name || ''}', '${item.tags || ''}', '${(item.notes || '').replace(/'/g, "\\'")}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteStock(${item.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    ${item.group_name ? '<span class="badge bg-primary mb-2">' + item.group_name + '</span>' : ''}
+                    <div class="mb-2">${tags}</div>
+                    ${item.notes ? '<p class="card-text text-muted small">' + item.notes + '</p>' : ''}
+                    <small class="text-muted">添加于 ${item.created_at ? item.created_at.substring(0,10) : '-'}</small>
+                </div>
+            </div>
+        </div>`;
+    });
+    container.html(html);
+}
+
+function showAddModal() {
+    $('#modal-title').text('添加股票');
+    $('#edit-id').val('');
+    $('#stock-code').val('').prop('disabled', false);
+    $('#group-name').val('');
+    $('#tags').val('');
+    $('#notes').val('');
+    stockModal.show();
+}
+
+function showEditModal(id, code, group, tags, notes) {
+    $('#modal-title').text('编辑关注');
+    $('#edit-id').val(id);
+    $('#stock-code').val(code).prop('disabled', true);
+    $('#group-name').val(group);
+    $('#tags').val(tags);
+    $('#notes').val(notes);
+    stockModal.show();
+}
+
+function saveStock() {
+    const id = $('#edit-id').val();
+    const isEdit = !!id;
+
+    if (!isEdit && !$('#stock-code').val().trim()) {
+        showMessage('请输入股票代码', 'warning');
+        return;
+    }
+
+    const data = {
+        group_name: $('#group-name').val().trim() || null,
+        tags: $('#tags').val().trim() || null,
+        notes: $('#notes').val().trim() || null
+    };
+
+    if (!isEdit) {
+        data.stock_code = $('#stock-code').val().trim();
+        data.market = 'CN';
+    }
+
+    const method = isEdit ? 'PUT' : 'POST';
+    const url = isEdit ? 'watchlist/' + id : 'watchlist';
+
+    apiRequest(url, method, data, function(response) {
+        stockModal.hide();
+        showMessage(isEdit ? '更新成功' : '添加成功', 'success');
+        loadWatchlist(currentGroup);
+    });
+}
+
+function deleteStock(id) {
+    showConfirm('确认删除此关注条目？', function() {
+        apiRequest('watchlist/' + id, 'DELETE', null, function(response) {
+            showMessage('删除成功', 'success');
+            loadWatchlist(currentGroup);
+        });
+    });
+}
+</script>
+{% endblock %}

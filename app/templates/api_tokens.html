@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}API Token 管理 - 股海罗盘{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-md-8">
+        <h2><i class="fas fa-key"></i> API Token 管理</h2>
+        <p class="text-muted">生成长期 API Token，用于 MCP 服务（Claude Desktop 等 AI 工具）认证。</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <button class="btn btn-primary" onclick="showCreateModal()">
+            <i class="fas fa-plus"></i> 生成新 Token
+        </button>
+    </div>
+</div>
+
+<!-- Token List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">Token 列表</div>
+            <div class="card-body">
+                <div id="token-list">
+                    <div class="text-center text-muted py-3">加载中...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Token Modal -->
+<div class="modal fade" id="createModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">生成新 API Token</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Token 名称 <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="token-name" placeholder="例如: Claude Desktop">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="createToken()">生成</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Show Token Modal (one-time display) -->
+<div class="modal fade" id="showTokenModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> 请立即复制 Token</h5>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <strong>此 Token 只显示一次！</strong> 关闭此窗口后将无法再次查看明文。
+                </div>
+                <div class="input-group">
+                    <input type="text" class="form-control font-monospace" id="token-value" readonly>
+                    <button class="btn btn-outline-secondary" onclick="copyToken()">
+                        <i class="fas fa-copy"></i> 复制
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="loadTokens()">我已复制，关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let createModal = null;
+let showTokenModal = null;
+
+$(document).ready(function() {
+    createModal = new bootstrap.Modal(document.getElementById('createModal'));
+    showTokenModal = new bootstrap.Modal(document.getElementById('showTokenModal'));
+    loadTokens();
+});
+
+function loadTokens() {
+    apiRequest('tokens', 'GET', null, function(response) {
+        const tokens = response.data || [];
+        renderTokens(tokens);
+    });
+}
+
+function renderTokens(tokens) {
+    const container = $('#token-list');
+    if (tokens.length === 0) {
+        container.html('<div class="text-center text-muted py-3">暂无 API Token，点击"生成新 Token"创建</div>');
+        return;
+    }
+
+    let html = '<table class="table table-hover"><thead><tr><th>名称</th><th>前缀</th><th>最后使用</th><th>状态</th><th>操作</th></tr></thead><tbody>';
+    tokens.forEach(function(token) {
+        const lastUsed = token.last_used_at ? token.last_used_at.substring(0, 19) : '从未使用';
+        const status = token.is_active ? '<span class="badge bg-success">有效</span>' : '<span class="badge bg-secondary">已撤销</span>';
+        const revokeBtn = token.is_active ? `<button class="btn btn-sm btn-outline-danger" onclick="revokeToken(${token.id})"><i class="fas fa-ban"></i> 撤销</button>` : '';
+        html += `<tr><td>${token.name}</td><td><code>${token.prefix}</code></td><td>${lastUsed}</td><td>${status}</td><td>${revokeBtn}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    container.html(html);
+}
+
+function showCreateModal() {
+    $('#token-name').val('');
+    createModal.show();
+}
+
+function createToken() {
+    const name = $('#token-name').val().trim();
+    if (!name) {
+        showMessage('请输入 Token 名称', 'warning');
+        return;
+    }
+
+    apiRequest('tokens', 'POST', {name: name}, function(response) {
+        createModal.hide();
+        $('#token-value').val(response.token);
+        showTokenModal.show();
+    });
+}
+
+function copyToken() {
+    const val = $('#token-value').val();
+    navigator.clipboard.writeText(val).then(function() {
+        showMessage('已复制到剪贴板', 'success');
+    }).catch(function() {
+        $('#token-value').select();
+        document.execCommand('copy');
+        showMessage('已复制', 'success');
+    });
+}
+
+function revokeToken(id) {
+    showConfirm('确认撤销此 Token？撤销后将无法恢复。', function() {
+        apiRequest('tokens/' + id, 'DELETE', null, function(response) {
+            showMessage('Token 已撤销', 'success');
+            loadTokens();
+        });
+    });
+}
+</script>
+{% endblock %}

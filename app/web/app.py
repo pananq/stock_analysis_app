@@ -48,15 +48,19 @@ def create_web_app(config=None):
         stock_bp,
         data_bp,
         system_bp,
-        auth_bp
+        auth_bp,
+        watchlist_web_bp,
+        api_token_web_bp
     )
-    
+
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(strategy_bp, url_prefix='/strategies')
     app.register_blueprint(stock_bp, url_prefix='/stocks')
     app.register_blueprint(data_bp, url_prefix='/data')
     app.register_blueprint(system_bp, url_prefix='/system')
     app.register_blueprint(auth_bp)
+    app.register_blueprint(watchlist_web_bp)
+    app.register_blueprint(api_token_web_bp)
     
     logger.info("Web路由注册完成")
     
@@ -66,14 +70,18 @@ def create_web_app(config=None):
         stock_bp as api_stock_bp,
         system_bp as api_system_bp,
         data_bp as api_data_bp,
-        auth_bp as api_auth_bp
+        auth_bp as api_auth_bp,
+        watchlist_bp as api_watchlist_bp,
+        api_token_bp as api_token_bp_route
     )
-    
+
     app.register_blueprint(api_strategy_bp, url_prefix='/api/strategies', name='api_strategy')
     app.register_blueprint(api_stock_bp, url_prefix='/api/stocks', name='api_stock')
     app.register_blueprint(api_system_bp, url_prefix='/api/system', name='api_system')
     app.register_blueprint(api_data_bp, url_prefix='/api/data', name='api_data')
     app.register_blueprint(api_auth_bp, url_prefix='/api/auth', name='api_auth')
+    app.register_blueprint(api_watchlist_bp, url_prefix='/api/watchlist', name='api_watchlist')
+    app.register_blueprint(api_token_bp_route, url_prefix='/api/tokens', name='api_tokens')
     
     logger.info("API路由注册完成")
     
