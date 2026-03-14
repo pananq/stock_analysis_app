@@ -145,9 +145,45 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <a href="/stocks/{{ stock.code }}" class="btn btn-sm btn-outline-primary">
-                                        <i class="fas fa-eye"></i> 查看详情
-                                    </a>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="/stocks/{{ stock.code }}" class="btn btn-outline-primary">
+                                            <i class="fas fa-eye"></i> 查看详情
+                                        </a>
+                                        <button type="button"
+                                                class="btn btn-outline-warning btn-watch-toggle"
+                                                data-stock-code="{{ stock.code }}"
+                                                onclick="quickAddWatch('{{ stock.code }}')">
+                                            <i class="fas fa-star"></i> 关注
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-outline-warning dropdown-toggle dropdown-toggle-split btn-watch-dropdown"
+                                                data-stock-code="{{ stock.code }}"
+                                                data-bs-toggle="dropdown"
+                                                data-bs-auto-close="outside"
+                                                aria-expanded="false">
+                                            <span class="visually-hidden">分组选项</span>
+                                        </button>
+                                        <ul class="dropdown-menu watch-group-menu" data-stock-code="{{ stock.code }}">
+                                            <li>
+                                                <a class="dropdown-item" href="#"
+                                                   onclick="addToWatchlist('{{ stock.code }}', null); return false;">
+                                                    <i class="fas fa-star"></i> 全部（不分组）
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            {# existing groups injected here by JS #}
+                                            <li><hr class="dropdown-divider existing-groups-divider" style="display:none"></li>
+                                            <li>
+                                                <div class="px-3 py-1 new-group-input" style="display:none">
+                                                    <input type="text" class="form-control form-control-sm" placeholder="输入新分组名">
+                                                </div>
+                                                <a class="dropdown-item new-group-link" href="#"
+                                                   onclick="showNewGroupInput(this); return false;">
+                                                    <i class="fas fa-plus"></i> 新分组...
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -169,15 +205,123 @@
 
 {% block extra_js %}
 <script>
-/**
- * 重置筛选条件
- */
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 function resetFilter() {
     document.getElementById('code').value = '';
     document.getElementById('name').value = '';
     document.getElementById('industry').value = '';
     document.getElementById('market').value = '';
     document.getElementById('filterForm').submit();
+}
+
+let watchedCodes = new Set();
+let existingGroups = [];
+
+$(document).ready(function() {
+    // Load watchlist to mark already-watched stocks and populate group lists
+    apiRequest('/watchlist', 'GET', null, function(response) {
+        const items = response.data || [];
+        items.forEach(function(item) {
+            watchedCodes.add(item.stock_code);
+            if (item.group_name && !existingGroups.includes(item.group_name)) {
+                existingGroups.push(item.group_name);
+            }
+        });
+        updateWatchButtons();
+        updateGroupDropdowns();
+    });
+});
+
+function updateWatchButtons() {
+    $('.btn-watch-toggle').each(function() {
+        const code = $(this).data('stock-code');
+        if (watchedCodes.has(code)) {
+            $(this)
+                .removeClass('btn-outline-warning')
+                .addClass('btn-success')
+                .prop('disabled', true)
+                .html('<i class="fas fa-check"></i> 已关注');
+            // Also disable the dropdown split button
+            $(this).next('.btn-watch-dropdown').prop('disabled', true);
+        }
+    });
+}
+
+function updateGroupDropdowns() {
+    $('.watch-group-menu').each(function() {
+        const menu = $(this);
+        // Remove previously injected group items (avoid duplicates on re-render)
+        menu.find('.injected-group').remove();
+        const divider = menu.find('.existing-groups-divider');
+
+        if (existingGroups.length > 0) {
+            const stockCode = menu.data('stock-code');
+            let groupHtml = '';
+            existingGroups.forEach(function(g) {
+                // Use JSON.stringify so group names with ' or " don't break the JS string literal
+                const jsGroup = escapeHtml(JSON.stringify(g));
+                groupHtml += '<li class="injected-group"><a class="dropdown-item" href="#" onclick="addToWatchlist(\'' +
+                    escapeHtml(stockCode) + '\', ' + jsGroup + '); return false;">' +
+                    escapeHtml(g) + '</a></li>';
+            });
+            divider.before(groupHtml);
+            divider.show();
+        } else {
+            divider.hide();
+        }
+    });
+}
+
+function quickAddWatch(stockCode) {
+    addToWatchlist(stockCode, null);
+}
+
+function addToWatchlist(stockCode, groupName) {
+    apiRequest('/watchlist', 'POST', {stock_code: stockCode, market: 'CN', group_name: groupName}, function(response) {
+        watchedCodes.add(stockCode);
+        if (groupName && !existingGroups.includes(groupName)) {
+            existingGroups.push(groupName);
+            updateGroupDropdowns();
+        }
+        updateWatchButtons();
+        showMessage('已加入关注', 'success');
+        // Close the open dropdown using Bootstrap's API to avoid stale visual state
+        const openToggle = document.querySelector('.btn-watch-dropdown[aria-expanded="true"]');
+        if (openToggle) {
+            const dd = bootstrap.Dropdown.getInstance(openToggle);
+            if (dd) dd.hide();
+        }
+    });
+}
+
+function showNewGroupInput(linkEl) {
+    const li = $(linkEl).closest('li');
+    const menu = $(linkEl).closest('.watch-group-menu');
+    const stockCode = menu.data('stock-code');
+    $(linkEl).hide();
+    const inputDiv = li.find('.new-group-input');
+    inputDiv.show();
+    const input = inputDiv.find('input').val('').focus();
+
+    input.off('keydown').on('keydown', function(e) {
+        if (e.key === 'Enter') {
+            const newGroup = $(this).val().trim();
+            if (newGroup) {
+                addToWatchlist(stockCode, newGroup);
+            }
+            // Reset UI
+            inputDiv.hide();
+            $(linkEl).show();
+        }
+        if (e.key === 'Escape') {
+            inputDiv.hide();
+            $(linkEl).show();
+        }
+    });
 }
 </script>
 {% endblock %}
