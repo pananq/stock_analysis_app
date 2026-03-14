@@ -5,7 +5,7 @@ import threading
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 import pandas as pd
-from app.models.orm_models import ORMDatabase, Watchlist
+from app.models.orm_models import ORMDatabase, Watchlist, Stock
 from app.utils import get_logger, get_config
 from sqlalchemy.orm import sessionmaker
 
@@ -144,7 +144,23 @@ class WatchlistService:
             if tag:
                 query = query.filter(Watchlist.tags.like(f'%,{tag},%'))
             items = query.order_by(Watchlist.created_at.desc()).all()
-            return [self._row_to_dict(item) for item in items]
+
+            # Batch-fetch stock metadata to avoid N+1 queries
+            stock_codes = [item.stock_code for item in items]
+            stock_map = {}
+            if stock_codes:
+                stocks = session.query(Stock).filter(Stock.code.in_(stock_codes)).all()
+                stock_map = {s.code: s for s in stocks}
+
+            result = []
+            for item in items:
+                d = self._row_to_dict(item)
+                s = stock_map.get(item.stock_code)
+                d['stock_name'] = s.name if s else None
+                d['industry'] = s.industry if s else None
+                d['market_type'] = s.market_type if s else None
+                result.append(d)
+            return result
         finally:
             session.close()
 
