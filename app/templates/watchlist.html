@@ -116,7 +116,8 @@ function updateGroupFilter(items) {
     const container = $('#group-filter');
     container.html('<button type="button" class="btn btn-outline-primary ' + (currentGroup ? '' : 'active') + '" onclick="filterByGroup(null, this)">全部</button>');
     groups.forEach(function(g) {
-        container.append('<button type="button" class="btn btn-outline-primary ' + (currentGroup === g ? 'active' : '') + '" onclick="filterByGroup(\'' + g + '\', this)">' + g + '</button>');
+        const jsGroup = escapeHtml(JSON.stringify(g));
+        container.append('<button type="button" class="btn btn-outline-primary ' + (currentGroup === g ? 'active' : '') + '" onclick="filterByGroup(' + jsGroup + ', this)">' + escapeHtml(g) + '</button>');
     });
 }
 
