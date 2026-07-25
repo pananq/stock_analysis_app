@@ -24,9 +24,11 @@ def configure_werkzeug_logging():
     """
     import logging
     from logging.handlers import RotatingFileHandler
+    from app.utils.logger import RedactingFormatter, SensitiveDataFilter
     
     # 获取Werkzeug日志记录器
     werkzeug_logger = logging.getLogger('werkzeug')
+    werkzeug_logger.addFilter(SensitiveDataFilter())
     
     # 移除所有现有的处理器
     werkzeug_logger.handlers.clear()
@@ -34,13 +36,6 @@ def configure_werkzeug_logging():
     # 创建容错的文件处理器
     log_path = './logs/api.log'
     try:
-        file_handler = RotatingFileHandler(
-            log_path,
-            maxBytes=10*1024*1024,  # 10MB
-            backupCount=10,
-            encoding='utf-8'
-        )
-        
         # 设置容错处理器
         class SafeRotatingFileHandler(RotatingFileHandler):
             def emit(self, record):
@@ -60,10 +55,11 @@ def configure_werkzeug_logging():
         )
         
         # 设置格式
-        formatter = logging.Formatter(
+        formatter = RedactingFormatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
         file_handler.setFormatter(formatter)
+        file_handler.addFilter(SensitiveDataFilter())
         
         werkzeug_logger.addHandler(file_handler)
         werkzeug_logger.setLevel(logging.INFO)
@@ -76,6 +72,12 @@ def configure_werkzeug_logging():
         # 如果配置失败，只输出到控制台
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
+        console_handler.setFormatter(
+            RedactingFormatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            )
+        )
+        console_handler.addFilter(SensitiveDataFilter())
         werkzeug_logger.addHandler(console_handler)
 
 
@@ -119,14 +121,16 @@ def create_app(config=None):
         # 检查并创建默认管理员
         try:
             from app.services.auth_service import AuthService
-            AuthService().ensure_admin_exists()
+            AuthService().ensure_admin_exists(
+                config.get('auth.initial_admin_password')
+            )
         except Exception as e:
             logger.error(f"初始化管理员失败: {e}")
             
         logger.info("数据库初始化完成")
     
     # 注册蓝图
-    from app.api.routes import strategy_bp, stock_bp, system_bp, data_bp, auth_bp, watchlist_bp, api_token_bp
+    from app.api.routes import strategy_bp, stock_bp, system_bp, data_bp, auth_bp, watchlist_bp, api_token_bp, report_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(strategy_bp, url_prefix='/api/strategies')
@@ -135,6 +139,7 @@ def create_app(config=None):
     app.register_blueprint(data_bp, url_prefix='/api/data')
     app.register_blueprint(watchlist_bp, url_prefix='/api/watchlist')
     app.register_blueprint(api_token_bp, url_prefix='/api/tokens')
+    app.register_blueprint(report_bp, url_prefix='/api/reports')
     
     logger.info("API路由注册完成")
     
@@ -151,7 +156,7 @@ def create_app(config=None):
         from datetime import datetime
         return jsonify({
             'name': '股海罗盘API',
-            'version': '1.0.0',
+            'version': '2.0.0',
             'status': 'running',
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'endpoints': {
@@ -194,7 +199,7 @@ def create_app(config=None):
             logger.error(f"健康检查失败: {e}")
             return jsonify({
                 'status': 'unhealthy',
-                'error': str(e)
+                'error': 'Health check failed'
             }), 500
     
     logger.info("Flask应用创建完成")
@@ -233,10 +238,10 @@ def register_error_handlers(app):
     @app.errorhandler(Exception)
     def handle_exception(error):
         """通用异常处理"""
-        logger.error(f"Unhandled exception: {error}")
+        logger.exception("Unhandled API exception")
         return jsonify({
             'error': 'Internal Server Error',
-            'message': str(error)
+            'message': 'An internal error occurred'
         }), 500
 
 
@@ -259,34 +264,30 @@ def register_request_hooks(app):
             '/api/auth/register',
             '/health',
             '/',
-            '/api/system/config',
-            '/api/system/system-info',
-            '/api/system/database-status',
-            '/api/system/scheduler/jobs',
-            '/api/system/stats',
-            '/api/system/info',
-            '/api/system/scheduler/logs'
         ]
         
         # 静态文件或白名单路径直接放行
         if request.path in public_paths or request.path.startswith('/static/'):
             return
             
-        # 获取 Token
+        # 外部客户端使用 Bearer Token；同源浏览器使用 HttpOnly Cookie。
         auth_header = request.headers.get('Authorization')
-        if not auth_header:
-            logger.warning(f"认证失败: 缺少 Authorization header - {request.method} {request.path}")
-            return jsonify({'error': 'Missing Authorization header'}), 401
-            
-        try:
+        token = request.cookies.get('auth_token')
+        if auth_header:
             parts = auth_header.split()
             if len(parts) != 2 or parts[0].lower() != 'bearer':
-                logger.warning(f"认证失败: 无效的 token 类型 - {request.method} {request.path}")
+                logger.warning(
+                    f"认证失败: 无效的 token 类型 - "
+                    f"{request.method} {request.path}"
+                )
                 return jsonify({'error': 'Invalid token type'}), 401
             token = parts[1]
-        except ValueError:
-            logger.warning(f"认证失败: 无效的 Authorization header - {request.method} {request.path}")
-            return jsonify({'error': 'Invalid Authorization header'}), 401
+
+        if not token:
+            logger.warning(
+                f"认证失败: 缺少认证信息 - {request.method} {request.path}"
+            )
+            return jsonify({'error': 'Missing authentication'}), 401
             
         # 验证 Token
         from app.utils.auth import AuthUtils

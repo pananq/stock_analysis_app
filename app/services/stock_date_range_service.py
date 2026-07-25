@@ -22,7 +22,11 @@ class StockDateRangeService:
         self.db = database
         self.logger = get_logger(__name__)
     
-    def get_stock_date_range(self, stock_code: str) -> Tuple[Optional[date], Optional[date]]:
+    def get_stock_date_range(
+        self,
+        stock_code: str,
+        security_id: int = None,
+    ) -> Tuple[Optional[date], Optional[date]]:
         """
         获取股票的数据时间范围
         
@@ -33,12 +37,14 @@ class StockDateRangeService:
             Tuple[earliest_date, latest_date]: (最早日期, 最近日期)，如果没有数据则返回 (None, None)
         """
         try:
-            query = '''
+            where = "id = %s" if security_id is not None else "code = %s"
+            query = f'''
                 SELECT earliest_data_date, latest_data_date
                 FROM stocks
-                WHERE code = %s
+                WHERE {where}
             '''
-            results = self.db.execute_query(query, (stock_code,))
+            identity = security_id if security_id is not None else stock_code
+            results = self.db.execute_query(query, (identity,))
             
             if results and len(results) > 0:
                 row = results[0]
@@ -62,7 +68,8 @@ class StockDateRangeService:
         self,
         stock_code: str,
         earliest_date: Optional[date] = None,
-        latest_date: Optional[date] = None
+        latest_date: Optional[date] = None,
+        security_id: int = None,
     ) -> bool:
         """
         更新股票的数据时间范围
@@ -77,7 +84,10 @@ class StockDateRangeService:
         """
         try:
             # 获取当前的时间范围
-            current_earliest, current_latest = self.get_stock_date_range(stock_code)
+            current_earliest, current_latest = self.get_stock_date_range(
+                stock_code,
+                security_id=security_id,
+            )
             
             # 确定新的日期范围
             new_earliest = earliest_date
@@ -120,9 +130,11 @@ class StockDateRangeService:
             
             updates.append("updated_at = %s")
             params.append(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-            params.append(stock_code)
+            identity = security_id if security_id is not None else stock_code
+            params.append(identity)
             
-            query = f"UPDATE stocks SET {', '.join(updates)} WHERE code = %s"
+            where = "id = %s" if security_id is not None else "code = %s"
+            query = f"UPDATE stocks SET {', '.join(updates)} WHERE {where}"
             self.logger.debug(f"执行SQL更新: {query}")
             self.logger.debug(f"SQL参数: {params}")
             
@@ -140,7 +152,12 @@ class StockDateRangeService:
             self.logger.error(f"更新股票{stock_code}的日期范围失败: {e}", exc_info=True)
             return False
     
-    def needs_update(self, stock_code: str, current_date: date = None) -> Tuple[bool, str]:
+    def needs_update(
+        self,
+        stock_code: str,
+        current_date: date = None,
+        security_id: int = None,
+    ) -> Tuple[bool, str]:
         """
         判断股票是否需要更新数据
         
@@ -155,7 +172,10 @@ class StockDateRangeService:
             current_date = date.today()
         
         # 获取当前的时间范围
-        earliest, latest = self.get_stock_date_range(stock_code)
+        earliest, latest = self.get_stock_date_range(
+            stock_code,
+            security_id=security_id,
+        )
         
         # 如果没有数据，需要更新
         if latest is None:
@@ -174,7 +194,12 @@ class StockDateRangeService:
         
         return (True, f"需要从{next_day}开始更新")
     
-    def calculate_update_start_date(self, stock_code: str, current_date: date = None) -> Optional[date]:
+    def calculate_update_start_date(
+        self,
+        stock_code: str,
+        current_date: date = None,
+        security_id: int = None,
+    ) -> Optional[date]:
         """
         计算增量更新的起始日期
         
@@ -189,7 +214,10 @@ class StockDateRangeService:
             current_date = date.today()
         
         # 获取当前的时间范围
-        _, latest = self.get_stock_date_range(stock_code)
+        _, latest = self.get_stock_date_range(
+            stock_code,
+            security_id=security_id,
+        )
         
         # 如果没有数据，从当前日期开始
         if latest is None:
@@ -315,7 +343,11 @@ class StockDateRangeService:
             self.logger.error(f"根据数据更新股票{stock_code}的日期范围失败: {e}", exc_info=True)
             return (False, 0)
     
-    def get_stock_date_range_from_daily_market(self, stock_code: str) -> Tuple[Optional[date], Optional[date]]:
+    def get_stock_date_range_from_daily_market(
+        self,
+        stock_code: str,
+        security_id: int = None,
+    ) -> Tuple[Optional[date], Optional[date]]:
         """
         从 daily_market 表中查询股票的最小和最大交易日期
         
@@ -326,12 +358,18 @@ class StockDateRangeService:
             Tuple[earliest_date, latest_date]: (最早日期, 最近日期)，如果没有数据则返回 (None, None)
         """
         try:
-            query = '''
+            where = (
+                "security_id = %s"
+                if security_id is not None
+                else "code = %s"
+            )
+            query = f'''
                 SELECT MIN(trade_date) as min_date, MAX(trade_date) as max_date
                 FROM daily_market
-                WHERE code = %s
+                WHERE {where}
             '''
-            results = self.db.execute_query(query, (stock_code,))
+            identity = security_id if security_id is not None else stock_code
+            results = self.db.execute_query(query, (identity,))
             
             if results and len(results) > 0:
                 row = results[0]

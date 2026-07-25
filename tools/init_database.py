@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.models.orm_models import ORMDatabase, Base
 from app.utils.config import get_config
+from app.utils.database_url import build_mysql_url
 import logging
 
 # 配置日志
@@ -36,13 +37,7 @@ def init_database():
             raise ValueError("未配置MySQL数据库信息")
         
         # 构建MySQL连接URL
-        mysql_url = (
-            f"mysql+pymysql://{mysql_config.get('username')}:"
-            f"{mysql_config.get('password')}@"
-            f"{mysql_config.get('host')}:"
-            f"{mysql_config.get('port')}/"
-            f"{mysql_config.get('database')}?charset=utf8mb4"
-        )
+        mysql_url = build_mysql_url(mysql_config)
         
         # 创建ORM数据库实例
         orm_db = ORMDatabase(mysql_url)

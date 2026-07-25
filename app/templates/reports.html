@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}智能日报 - 股海罗盘{% endblock %}
+
+{% block content %}
+<div class="page-shell">
+    <div class="page-hero d-flex flex-wrap justify-content-between align-items-end gap-3">
+        <div>
+            <span class="eyebrow">DAILY INTELLIGENCE</span>
+            <h1 class="mb-2">关注列表智能日报</h1>
+            <p class="text-secondary mb-0">聚合跨市场日线数据、技术信号和可选 AI 解读。</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" id="preview-report">
+                <i class="fas fa-wand-magic-sparkles me-2"></i>生成预览
+            </button>
+            <button class="btn btn-primary" id="send-report">
+                <i class="fas fa-paper-plane me-2"></i>发送邮件
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+        <div class="col-md-4">
+            <div class="metric-card">
+                <span class="metric-label">AI 分析</span>
+                <strong id="ai-status">读取中</strong>
+                <small id="ai-model" class="text-secondary"></small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="metric-card">
+                <span class="metric-label">邮件通知</span>
+                <strong id="email-status">读取中</strong>
+                <small class="text-secondary">通过 SMTP 安全发送</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="metric-card">
+                <span class="metric-label">自动日报</span>
+                <strong id="schedule-status">读取中</strong>
+                <small id="schedule-time" class="text-secondary"></small>
+            </div>
+        </div>
+    </div>
+
+    <div id="report-empty" class="empty-panel mt-4">
+        <i class="fas fa-chart-line"></i>
+        <h3>尚未生成今日分析</h3>
+        <p>点击“生成预览”，系统会读取关注列表中 A 股、港股和美股的日线数据。</p>
+    </div>
+
+    <div id="report-result" class="d-none mt-4">
+        <div id="ai-summary-card" class="insight-card d-none">
+            <div class="ai-summary-heading">
+                <div class="ai-summary-icon">
+                    <i class="fas fa-wand-magic-sparkles"></i>
+                </div>
+                <div>
+                    <span class="eyebrow">AI SUMMARY</span>
+                    <h2>AI 综合解读</h2>
+                </div>
+            </div>
+            <div id="ai-summary" class="ai-summary-content"></div>
+        </div>
+        <div class="surface-card mt-3">
+            <div class="surface-card-header">
+                <div>
+                    <h2 class="h5 mb-1">逐股分析</h2>
+                    <span id="report-meta" class="text-secondary"></span>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table market-table align-middle mb-0">
+                    <thead>
+                        <tr><th>市场</th><th>股票</th><th>最新价</th><th>日涨跌</th><th>风险</th><th>趋势判断</th></tr>
+                    </thead>
+                    <tbody id="report-rows"></tbody>
+                </table>
+            </div>
+        </div>
+        <p class="report-disclaimer">分析仅基于历史行情数据，不构成投资建议。</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function statusText(enabled) {
+    return enabled ? '<span class="status-pill success">已启用</span>' : '<span class="status-pill muted">未启用</span>';
+}
+
+function renderInlineMarkdown(value) {
+    return escapeHtml(value)
+        .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+        .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/__([^_\n]+)__/g, '<strong>$1</strong>');
+}
+
+function renderSafeMarkdown(markdown) {
+    const lines = String(markdown || '').replace(/\r\n?/g, '\n').split('\n');
+    const blocks = [];
+    let paragraph = [];
+    let listType = null;
+    let listItems = [];
+
+    function flushParagraph() {
+        if (!paragraph.length) return;
+        blocks.push(`<p>${renderInlineMarkdown(paragraph.join(' '))}</p>`);
+        paragraph = [];
+    }
+
+    function flushList() {
+        if (!listType || !listItems.length) return;
+        const items = listItems
+            .map(item => `<li>${renderInlineMarkdown(item)}</li>`)
+            .join('');
+        blocks.push(`<${listType}>${items}</${listType}>`);
+        listType = null;
+        listItems = [];
+    }
+
+    lines.forEach(rawLine => {
+        const line = rawLine.trim();
+        const unordered = line.match(/^[-*+]\s+(.+)$/);
+        const ordered = line.match(/^\d+[.)]\s+(.+)$/);
+        const heading = line.match(/^(#{2,4})\s+(.+)$/);
+        const quote = line.match(/^>\s?(.+)$/);
+
+        if (!line) {
+            flushParagraph();
+            flushList();
+            return;
+        }
+        if (heading) {
+            flushParagraph();
+            flushList();
+            const level = Math.min(heading[1].length + 1, 5);
+            blocks.push(`<h${level}>${renderInlineMarkdown(heading[2])}</h${level}>`);
+            return;
+        }
+        if (unordered || ordered) {
+            flushParagraph();
+            const nextType = unordered ? 'ul' : 'ol';
+            if (listType && listType !== nextType) flushList();
+            listType = nextType;
+            listItems.push((unordered || ordered)[1]);
+            return;
+        }
+        if (quote) {
+            flushParagraph();
+            flushList();
+            blocks.push(`<blockquote>${renderInlineMarkdown(quote[1])}</blockquote>`);
+            return;
+        }
+        flushList();
+        paragraph.push(line);
+    });
+
+    flushParagraph();
+    flushList();
+    return blocks.join('');
+}
+
+function loadReportSettings() {
+    apiRequest('/reports/settings', 'GET', null, function(response) {
+        const settings = response.data;
+        $('#ai-status').html(statusText(settings.ai_enabled));
+        $('#ai-model').text(settings.ai_model || '未配置模型');
+        $('#email-status').html(statusText(settings.email_enabled));
+        $('#schedule-status').html(statusText(settings.schedule_enabled));
+        $('#schedule-time').text(
+            settings.schedule_enabled
+                ? `每日 ${settings.schedule_time} · ${settings.target_count} 个发送目标`
+                : '可在配置文件中启用'
+        );
+        $('#send-report').prop(
+            'disabled',
+            !settings.email_enabled || !settings.can_send
+        );
+    });
+}
+
+function renderReport(report) {
+    $('#report-empty').addClass('d-none');
+    $('#report-result').removeClass('d-none');
+    $('#report-meta').text(`${report.report_date} · ${report.item_count} 只股票`);
+    if (report.ai_summary) {
+        $('#ai-summary-card').removeClass('d-none');
+        $('#ai-summary').html(renderSafeMarkdown(report.ai_summary));
+    } else if (report.ai_error) {
+        $('#ai-summary-card').removeClass('d-none');
+        $('#ai-summary').html(
+            `<p class="ai-summary-fallback">${escapeHtml(report.ai_error)}</p>`
+        );
+    } else {
+        $('#ai-summary-card').addClass('d-none');
+    }
+
+    const rows = report.analyses.map(item => {
+        const change = typeof item.daily_change_pct === 'number' ? item.daily_change_pct : null;
+        const changeClass = change === null ? '' : change >= 0 ? 'text-rise' : 'text-fall';
+        const changeText = change === null ? '-' : `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
+        return `<tr>
+            <td><span class="market-chip ${escapeHtml(item.market.toLowerCase())}">${escapeHtml(item.market)}</span></td>
+            <td><strong>${escapeHtml(item.stock_name || item.stock_code)}</strong><small>${escapeHtml(item.stock_code)}</small></td>
+            <td>${escapeHtml(item.latest_close == null ? '-' : item.latest_close)}</td>
+            <td class="${changeClass}">${changeText}</td>
+            <td>${escapeHtml(item.risk_level || '-')}</td>
+            <td>${escapeHtml(item.summary || '-')}</td>
+        </tr>`;
+    }).join('');
+    $('#report-rows').html(rows || '<tr><td colspan="6" class="text-center py-5 text-secondary">关注列表为空</td></tr>');
+}
+
+$(function() {
+    loadReportSettings();
+    $('#preview-report').on('click', function() {
+        showLoading('正在分析跨市场行情...');
+        apiRequest('/reports/daily/preview', 'POST', {}, function(response) {
+            hideLoading();
+            renderReport(response.data);
+        }, function() { hideLoading(); });
+    });
+    $('#send-report').on('click', function() {
+        showLoading('正在生成并发送日报...');
+        apiRequest('/reports/daily/send', 'POST', {}, function(response) {
+            hideLoading();
+            renderReport(response.report);
+            showMessage('日报已发送', 'success');
+        }, function() { hideLoading(); });
+    });
+});
+</script>
+{% endblock %}

@@ -11,6 +11,16 @@ from .strategy_executor import StrategyExecutor, get_strategy_executor
 from .stock_date_range_service import StockDateRangeService
 from .watchlist_service import WatchlistService, get_watchlist_service
 from .api_token_service import ApiTokenService
+from .global_market_data_service import GlobalMarketDataService, get_global_market_data_service
+from .security_list_service import SecurityListService
+from .security_market_data_service import (
+    SecurityMarketDataService,
+    get_security_market_data_service,
+)
+from .analysis_service import MarketAnalysisService
+from .ai_analysis_service import AIAnalysisService
+from .email_service import EmailService
+from .daily_report_service import DailyReportService, get_daily_report_service
 
 # 单例缓存
 _api_token_service_instance = None
@@ -62,4 +72,14 @@ __all__ = [
     'get_watchlist_service',
     'ApiTokenService',
     'get_api_token_service',
+    'GlobalMarketDataService',
+    'get_global_market_data_service',
+    'SecurityListService',
+    'SecurityMarketDataService',
+    'get_security_market_data_service',
+    'MarketAnalysisService',
+    'AIAnalysisService',
+    'EmailService',
+    'DailyReportService',
+    'get_daily_report_service',
 ]

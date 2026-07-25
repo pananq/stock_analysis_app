@@ -3,13 +3,15 @@
 {% block title %}关注列表 - 股海罗盘{% endblock %}
 
 {% block content %}
-<div class="row mb-3">
-    <div class="col-md-8">
-        <h2><i class="fas fa-star"></i> 关注列表</h2>
+<div class="page-hero d-flex flex-wrap justify-content-between align-items-end gap-3">
+    <div>
+        <span class="eyebrow">MULTI-MARKET WATCHLIST</span>
+        <h1 class="mb-2">跨市场关注列表</h1>
+        <p class="text-secondary mb-0">在一个视图中跟踪 A 股、港股和美股的日线趋势。</p>
     </div>
-    <div class="col-md-4 text-end">
+    <div>
         <button class="btn btn-primary" onclick="showAddModal()">
-            <i class="fas fa-plus"></i> 添加股票
+            <i class="fas fa-plus me-2"></i>添加股票
         </button>
     </div>
 </div>
@@ -24,7 +26,7 @@
 </div>
 
 <!-- Watchlist -->
-<div class="card" id="watchlist-container">
+<div class="surface-card" id="watchlist-container">
     <div class="card-body p-0">
         <div class="text-center text-muted py-5" id="empty-hint">
             <i class="fas fa-star fa-3x mb-3"></i>
@@ -44,7 +46,25 @@
             <div class="modal-body">
                 <input type="hidden" id="edit-id">
                 <div class="mb-3">
-                    <label class="form-label">股票代码 <span class="text-danger">*</span></label>
+                    <label class="form-label">市场 <span class="text-danger">*</span></label>
+                    <select class="form-select" id="stock-market">
+                        <option value="CN">A 股（CN）</option>
+                        <option value="HK">港股（HK）</option>
+                        <option value="US">美股（US）</option>
+                    </select>
+                    <div class="form-text">港股示例 00700，美股示例 AAPL。</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">证券类型 <span class="text-danger">*</span></label>
+                    <select class="form-select" id="security-type">
+                        <option value="STOCK">股票</option>
+                        <option value="ETF">ETF/ETP</option>
+                        <option value="FUND">基金/REIT</option>
+                        <option value="INDEX">指数</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">证券代码 <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="stock-code" placeholder="例如: 600000" required>
                 </div>
                 <div class="mb-3">
@@ -67,20 +87,38 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="chartModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <span class="eyebrow" id="chart-market"></span>
+                    <h5 class="modal-title" id="chart-title">日线走势</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="chart-summary mb-3" id="chart-summary"></div>
+                <div class="chart-canvas-wrap"><canvas id="daily-chart"></canvas></div>
+                <div class="insight-strip mt-3" id="stock-analysis"></div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
-function escapeHtml(str) {
-    if (!str) return '';
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-}
-
 let currentGroup = null;
 let stockModal = null;
+let chartModal = null;
+let dailyChart = null;
 
 $(document).ready(function() {
     stockModal = new bootstrap.Modal(document.getElementById('stockModal'));
+    chartModal = new bootstrap.Modal(document.getElementById('chartModal'));
     loadWatchlist();
 
     $(document).on('click', '.btn-edit', function() {
@@ -88,6 +126,8 @@ $(document).ready(function() {
         showEditModal(
             btn.data('id'),
             btn.data('code'),
+            btn.data('market'),
+            btn.data('security-type'),
             btn.data('group'),
             btn.data('tags'),
             btn.data('notes')
@@ -96,6 +136,14 @@ $(document).ready(function() {
 
     $(document).on('click', '.btn-delete', function() {
         deleteStock($(this).data('id'));
+    });
+
+    $(document).on('click', '.btn-chart', function() {
+        showDailyChart(
+            $(this).data('code'),
+            $(this).data('market'),
+            $(this).data('security-type')
+        );
     });
 });
 
@@ -129,7 +177,7 @@ function filterByGroup(group, btn) {
 
 function marketTypeBadge(mt) {
     if (!mt) return '';
-    const map = {'沪市': 'bg-primary', '深市': 'bg-success', '北交所': 'bg-warning'};
+    const map = {'沪市': 'bg-primary', '深市': 'bg-success', '北交所': 'bg-warning', '港股': 'bg-danger', '美股': 'bg-info'};
     const cls = map[mt] || 'bg-secondary';
     return '<span class="badge ' + cls + '">' + escapeHtml(mt) + '</span>';
 }
@@ -145,7 +193,9 @@ function renderWatchlist(items) {
     items.forEach(function(item) {
         const tags = item.tags ? item.tags.split(',').filter(t => t.trim()).map(t => '<span class="badge bg-secondary me-1">' + escapeHtml(t.trim()) + '</span>').join('') : '';
         rows += `<tr>
-            <td><strong><a href="/stocks/${escapeHtml(item.stock_code)}" class="text-decoration-none">${escapeHtml(item.stock_code)}</a></strong></td>
+            <td><span class="market-chip ${escapeHtml(item.market.toLowerCase())}">${escapeHtml(item.market)}</span></td>
+            <td>${escapeHtml({'STOCK': '股票', 'ETF': 'ETF/ETP', 'FUND': '基金/REIT', 'INDEX': '指数'}[item.security_type] || item.security_type)}</td>
+            <td><strong>${escapeHtml(item.stock_code)}</strong></td>
             <td>${escapeHtml(item.stock_name || '-')}</td>
             <td>${escapeHtml(item.industry || '-')}</td>
             <td>${marketTypeBadge(item.market_type)}</td>
@@ -154,9 +204,18 @@ function renderWatchlist(items) {
             <td><small class="text-muted">${escapeHtml(item.notes || '-')}</small></td>
             <td><small class="text-muted">${item.created_at ? item.created_at.substring(0, 10) : '-'}</small></td>
             <td>
+                <button class="btn btn-sm btn-primary-subtle me-1 btn-chart"
+                    data-code="${escapeHtml(item.stock_code)}"
+                    data-market="${escapeHtml(item.market)}"
+                    data-security-type="${escapeHtml(item.security_type || 'STOCK')}"
+                    title="查看日线与分析">
+                    <i class="fas fa-chart-line"></i>
+                </button>
                 <button class="btn btn-sm btn-outline-secondary me-1 btn-edit"
                     data-id="${item.id}"
                     data-code="${escapeHtml(item.stock_code)}"
+                    data-market="${escapeHtml(item.market)}"
+                    data-security-type="${escapeHtml(item.security_type || 'STOCK')}"
                     data-group="${escapeHtml(item.group_name || '')}"
                     data-tags="${escapeHtml(item.tags || '')}"
                     data-notes="${escapeHtml(item.notes || '')}">
@@ -174,8 +233,10 @@ function renderWatchlist(items) {
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
-                        <th>股票代码</th>
-                        <th>股票名称</th>
+                        <th>市场</th>
+                        <th>类型</th>
+                        <th>证券代码</th>
+                        <th>证券名称</th>
                         <th>行业</th>
                         <th>市场类型</th>
                         <th>分组</th>
@@ -194,6 +255,8 @@ function renderWatchlist(items) {
 function showAddModal() {
     $('#modal-title').text('添加股票');
     $('#edit-id').val('');
+    $('#stock-market').val('CN').prop('disabled', false);
+    $('#security-type').val('STOCK').prop('disabled', false);
     $('#stock-code').val('').prop('disabled', false);
     $('#group-name').val('');
     $('#tags').val('');
@@ -201,10 +264,12 @@ function showAddModal() {
     stockModal.show();
 }
 
-function showEditModal(id, code, group, tags, notes) {
+function showEditModal(id, code, market, securityType, group, tags, notes) {
     $('#modal-title').text('编辑关注');
     $('#edit-id').val(id);
     $('#stock-code').val(code).prop('disabled', true);
+    $('#stock-market').val(market).prop('disabled', true);
+    $('#security-type').val(securityType).prop('disabled', true);
     $('#group-name').val(group);
     $('#tags').val(tags);
     $('#notes').val(notes);
@@ -228,7 +293,8 @@ function saveStock() {
 
     if (!isEdit) {
         data.stock_code = $('#stock-code').val().trim();
-        data.market = 'CN';
+        data.market = $('#stock-market').val();
+        data.security_type = $('#security-type').val();
     }
 
     const method = isEdit ? 'PUT' : 'POST';
@@ -238,6 +304,89 @@ function saveStock() {
         stockModal.hide();
         showMessage(isEdit ? '更新成功' : '添加成功', 'success');
         loadWatchlist(currentGroup);
+    });
+}
+
+function showDailyChart(code, market, securityType) {
+    const toLocalDate = date => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+    const endDate = new Date();
+    const end = toLocalDate(endDate);
+    const startDate = new Date();
+    startDate.setFullYear(startDate.getFullYear() - 1);
+    const start = toLocalDate(startDate);
+    $('#chart-market').text(`${market} MARKET`);
+    $('#chart-title').text(`${code} · 日线走势`);
+    $('#chart-summary').html('<span class="text-secondary">正在读取行情...</span>');
+    $('#stock-analysis').html('<span class="text-secondary">正在生成分析...</span>');
+    chartModal.show();
+
+    const dataUrl = `/watchlist/${encodeURIComponent(code)}/data?market=${encodeURIComponent(market)}&security_type=${encodeURIComponent(securityType)}&start_date=${start}&end_date=${end}&ma_periods=5,20,60`;
+    apiRequest(dataUrl, 'GET', null, function(response) {
+        const payload = response.data;
+        const records = payload.records || [];
+        const summary = payload.summary || {};
+        $('#chart-summary').html(`
+            <div><span>币种</span><strong>${escapeHtml(payload.currency || '-')}</strong></div>
+            <div><span>交易日</span><strong>${records.length}</strong></div>
+            <div><span>区间均价</span><strong>${escapeHtml(summary.avg_price == null ? '-' : summary.avg_price)}</strong></div>
+            <div><span>区间高点</span><strong>${escapeHtml(summary.max_price == null ? '-' : summary.max_price)}</strong></div>
+        `);
+        renderDailyChart(records, payload.indicators || {});
+        // 行情与分析共用同一份上游数据。等行情加载完成后再请求分析，
+        // 避免 AkShare 的美股代码解析器被同一页面并发调用。
+        const analysisUrl = `/watchlist/${encodeURIComponent(code)}/analysis?market=${encodeURIComponent(market)}&security_type=${encodeURIComponent(securityType)}&start_date=${start}&end_date=${end}`;
+        apiRequest(analysisUrl, 'GET', null, function(analysisResponse) {
+            const item = analysisResponse.data;
+            $('#stock-analysis').html(`
+                <span class="status-pill ${item.signal === 'bullish' ? 'success' : item.signal === 'bearish' ? 'danger' : 'muted'}">${escapeHtml(item.signal || '-')}</span>
+                <strong>${escapeHtml(item.summary || '-')}</strong>
+                <span>年化波动率 ${escapeHtml(item.annualized_volatility_pct == null ? '-' : item.annualized_volatility_pct + '%')}</span>
+                <small>${escapeHtml(item.disclaimer || '')}</small>
+            `);
+        });
+    });
+}
+
+function renderDailyChart(records, indicators) {
+    if (dailyChart) dailyChart.destroy();
+    const labels = records.map(row => row.trade_date);
+    const datasets = [{
+        label: '收盘价',
+        data: records.map(row => row.close),
+        borderColor: '#295cff',
+        backgroundColor: 'rgba(41, 92, 255, .10)',
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: .18,
+        fill: true
+    }];
+    const colors = {'ma_5': '#f59e0b', 'ma_20': '#8b5cf6', 'ma_60': '#10b981'};
+    Object.keys(indicators).forEach(key => {
+        const values = Object.fromEntries(indicators[key].map(row => [row.trade_date, row.value]));
+        datasets.push({
+            label: key.toUpperCase(),
+            data: labels.map(label => values[label]),
+            borderColor: colors[key] || '#64748b',
+            borderWidth: 1.5,
+            pointRadius: 0,
+            tension: .18
+        });
+    });
+    dailyChart = new Chart(document.getElementById('daily-chart'), {
+        type: 'line',
+        data: {labels, datasets},
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {mode: 'index', intersect: false},
+            plugins: {legend: {position: 'top'}},
+            scales: {x: {grid: {display: false}, ticks: {maxTicksLimit: 10}}}
+        }
     });
 }
 

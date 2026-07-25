@@ -20,6 +20,7 @@ import duckdb
 from app.utils import get_logger
 from app.models.orm_models import DailyMarket, ORMDatabase
 from app.utils.config import get_config
+from app.utils.database_url import build_mysql_url
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
@@ -461,13 +462,7 @@ def main():
                 print("错误: 未配置MySQL数据库信息")
                 sys.exit(1)
             
-            mysql_url = (
-                f"mysql+pymysql://{mysql_config.get('username')}:"
-                f"{mysql_config.get('password')}@"
-                f"{mysql_config.get('host')}:"
-                f"{mysql_config.get('port')}/"
-                f"{mysql_config.get('database')}?charset=utf8mb4"
-            )
+            mysql_url = build_mysql_url(mysql_config)
         
         # 创建迁移器并执行迁移
         migrator = DuckDBToMySQLMigrator(

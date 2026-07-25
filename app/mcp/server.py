@@ -4,6 +4,7 @@ MCP 服务器
 """
 from contextvars import ContextVar
 from typing import Optional
+import json
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 from app.utils import get_logger, get_config
@@ -29,12 +30,36 @@ class BearerTokenMiddleware:
         if scope["type"] in ("http", "websocket"):
             headers = {k.lower(): v for k, v in scope.get("headers", [])}
             auth_header = headers.get(b"authorization", b"").decode("utf-8", errors="ignore")
+            user_id = None
             if auth_header.lower().startswith("bearer "):
-                token = auth_header[7:]
-                await self._verify_and_set(token)
+                user_id = await self._verify(auth_header[7:].strip())
+            if user_id is None:
+                if scope["type"] == "websocket":
+                    await send({'type': 'websocket.close', 'code': 4401})
+                else:
+                    body = json.dumps(
+                        {'error': 'Missing or invalid API token'}
+                    ).encode('utf-8')
+                    await send({
+                        'type': 'http.response.start',
+                        'status': 401,
+                        'headers': [
+                            (b'content-type', b'application/json; charset=utf-8'),
+                            (b'content-length', str(len(body)).encode('ascii')),
+                        ],
+                    })
+                    await send({'type': 'http.response.body', 'body': body})
+                return
+
+            context_token = current_user_id.set(user_id)
+            try:
+                await self.app(scope, receive, send)
+            finally:
+                current_user_id.reset(context_token)
+            return
         await self.app(scope, receive, send)
 
-    async def _verify_and_set(self, token: str):
+    async def _verify(self, token: str) -> Optional[int]:
         try:
             from app.services.api_token_service import get_api_token_service
             service = get_api_token_service()
@@ -42,22 +67,28 @@ class BearerTokenMiddleware:
             if result:
                 user_id = result.get('user_id')
                 if user_id:
-                    current_user_id.set(user_id)
                     logger.debug(f"MCP 认证成功，user_id={user_id}")
+                    return int(user_id)
         except Exception as e:
             logger.error(f"Token 验证失败: {e}")
+        return None
 
 
 def create_mcp_server() -> FastMCP:
     """Create and configure the MCP server"""
     config = get_config()
     mcp_config = config.get('mcp', {})
-    host = mcp_config.get('host', '0.0.0.0')
+    host = mcp_config.get('host', '127.0.0.1')
     port = mcp_config.get('port', 5002)
 
-    # Disable DNS rebinding protection for non-localhost hosts
     transport_security = TransportSecuritySettings(
-        enable_dns_rebinding_protection=False
+        enable_dns_rebinding_protection=mcp_config.get(
+            'dns_rebinding_protection', True
+        ),
+        allowed_hosts=mcp_config.get(
+            'allowed_hosts', ['127.0.0.1:*', 'localhost:*']
+        ),
+        allowed_origins=mcp_config.get('allowed_origins', []),
     )
 
     mcp = FastMCP(
@@ -78,6 +109,7 @@ def create_mcp_server() -> FastMCP:
 
 def run_mcp_server():
     """Run the MCP server (called as multiprocessing target)"""
+    import asyncio
     import uvicorn
     import anyio
     from app.utils import get_config, setup_logging
@@ -90,7 +122,7 @@ def run_mcp_server():
     mcp = create_mcp_server()
 
     mcp_config = config.get('mcp', {})
-    host = mcp_config.get('host', '0.0.0.0')
+    host = mcp_config.get('host', '127.0.0.1')
     port = mcp_config.get('port', 5002)
 
     logger.info(f"MCP 服务器启动: http://{host}:{port}/sse")
@@ -109,4 +141,7 @@ def run_mcp_server():
         server = uvicorn.Server(config_uv)
         await server.serve()
 
-    anyio.run(serve)
+    try:
+        anyio.run(serve)
+    except (KeyboardInterrupt, asyncio.CancelledError):
+        logger.info("MCP 服务器已停止")

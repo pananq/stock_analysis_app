@@ -4,7 +4,7 @@
 提供系统配置、日志查看等功能
 """
 
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, redirect
 import requests
 from app.utils import get_logger, get_config
 
@@ -17,37 +17,68 @@ config = get_config()
 API_BASE_URL = f"http://localhost:{config.get('api', {}).get('port', 5000)}/api"
 
 
+def get_auth_headers():
+    """把浏览器会话令牌转发给独立 API 服务。"""
+    token = request.cookies.get('auth_token')
+    if token:
+        return {'Authorization': f'Bearer {token}'}
+    return {}
+
+
 @system_bp.route('/')
 def index():
     """系统设置页面"""
     try:
+        headers = get_auth_headers()
         # 获取可编辑配置
-        config_response = requests.get(f"{API_BASE_URL}/system/config", timeout=5)
+        config_response = requests.get(
+            f"{API_BASE_URL}/system/config",
+            headers=headers,
+            timeout=5,
+        )
+        if config_response.status_code == 401:
+            return redirect('/login')
         if config_response.status_code == 200:
             system_config = config_response.json().get('data', {})
         else:
             system_config = {}
         
         # 获取系统信息（仅展示）
-        info_response = requests.get(f"{API_BASE_URL}/system/system-info", timeout=5)
+        info_response = requests.get(
+            f"{API_BASE_URL}/system/system-info",
+            headers=headers,
+            timeout=5,
+        )
         if info_response.status_code == 200:
             system_info_config = info_response.json().get('data', {})
         else:
             system_info_config = {}
         
         # 获取数据库状态
-        db_status_response = requests.get(f"{API_BASE_URL}/system/database-status", timeout=5)
+        db_status_response = requests.get(
+            f"{API_BASE_URL}/system/database-status",
+            headers=headers,
+            timeout=5,
+        )
         if db_status_response.status_code == 200:
             database_status = db_status_response.json().get('data', {})
         else:
             database_status = {}
         
         # 获取调度任务列表
-        jobs_response = requests.get(f"{API_BASE_URL}/system/scheduler/jobs", timeout=5)
+        jobs_response = requests.get(
+            f"{API_BASE_URL}/system/scheduler/jobs",
+            headers=headers,
+            timeout=5,
+        )
         jobs = jobs_response.json().get('data', []) if jobs_response.status_code == 200 else []
         
         # 获取市场统计信息（用于显示数据范围）
-        stats_response = requests.get(f"{API_BASE_URL}/system/stats", timeout=5)
+        stats_response = requests.get(
+            f"{API_BASE_URL}/system/stats",
+            headers=headers,
+            timeout=5,
+        )
         stats = stats_response.json().get('data', {}) if stats_response.status_code == 200 else {}
         market_stats = stats.get('market_data', {})
         
@@ -81,7 +112,14 @@ def logs():
             params['module'] = request.args.get('module')
         
         # 获取系统日志
-        response = requests.get(f"{API_BASE_URL}/system/logs", params=params, timeout=5)
+        response = requests.get(
+            f"{API_BASE_URL}/system/logs",
+            params=params,
+            headers=get_auth_headers(),
+            timeout=5,
+        )
+        if response.status_code == 401:
+            return redirect('/login')
         if response.status_code == 200:
             data = response.json()
             logs = data.get('data', [])
@@ -108,7 +146,13 @@ def tasks():
     """任务执行历史页面"""
     try:
         # 获取任务执行历史
-        response = requests.get(f"{API_BASE_URL}/system/scheduler/logs?limit=50", timeout=5)
+        response = requests.get(
+            f"{API_BASE_URL}/system/scheduler/logs?limit=50",
+            headers=get_auth_headers(),
+            timeout=5,
+        )
+        if response.status_code == 401:
+            return redirect('/login')
         if response.status_code == 200:
             data = response.json()
             tasks = data.get('data', [])

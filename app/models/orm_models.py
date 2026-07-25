@@ -16,17 +16,31 @@ logger = get_logger(__name__)
 
 # 声明基类
 Base = declarative_base()
+SecurityId = BigInteger().with_variant(Integer, 'sqlite')
 
 
 class Stock(Base):
     """股票基础信息表"""
     __tablename__ = 'stocks'
     
-    code = Column(String(20), primary_key=True, comment='股票代码')
+    id = Column(SecurityId, primary_key=True, autoincrement=True, comment='证券ID')
+    code = Column(String(20), nullable=False, comment='市场内证券代码')
+    market = Column(
+        String(10),
+        nullable=False,
+        default='CN',
+        comment='标准市场(CN/HK/US)',
+    )
     name = Column(String(500), nullable=False, comment='股票名称')
     list_date = Column(Date, comment='上市日期')
     industry = Column(String(200), comment='所属行业')
     market_type = Column(String(50), comment='市场类型')
+    security_type = Column(
+        String(20),
+        nullable=False,
+        default='STOCK',
+        comment='证券类型(STOCK/ETF/FUND/INDEX)',
+    )
     status = Column(String(50), default='normal', comment='状态')
     earliest_data_date = Column(Date, comment='最早数据日期')
     latest_data_date = Column(Date, comment='最近数据日期')
@@ -35,9 +49,18 @@ class Stock(Base):
     
     # 索引
     __table_args__ = (
+        UniqueConstraint(
+            'market',
+            'code',
+            'security_type',
+            name='uq_stocks_market_code_type',
+        ),
+        Index('idx_stocks_code', 'code'),
+        Index('idx_stocks_market', 'market'),
         Index('idx_status', 'status'),
         Index('idx_industry', 'industry'),
         Index('idx_market_type', 'market_type'),
+        Index('idx_security_type', 'security_type'),
         Index('idx_earliest_data_date', 'earliest_data_date'),
         Index('idx_latest_data_date', 'latest_data_date'),
     )
@@ -51,6 +74,14 @@ class User(Base):
     username = Column(String(50), nullable=False, unique=True, comment='用户名')
     password_hash = Column(String(255), nullable=False, comment='密码哈希')
     role = Column(String(20), nullable=False, default='user', comment='角色(admin/user)')
+    nickname = Column(String(50), comment='个人昵称')
+    email = Column(String(254), comment='每日日报收件邮箱')
+    daily_report_enabled = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        comment='是否启用个人邮件日报',
+    )
     created_at = Column(DateTime, default=datetime.now, comment='创建时间')
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now, comment='更新时间')
     last_login = Column(DateTime, comment='最后登录时间')
@@ -89,6 +120,7 @@ class StrategyResult(Base):
     
     id = Column(Integer, primary_key=True, autoincrement=True, comment='结果ID')
     strategy_id = Column(Integer, nullable=False, comment='策略ID')
+    security_id = Column(SecurityId, comment='证券ID')
     stock_code = Column(String(20), nullable=False, comment='股票代码')
     trigger_date = Column(Date, nullable=False, comment='触发日期')
     trigger_price = Column(Float(10, 4), comment='触发价格')
@@ -99,6 +131,7 @@ class StrategyResult(Base):
     # 索引
     __table_args__ = (
         Index('idx_strategy_id', 'strategy_id'),
+        Index('idx_strategy_result_security_id', 'security_id'),
         Index('idx_stock_code', 'stock_code'),
         Index('idx_trigger_date', 'trigger_date'),
         Index('idx_executed_at', 'executed_at'),
@@ -196,8 +229,9 @@ class DailyMarket(Base):
     """股票日线行情数据表"""
     __tablename__ = 'daily_market'
     
-    code = Column(String(20), primary_key=True, comment='股票代码')
+    security_id = Column(SecurityId, primary_key=True, comment='证券ID')
     trade_date = Column(Date, primary_key=True, comment='交易日期')
+    code = Column(String(20), nullable=False, comment='冗余证券代码（兼容展示）')
     open = Column(Numeric(10, 2), comment='开盘价')
     close = Column(Numeric(10, 2), comment='收盘价')
     high = Column(Numeric(10, 2), comment='最高价')
@@ -212,7 +246,6 @@ class DailyMarket(Base):
     __table_args__ = (
         Index('idx_daily_market_code', 'code'),
         Index('idx_daily_market_date', 'trade_date'),
-        Index('idx_daily_market_code_date', 'code', 'trade_date'),
         {'mysql_engine': 'InnoDB', 'mysql_charset': 'utf8mb4'}
     )
 
@@ -225,16 +258,27 @@ class Watchlist(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment='自选股ID')
     user_id = Column(Integer, nullable=False, comment='用户ID')
+    security_id = Column(SecurityId, nullable=False, comment='证券ID')
     stock_code = Column(String(20), nullable=False, comment='股票代码')
     market = Column(String(20), nullable=False, default='CN', comment='市场')
+    security_type = Column(
+        String(20),
+        nullable=False,
+        default='STOCK',
+        comment='证券类型',
+    )
     group_name = Column(String(100), comment='分组名称')
     tags = Column(String(500), comment='标签，格式,tag1,tag2,')
     notes = Column(String(500), comment='备注')
     created_at = Column(DateTime, default=datetime.now, comment='创建时间')
 
     __table_args__ = (
-        UniqueConstraint('user_id', 'stock_code', 'market', name='uq_watchlist_user_stock_market'),
-        Index('idx_watchlist_user_id', 'user_id'),
+        UniqueConstraint(
+            'user_id',
+            'security_id',
+            name='uq_watchlist_user_security',
+        ),
+        Index('idx_watchlist_security_id', 'security_id'),
         Index('idx_watchlist_group_name', 'group_name'),
         Index('idx_watchlist_stock_code', 'stock_code'),
     )
@@ -312,7 +356,8 @@ class ORMDatabase:
         # 创建所有表
         self._create_tables()
         
-        logger.info(f"ORM数据库初始化完成: {db_url}")
+        safe_url = self.engine.url.render_as_string(hide_password=True)
+        logger.info(f"ORM数据库初始化完成: {safe_url}")
     
     def _create_tables(self):
         """创建所有表"""
@@ -324,26 +369,78 @@ class ORMDatabase:
         
         # 然后创建所有表
         Base.metadata.create_all(self.engine)
+        self._migrate_security_type_columns()
+        self._migrate_user_profile_columns()
+
+    def _migrate_security_type_columns(self):
+        """为已有数据库补充证券类型字段。"""
+        from sqlalchemy import inspect, text
+
+        inspector = inspect(self.engine)
+        with self.engine.begin() as connection:
+            stock_columns = {
+                column['name']
+                for column in inspector.get_columns('stocks')
+            }
+            if 'security_type' not in stock_columns:
+                connection.execute(text(
+                    "ALTER TABLE stocks ADD COLUMN security_type "
+                    "VARCHAR(20) NOT NULL DEFAULT 'STOCK'"
+                ))
+                connection.execute(text(
+                    "CREATE INDEX idx_security_type "
+                    "ON stocks (security_type)"
+                ))
+
+            watchlist_columns = {
+                column['name']
+                for column in inspector.get_columns('watchlists')
+            }
+            if 'security_type' not in watchlist_columns:
+                connection.execute(text(
+                    "ALTER TABLE watchlists ADD COLUMN security_type "
+                    "VARCHAR(20) NOT NULL DEFAULT 'STOCK'"
+                ))
+
+    def _migrate_user_profile_columns(self):
+        """为已有用户表补充可选的个人资料字段。"""
+        from sqlalchemy import inspect, text
+
+        inspector = inspect(self.engine)
+        user_columns = {
+            column['name']
+            for column in inspector.get_columns('users')
+        }
+        with self.engine.begin() as connection:
+            if 'nickname' not in user_columns:
+                connection.execute(text(
+                    "ALTER TABLE users ADD COLUMN nickname VARCHAR(50) NULL"
+                ))
+            if 'email' not in user_columns:
+                connection.execute(text(
+                    "ALTER TABLE users ADD COLUMN email VARCHAR(254) NULL"
+                ))
+            if 'daily_report_enabled' not in user_columns:
+                connection.execute(text(
+                    "ALTER TABLE users ADD COLUMN daily_report_enabled "
+                    "TINYINT(1) NOT NULL DEFAULT 0"
+                ))
     
     def _create_database_if_not_exists(self):
         """如果数据库不存在则创建"""
         from sqlalchemy import text, create_engine
-        
-        # 从 db_url 中提取数据库信息
-        # 格式: mysql+pymysql://user:password@host:port/database
-        match = re.match(
-            r'mysql\+pymysql://([^:]+):([^@]+)@([^:]+):(\d+)/([^?]+)',
-            self.db_url
-        )
-        
-        if not match:
-            logger.warning("无法解析数据库URL，跳过数据库创建")
+        from sqlalchemy.engine import make_url
+
+        parsed_url = make_url(self.db_url)
+        if parsed_url.get_backend_name() != 'mysql':
             return
-        
-        username, password, host, port, database = match.groups()
-        
-        # 创建一个不指定数据库的连接URL，用于连接到MySQL服务器
-        server_url = f"mysql+pymysql://{username}:{password}@{host}:{port}"
+
+        database = parsed_url.database
+        if not database or not re.fullmatch(r'[A-Za-z0-9_]+', database):
+            raise ValueError("MySQL 数据库名只能包含字母、数字和下划线")
+
+        # URL 对象会正确转义用户名和密码中的 @、:、/ 等字符。
+        server_url = parsed_url.set(database=None)
         
         try:
             # 连接到MySQL服务器
@@ -351,14 +448,21 @@ class ORMDatabase:
             
             with server_engine.connect() as conn:
                 # 检查数据库是否存在
-                result = conn.execute(text(
-                    f"SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '{database}'"
-                ))
+                result = conn.execute(
+                    text(
+                        "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA "
+                        "WHERE SCHEMA_NAME = :database"
+                    ),
+                    {'database': database},
+                )
                 
                 if not result.fetchone():
                     # 数据库不存在，创建它
                     logger.info(f"数据库 '{database}' 不存在，正在创建...")
-                    conn.execute(text(f"CREATE DATABASE `{database}` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"))
+                    conn.exec_driver_sql(
+                        f"CREATE DATABASE `{database}` DEFAULT CHARACTER SET "
+                        "utf8mb4 COLLATE utf8mb4_unicode_ci"
+                    )
                     logger.info(f"数据库 '{database}' 创建成功")
                 else:
                     logger.info(f"数据库 '{database}' 已存在")

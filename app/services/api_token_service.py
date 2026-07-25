@@ -9,28 +9,25 @@ from sqlalchemy.orm import sessionmaker
 
 from app.models.orm_models import ORMDatabase, ApiToken, User
 from app.utils import get_logger, get_config
+from app.utils.database_url import build_mysql_url
 from app.utils.auth import AuthUtils
 
 logger = get_logger(__name__)
 
 
 class ApiTokenService:
-    def __init__(self):
-        config = get_config()
-        mysql_config = config.get('database.mysql')
-        if not mysql_config:
-            raise ValueError("未配置MySQL数据库信息")
+    def __init__(self, session_factory=None):
+        self.orm_db = None
+        if session_factory is not None:
+            self.Session = session_factory
+        else:
+            config = get_config()
+            mysql_config = config.get('database.mysql')
+            if not mysql_config:
+                raise ValueError("未配置MySQL数据库信息")
 
-        mysql_url = (
-            f"mysql+pymysql://{mysql_config.get('username')}:"
-            f"{mysql_config.get('password')}@"
-            f"{mysql_config.get('host')}:"
-            f"{mysql_config.get('port')}/"
-            f"{mysql_config.get('database')}?charset=utf8mb4"
-        )
-
-        self.orm_db = ORMDatabase(mysql_url)
-        self.Session = sessionmaker(bind=self.orm_db.engine)
+            self.orm_db = ORMDatabase(build_mysql_url(mysql_config))
+            self.Session = sessionmaker(bind=self.orm_db.engine)
         logger.info("ApiTokenService初始化完成")
 
     def create_token(self, user_id: int, name: str) -> Dict[str, Any]:
@@ -66,7 +63,7 @@ class ApiTokenService:
         except Exception as e:
             session.rollback()
             logger.error(f"创建 API Token 失败: {e}")
-            return {'success': False, 'error': str(e)}
+            raise
         finally:
             session.close()
 
@@ -124,7 +121,7 @@ class ApiTokenService:
         except Exception as e:
             session.rollback()
             logger.error(f"撤销 API Token 失败: {e}")
-            return False
+            raise
         finally:
             session.close()
 
@@ -139,7 +136,7 @@ class ApiTokenService:
             return [self._to_dict(t) for t in tokens]
         except Exception as e:
             logger.error(f"列出 API Token 失败: {e}")
-            return []
+            raise
         finally:
             session.close()
 

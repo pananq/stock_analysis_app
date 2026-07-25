@@ -20,12 +20,17 @@
 }
 </style>
 
-<div class="row">
-    <div class="col-12">
-        <h2><i class="fas fa-cog"></i> 系统设置</h2>
-        <hr>
+<section class="legacy-page-hero d-flex flex-wrap justify-content-between align-items-end gap-3">
+    <div>
+        <span class="eyebrow">SYSTEM CONTROL</span>
+        <h1>系统控制台</h1>
+        <p>查看运行状态、调度计划和服务配置，维护稳定的数据分析环境。</p>
     </div>
-</div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-secondary" href="/system/logs"><i class="fas fa-file-lines"></i>系统日志</a>
+        <a class="btn btn-primary" href="/system/tasks"><i class="fas fa-list-check"></i>任务历史</a>
+    </div>
+</section>
 
 {% if error %}
 <div class="alert alert-warning">
@@ -48,7 +53,7 @@
                     </tr>
                     <tr>
                         <th>版本</th>
-                        <td><span class="badge bg-primary">v1.0.0</span></td>
+                        <td><span class="badge bg-primary">v2.0.0</span></td>
                     </tr>
                     <tr>
                         <th>数据源</th>

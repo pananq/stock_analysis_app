@@ -8,6 +8,7 @@ from flask import Blueprint, request, jsonify, g
 from app.services import get_strategy_service, get_strategy_executor
 from app.task_manager import get_task_manager
 from app.utils import get_logger
+from app.api.validation import parse_int
 from decimal import Decimal
 
 logger = get_logger(__name__)
@@ -139,7 +140,12 @@ def create_strategy():
         创建的策略ID
     """
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': '请提供策略参数'
+            }), 400
         
         # 获取当前用户
         user = getattr(g, 'user', None)
@@ -167,13 +173,34 @@ def create_strategy():
                 'error': '策略名称已存在，请使用其他名称'
             }), 400
         
+        try:
+            rise_threshold = float(data['rise_threshold'])
+            observation_days = int(data['observation_days'])
+            ma_period = int(data['ma_period'])
+        except (TypeError, ValueError):
+            return jsonify({
+                'success': False,
+                'error': '策略参数格式无效'
+            }), 400
+
+        valid, validation_error = strategy_service.validate_strategy_config(
+            rise_threshold,
+            observation_days,
+            ma_period,
+        )
+        if not valid:
+            return jsonify({
+                'success': False,
+                'error': validation_error
+            }), 400
+
         strategy_id = strategy_service.create_strategy(
             name=data['name'],
             user_id=user_id,
             description=data.get('description', ''),
-            rise_threshold=float(data['rise_threshold']),
-            observation_days=int(data['observation_days']),
-            ma_period=int(data['ma_period']),
+            rise_threshold=rise_threshold,
+            observation_days=observation_days,
+            ma_period=ma_period,
             enabled=data.get('enabled', True)
         )
         
@@ -219,7 +246,38 @@ def update_strategy(strategy_id):
         更新结果
     """
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': '请提供要更新的策略字段'
+            }), 400
+        allowed_fields = {
+            'name',
+            'description',
+            'rise_threshold',
+            'observation_days',
+            'ma_period',
+            'enabled',
+        }
+        unknown_fields = set(data) - allowed_fields
+        if unknown_fields:
+            return jsonify({
+                'success': False,
+                'error': f"不支持的策略字段: {', '.join(sorted(unknown_fields))}"
+            }), 400
+        try:
+            if 'rise_threshold' in data:
+                data['rise_threshold'] = float(data['rise_threshold'])
+            if 'observation_days' in data:
+                data['observation_days'] = int(data['observation_days'])
+            if 'ma_period' in data:
+                data['ma_period'] = int(data['ma_period'])
+        except (TypeError, ValueError):
+            return jsonify({
+                'success': False,
+                'error': '策略参数格式无效'
+            }), 400
         
         # 获取当前用户
         user = getattr(g, 'user', None)
@@ -228,6 +286,11 @@ def update_strategy(strategy_id):
             user_id = user.get('user_id')
         
         strategy_service = get_strategy_service()
+        if not strategy_service.get_strategy(strategy_id, user_id=user_id):
+            return jsonify({
+                'success': False,
+                'error': '策略不存在或无权访问'
+            }), 404
         success = strategy_service.update_strategy(strategy_id, user_id=user_id, **data)
         
         if success:
@@ -238,8 +301,8 @@ def update_strategy(strategy_id):
         else:
             return jsonify({
                 'success': False,
-                'error': '策略更新失败或无权操作'
-            }), 500
+                'error': '策略更新失败，请检查参数'
+            }), 400
             
     except Exception as e:
         logger.error(f"更新策略失败: {e}")
@@ -268,6 +331,11 @@ def delete_strategy(strategy_id):
             user_id = user.get('user_id')
             
         strategy_service = get_strategy_service()
+        if not strategy_service.get_strategy(strategy_id, user_id=user_id):
+            return jsonify({
+                'success': False,
+                'error': '策略不存在或无权访问'
+            }), 404
         success = strategy_service.delete_strategy(strategy_id, user_id=user_id)
         
         if success:
@@ -278,7 +346,7 @@ def delete_strategy(strategy_id):
         else:
             return jsonify({
                 'success': False,
-                'error': '策略删除失败或无权操作'
+                'error': '策略删除失败'
             }), 500
             
     except Exception as e:
@@ -477,8 +545,12 @@ def get_strategy_results(strategy_id):
         策略执行结果列表
     """
     try:
-        limit = int(request.args.get('limit', 100))
-        offset = int(request.args.get('offset', 0))
+        limit = parse_int(
+            request.args.get('limit'), 'limit', 100, minimum=1, maximum=1000
+        )
+        offset = parse_int(
+            request.args.get('offset'), 'offset', 0, minimum=0
+        )
         
         strategy_executor = get_strategy_executor()
         results = strategy_executor.get_strategy_results(
@@ -500,6 +572,8 @@ def get_strategy_results(strategy_id):
             }
         })
         
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"获取策略结果失败: {e}")
         return jsonify({
@@ -527,6 +601,11 @@ def enable_strategy(strategy_id):
             user_id = user.get('user_id')
             
         strategy_service = get_strategy_service()
+        if not strategy_service.get_strategy(strategy_id, user_id=user_id):
+            return jsonify({
+                'success': False,
+                'error': '策略不存在或无权访问'
+            }), 404
         success = strategy_service.update_strategy(strategy_id, user_id=user_id, enabled=True)
         
         if success:
@@ -537,7 +616,7 @@ def enable_strategy(strategy_id):
         else:
             return jsonify({
                 'success': False,
-                'error': '启用策略失败或无权操作'
+                'error': '启用策略失败'
             }), 500
             
     except Exception as e:
@@ -567,6 +646,11 @@ def disable_strategy(strategy_id):
             user_id = user.get('user_id')
             
         strategy_service = get_strategy_service()
+        if not strategy_service.get_strategy(strategy_id, user_id=user_id):
+            return jsonify({
+                'success': False,
+                'error': '策略不存在或无权访问'
+            }), 404
         success = strategy_service.update_strategy(strategy_id, user_id=user_id, enabled=False)
         
         if success:
@@ -577,7 +661,7 @@ def disable_strategy(strategy_id):
         else:
             return jsonify({
                 'success': False,
-                'error': '禁用策略失败或无权操作'
+                'error': '禁用策略失败'
             }), 500
             
     except Exception as e:

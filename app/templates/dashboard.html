@@ -3,12 +3,16 @@
 {% block title %}仪表板 - 股海罗盘{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <h2><i class="fas fa-tachometer-alt"></i> 系统仪表板</h2>
-        <hr>
+<section class="legacy-page-hero d-flex flex-wrap justify-content-between align-items-end gap-3">
+    <div>
+        <span class="eyebrow">MARKET OVERVIEW</span>
+        <h1>投资工作台</h1>
+        <p>汇总证券资产、策略运行与数据任务，快速掌握系统当前状态。</p>
     </div>
-</div>
+    <a class="btn btn-primary" href="/watchlist">
+        <i class="fas fa-bookmark"></i>查看我的关注
+    </a>
+</section>
 
 {% if error %}
 <div class="alert alert-warning">
@@ -161,8 +165,10 @@
                                 <td>
                                     {% if log.status == 'success' %}
                                     <span class="badge bg-success">成功</span>
-                                    {% elif log.status == 'failed' %}
+                                    {% elif log.status in ['failed', 'error'] %}
                                     <span class="badge bg-danger">失败</span>
+                                    {% elif log.status == 'skipped' %}
+                                    <span class="badge bg-warning text-dark">暂缓</span>
                                     {% else %}
                                     <span class="badge bg-secondary">{{ log.status }}</span>
                                     {% endif %}
@@ -346,8 +352,9 @@ function viewTaskDetails(jobLogId, jobName) {
                             <tr>
                                 <th>状态:</th>
                                 <td>
-                                    ${jobLog.status === 'success' ? '<span class="badge bg-success">成功</span>' : 
-                                      jobLog.status === 'failed' ? '<span class="badge bg-danger">失败</span>' : 
+                                    ${jobLog.status === 'success' ? '<span class="badge bg-success">成功</span>' :
+                                      jobLog.status === 'skipped' ? '<span class="badge bg-warning text-dark">暂缓</span>' :
+                                      ['failed', 'error'].includes(jobLog.status) ? '<span class="badge bg-danger">失败</span>' :
                                       '<span class="badge bg-secondary">' + (jobLog.status || '-') + '</span>'}
                                 </td>
                             </tr>

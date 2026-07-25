@@ -14,6 +14,8 @@
 
 ### 技术特点
 - **多数据源支持**: 支持Akshare和Tushare数据源，可灵活切换
+- **跨市场日线**: 关注列表支持 A 股、港股和美股日线曲线及数据源自动回退
+- **智能分析日报**: 支持基础技术分析、可配置 AI 综合解读与 SMTP 邮件日报
 - **API频率控制**: 智能的请求延迟和重试机制，避免被数据源封禁
 - **高性能存储**: MySQL存储所有数据，使用SQLAlchemy ORM访问，支持复杂查询和事务
 - **响应式设计**: Web界面支持桌面和移动设备访问
@@ -34,17 +36,20 @@
 
 ```bash
 # 1. 克隆项目
-git clone <repository-url>
-cd stock-analysis-app
+git clone https://github.com/pananq/stock_analysis_app.git
+cd stock_analysis_app
 
 # 2. 安装依赖
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 
 # 3. 配置和初始化
-cp config.yaml.example config.yaml
-# 编辑 config.yaml 配置数据源
+cp config.example.yaml config.yaml
+cp .env.example .env
+# 必须在 .env 中设置随机 AUTH_SECRET_KEY；首次初始化还需设置
+# ADMIN_INITIAL_PASSWORD。AI、SMTP 和 Tushare 密钥也建议放在此文件。
+python main.py doctor
 python main.py --init-db
 
 # 4. 启动服务
@@ -52,7 +57,7 @@ python main.py start
 
 # 5. 访问系统
 # Web界面: http://localhost:8000
-# API文档: http://localhost:5000/api/docs
+# 智能日报: http://localhost:8000/reports
 ```
 
 更多详细说明请查看 [INSTALL.md](INSTALL.md)
@@ -60,7 +65,7 @@ python main.py start
 ##  项目结构
 
 ```
-stock-analysis-app/
+stock_analysis_app/
 ├── app/                          # 应用程序代码
 │   ├── api/                      # REST API接口
 │   │   ├── routes/               # API路由
@@ -68,15 +73,17 @@ stock-analysis-app/
 │   ├── web/                      # Web界面
 │   │   ├── routes/               # Web路由
 │   │   └── app.py                # Web应用
-│   ├── models/                   # 数据模型
-│   │   ├── sqlite_db.py          # SQLite数据库管理
-│   │   └── duckdb_manager.py     # DuckDB数据库管理
+│   ├── models/                   # MySQL / SQLAlchemy 数据模型
 │   ├── services/                 # 业务服务
 │   │   ├── datasource.py         # 数据源抽象接口
 │   │   ├── akshare_datasource.py # Akshare数据源
 │   │   ├── tushare_datasource.py # Tushare数据源
 │   │   ├── stock_service.py      # 股票服务
-│   │   ├── market_data_service.py# 行情数据服务
+│   │   ├── market_data_service.py# A 股行情服务
+│   │   ├── global_market_data_service.py # 港美股行情适配
+│   │   ├── daily_report_service.py # 关注列表日报
+│   │   ├── ai_analysis_service.py # AI 综合分析
+│   │   ├── email_service.py      # SMTP 邮件发送
 │   │   ├── strategy_service.py   # 策略服务
 │   │   └── strategy_executor.py  # 策略执行器
 │   ├── scheduler/                # 任务调度
@@ -91,20 +98,16 @@ stock-analysis-app/
 │   ├── templates/                # HTML模板
 │   └── static/                   # 静态资源
 ├── tests/                        # 测试代码
-│   ├── test_integration.py       # 集成测试
-│   ├── test_rate_limiter.py      # 频率控制测试
-│   ├── test_datasource.py        # 数据源测试
-│   ├── test_performance.py       # 性能测试
+│   ├── test_new_features.py      # 当前维护的隔离与 API 集成测试
 │   └── run_tests.py              # 测试运行脚本
 ├── docs/                         # 文档目录
 │   ├── background_import.md      # 后台导入说明
 │   └── daemon_mode_usage.md      # 后台运行使用指南
-├── data/                         # 数据文件
-│   ├── stocks.db                 # SQLite数据库
-│   └── market_data.duckdb        # DuckDB数据库
+├── data/                         # 本地导出及备份目录
 ├── logs/                         # 日志文件
 │   └── app.log                   # 应用日志
-├── config.yaml                   # 配置文件
+├── config.example.yaml           # 可提交的配置模板
+├── .env.example                  # 敏感环境变量模板
 ├── requirements.txt              # Python依赖
 ├── main.py                       # 主入口（支持后台运行）
 ├── run_api.py                    # API启动脚本
@@ -126,6 +129,7 @@ stock-analysis-app/
 
 # 通过API
 curl -X POST http://localhost:5000/api/data/import \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "start_date": "2021-01-01",
@@ -136,7 +140,8 @@ curl -X POST http://localhost:5000/api/data/import \
 # {"success": true, "task_id": "uuid-string"}
 
 # 查询任务进度
-curl http://localhost:5000/api/data/tasks/{task_id}
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:5000/api/data/tasks/{task_id}
 ```
 
 #### 2. 增量更新（后台任务）
@@ -148,7 +153,8 @@ curl http://localhost:5000/api/data/tasks/{task_id}
 # 点击"开始增量更新"
 
 # 通过API
-curl -X POST http://localhost:5000/api/data/update
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  http://localhost:5000/api/data/update
 ```
 
 **注意**：
@@ -164,6 +170,7 @@ curl -X POST http://localhost:5000/api/data/update
 ```bash
 # 通过API
 curl -X POST http://localhost:5000/api/strategies \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "均线突破策略",
@@ -181,7 +188,8 @@ curl -X POST http://localhost:5000/api/strategies \
 #### 2. 执行策略
 ```bash
 # 通过API
-curl -X POST http://localhost:5000/api/strategies/{id}/execute
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  http://localhost:5000/api/strategies/{id}/execute
 
 # 或通过Web界面
 # 访问 http://localhost:8000/strategies
@@ -193,51 +201,43 @@ curl -X POST http://localhost:5000/api/strategies/{id}/execute
 #### 1. 查询股票列表
 ```bash
 # 查询所有股票
-curl http://localhost:5000/api/stocks
+curl -H "Authorization: Bearer $TOKEN" http://localhost:5000/api/stocks
 
 # 按条件查询
-curl "http://localhost:5000/api/stocks?market=沪市&industry=银行"
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:5000/api/stocks?market=沪市&industry=银行"
 ```
 
 #### 2. 查询历史行情
 ```bash
-curl "http://localhost:5000/api/stocks/600000/history?limit=30"
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:5000/api/stocks/600000/history?limit=30"
 ```
 
 ## 🧪 测试
 
-### 运行所有测试
+### 运行当前快速回归测试
 ```bash
-cd stock-analysis-app
-python -m tests.run_tests
+cd stock_analysis_app
+.venv/bin/python -m tests.run_tests --quick
+.venv/bin/python -m unittest discover -s tests -p "test*.py"
 ```
 
-### 运行快速测试（不含网络请求）
+该测试集不访问外部网络或生产数据库，使用内存数据库验证认证、跨市场关注列表、日线指标、
+AI 故障降级、日报、邮件编排和 API Token 生命周期。旧版 SQLite/DuckDB 测试保留在
+`tests/legacy/`，默认测试发现不会执行这些可能访问外部服务的历史脚本。
+
+配置 AI 后，可显式运行真实港美股行情与 AI 日报验证；脚本会创建并清理临时 MySQL 记录：
+
 ```bash
-python -m tests.run_tests --quick
+.venv/bin/python tools/verify_live_ai_report.py --confirm-live
 ```
 
-### 运行指定模块测试
+配置 SMTP 和日报收件人后，可显式发送一封真实验证邮件；脚本只输出收件人数，不显示地址：
+
 ```bash
-# 集成测试
-python -m tests.run_tests --module integration
-
-# 频率控制测试
-python -m tests.run_tests --module rate_limiter
-
-# 数据源测试
-python -m tests.run_tests --module datasource
-
-# 性能测试
-python -m tests.run_tests --module performance
+.venv/bin/python tools/verify_live_email.py --confirm-send
 ```
-
-## 📈 性能指标
-
-- **策略执行**: 全市场扫描在5分钟内完成
-- **数据查询**: 单股票历史行情查询 < 100ms
-- **API响应**: 平均响应时间 < 200ms
-- **并发支持**: 支持多用户同时访问
 
 ## 🔧 开发指南
 

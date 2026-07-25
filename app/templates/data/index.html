@@ -3,12 +3,16 @@
 {% block title %}数据管理 - 股海罗盘{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <h2><i class="fas fa-database"></i> 数据管理</h2>
-        <hr>
+<section class="legacy-page-hero d-flex flex-wrap justify-content-between align-items-end gap-3">
+    <div>
+        <span class="eyebrow">DATA OPERATIONS</span>
+        <h1>数据中心</h1>
+        <p>统一管理跨市场证券目录、历史行情、增量更新与后台任务。</p>
     </div>
-</div>
+    <a class="btn btn-outline-primary" href="/system/tasks">
+        <i class="fas fa-clock-rotate-left"></i>查看任务历史
+    </a>
+</section>
 
 {% if error %}
 <div class="alert alert-warning">
@@ -23,8 +27,11 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between">
                     <div>
-                        <small class="text-muted">股票总数</small>
+                        <small class="text-muted">证券总数</small>
                         <h3 id="total-stocks">{{ status.get('total_stocks', 0) }}</h3>
+                        <small class="text-muted">
+                            已有行情：<span id="market-data-securities">{{ status.get('market_data_security_count', 0) }}</span>
+                        </small>
                     </div>
                     <div class="text-primary" style="font-size: 2rem;">
                         <i class="fas fa-list"></i>
@@ -56,11 +63,11 @@
                         <small class="text-muted">数据日期范围</small>
                         <div class="mt-2" id="date-range" style="font-size: 0.85rem; line-height: 1.3;">
                             {% if status.get('earliest_date') %}
-                            {{ status.earliest_date[:4] }}/{{ status.earliest_date[4:6] }}/{{ status.earliest_date[6:] }}
+                            {{ status.earliest_date|replace('-', '/') }}
                             <br>
                             至
                             <br>
-                            {{ status.latest_date[:4] }}/{{ status.latest_date[4:6] }}/{{ status.latest_date[6:] }}
+                            {{ status.latest_date|replace('-', '/') }}
                             {% else %}
                             -
                             {% endif %}
@@ -80,7 +87,11 @@
                     <div>
                         <small class="text-muted">当前任务</small>
                         <div class="mt-2" id="current-task" style="font-size: 1rem;">
+                            {% if status.get('current_task') %}
+                            {{ status.current_task.task_name }}
+                            {% else %}
                             无
+                            {% endif %}
                         </div>
                     </div>
                     <div class="text-warning" style="font-size: 2rem;">
@@ -98,19 +109,19 @@
     <div class="col-md-6 mb-4">
         <div class="card h-100">
             <div class="card-header bg-primary text-white">
-                <i class="fas fa-download"></i> 股票列表导入
+                <i class="fas fa-download"></i> 证券目录导入
             </div>
             <div class="card-body d-flex flex-column">
                 <p class="text-muted flex-grow-1">
-                    从数据源获取全量股票列表信息，将完全替换数据库中的现有股票数据。
-                    适用于首次导入或需要更新全量股票列表时使用。
+                    从数据源获取 A股、港股和美股列表，按市场替换数据库中的现有数据。
+                    同步 A 股、港股和美股的股票、ETF/ETP、基金/REIT 与指数目录。
                 </p>
                 <div class="alert alert-warning">
                     <i class="fas fa-exclamation-triangle"></i> 
-                    <strong>注意：</strong>此操作将删除现有股票列表并用新数据替换！
+                    <strong>容错：</strong>获取失败的市场会保留旧数据，不会被清空。
                 </div>
                 <button class="btn btn-primary w-100" onclick="importStockList()" id="btn-import-stock-list">
-                    <i class="fas fa-download"></i> 导入股票列表
+                    <i class="fas fa-download"></i> 导入证券目录
                 </button>
             </div>
         </div>
@@ -119,11 +130,11 @@
     <div class="col-md-6 mb-4">
         <div class="card h-100">
             <div class="card-header bg-info text-white">
-                <i class="fas fa-sync-alt"></i> 股票列表更新
+                <i class="fas fa-sync-alt"></i> 证券目录更新
             </div>
             <div class="card-body d-flex flex-column">
                 <p class="text-muted flex-grow-1">
-                    增量更新股票列表，保留现有数据，只更新变化的部分。
+                    增量更新证券目录，保留现有数据，只更新变化的部分。
                     建议定期执行以保持股票信息最新。
                 </p>
                 <div class="alert alert-success">
@@ -131,7 +142,7 @@
                     <strong>推荐：</strong>定期执行，不会影响现有数据
                 </div>
                 <button class="btn btn-info w-100" onclick="updateStockList()" id="btn-update-stock-list">
-                    <i class="fas fa-sync-alt"></i> 更新股票列表
+                    <i class="fas fa-sync-alt"></i> 更新证券目录
                 </button>
             </div>
         </div>
@@ -147,12 +158,13 @@
             </div>
             <div class="card-body d-flex flex-column">
                 <p class="text-muted flex-grow-1">
-                    从数据源获取所有股票的历史行情数据。
+                    按 CN → HK → US 轮询获取股票、ETF/ETP、基金/REIT
+                    与指数的历史行情，避免单一市场长期占用任务。
                     首次使用时建议执行此操作，后续可以使用增量更新功能。
                 </p>
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle"></i> 
-                    <strong>注意：</strong>全量导入将在后台执行，你可以关闭页面，任务会继续运行。
+                    <strong>覆盖范围：</strong>A 股、港股和美股；任务将在后台执行。
                 </div>
                 <button class="btn btn-dark w-100" onclick="importData()" id="btn-import">
                     <i class="fas fa-download"></i> 开始全量导入
@@ -168,12 +180,12 @@
             </div>
             <div class="card-body d-flex flex-column">
                 <p class="text-muted flex-grow-1">
-                    更新股票的最新一日的行情数据。
+                    轮询更新 A 股、港股和美股目录中各类证券的最新行情数据。
                     建议每日收盘后执行此操作以保持数据最新。
                 </p>
                 <div class="alert alert-success">
                     <i class="fas fa-check-circle"></i> 
-                    <strong>推荐：</strong>每日执行一次，耗时较短
+                    <strong>多市场：</strong>不会仅筛选已有 A 股行情的代码
                 </div>
                 <button class="btn btn-success w-100" onclick="updateData()" id="btn-update">
                     <i class="fas fa-sync-alt"></i> 更新行情数据
@@ -282,9 +294,9 @@
             <div class="card-body">
                 <h6>数据更新流程</h6>
                 <ol>
-                    <li><strong>首次使用：</strong>执行"全量数据导入"，获取所有股票的基础信息和历史行情</li>
+                    <li><strong>首次使用：</strong>先同步证券目录，再执行“全量数据导入”获取历史行情</li>
                     <li><strong>日常使用：</strong>每日收盘后执行"增量数据更新"，获取最新行情</li>
-                    <li><strong>数据范围：</strong>系统自动记录所有A股股票的历史行情数据</li>
+                    <li><strong>数据范围：</strong>A 股、港股、美股的股票、ETF/ETP、基金/REIT 与指数</li>
                     <li><strong>定时更新：</strong>可以配置自动任务，每日自动执行增量更新</li>
                 </ol>
                 
@@ -306,58 +318,43 @@
 // 当前任务ID和定时器
 let currentTaskId = null;
 let taskCheckInterval = null;
+const multiMarketTaskOptions = {
+    markets: ['CN', 'HK', 'US']
+};
 
 /**
- * 导入股票列表（全量替换）
+ * 导入证券目录（全量替换）
  */
 function importStockList() {
-    showConfirm('确定要导入全量股票列表吗？此操作将完全替换数据库中的现有股票数据，不可恢复！', function() {
-        // 显示加载遮罩
-        showLoading('正在导入股票列表，请稍候...');
-        
+    showConfirm('确定要导入全量证券目录吗？成功获取的市场与证券类型将用新目录替换；获取失败的范围会保留旧数据。', function() {
         apiRequest('/stocks/list/import', 'POST', {},
             function(response) {
-                hideLoading();
-                if (response.success) {
-                    const message = `股票列表导入成功！\n总数：${response.data.total}\n成功：${response.data.success_count}\n失败：${response.data.fail_count}\n耗时：${response.data.duration.toFixed(2)}秒`;
-                    showMessage(message, 'success');
-                    // 刷新数据统计
-                    refreshDataStatus();
-                } else {
-                    showMessage('导入股票列表失败: ' + response.error, 'error');
+                if (response.success && response.task_id) {
+                    showMessage('证券目录导入任务已启动！任务ID: ' + response.task_id, 'success');
+                    startProgressCheck(response.task_id);
                 }
             },
             function(error) {
-                hideLoading();
-                showMessage('导入股票列表失败: ' + error, 'error');
+                showMessage('导入证券目录失败: ' + error, 'error');
             }
         );
     });
 }
 
 /**
- * 更新股票列表（增量）
+ * 更新证券目录（增量）
  */
 function updateStockList() {
-    showConfirm('确定要更新股票列表吗？此操作将保留现有数据，只更新变化的部分。', function() {
-        // 显示加载遮罩
-        showLoading('正在更新股票列表，请稍候...');
-        
+    showConfirm('确定要更新证券目录吗？此操作将保留现有数据，只更新变化的部分。', function() {
         apiRequest('/stocks/update', 'POST', {},
             function(response) {
-                hideLoading();
-                if (response.success) {
-                    const message = `股票列表更新成功！\n总数：${response.data.total}\n新增：${response.data.added}\n更新：${response.data.updated}`;
-                    showMessage(message, 'success');
-                    // 刷新数据统计
-                    refreshDataStatus();
-                } else {
-                    showMessage('更新股票列表失败: ' + response.error, 'error');
+                if (response.success && response.task_id) {
+                    showMessage('证券目录更新任务已启动！任务ID: ' + response.task_id, 'success');
+                    startProgressCheck(response.task_id);
                 }
             },
             function(error) {
-                hideLoading();
-                showMessage('更新股票列表失败: ' + error, 'error');
+                showMessage('更新证券目录失败: ' + error, 'error');
             }
         );
     });
@@ -367,12 +364,12 @@ function updateStockList() {
  * 执行全量数据导入
  */
 function importData() {
-    showConfirm('确定要开始全量数据导入吗？任务将在后台执行，你可以关闭页面。', function() {
+    showConfirm('确定要开始 CN/HK/US 全量数据导入吗？系统会按市场轮询处理，任务将在后台继续运行。', function() {
         // 不显示加载遮罩，让用户直接留在原页面
-        apiRequest('/data/import', 'POST', {},
+        apiRequest('/data/import', 'POST', multiMarketTaskOptions,
             function(response) {
                 if (response.success && response.task_id) {
-                    showMessage('导入任务已启动！任务ID: ' + response.task_id, 'success');
+                    showMessage('CN/HK/US 全量导入任务已启动！任务ID: ' + response.task_id, 'success');
                     startProgressCheck(response.task_id);
                 }
             },
@@ -387,12 +384,15 @@ function importData() {
  * 执行增量数据更新
  */
 function updateData() {
-    showConfirm('确定要开始增量数据更新吗？', function() {
+    showConfirm('确定要更新 CN/HK/US 最近行情吗？任务会在三个市场之间轮询执行。', function() {
         // 不显示加载遮罩，让用户直接留在原页面
-        apiRequest('/data/update', 'POST', {},
+        apiRequest('/data/update', 'POST', {
+            ...multiMarketTaskOptions,
+            only_existing: false
+        },
             function(response) {
                 if (response.success && response.task_id) {
-                    showMessage('更新任务已启动！任务ID: ' + response.task_id, 'success');
+                    showMessage('CN/HK/US 行情更新任务已启动！任务ID: ' + response.task_id, 'success');
                     startProgressCheck(response.task_id);
                 }
             },
@@ -554,7 +554,11 @@ function refreshDataStatus() {
                 
                 // 更新统计信息
                 document.getElementById('total-stocks').textContent = data.total_stocks || 0;
+                document.getElementById('market-data-securities').textContent =
+                    data.market_data_security_count || 0;
                 document.getElementById('total-records').textContent = (data.record_count_millions || 0) + '万';
+                document.getElementById('current-task').textContent =
+                    data.current_task ? data.current_task.task_name : '无';
                 
                 // 更新日期范围
                 const dateRangeEl = document.getElementById('date-range');

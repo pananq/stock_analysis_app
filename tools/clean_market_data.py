@@ -11,6 +11,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from app.utils import get_config, get_logger
+from app.utils.database_url import build_mysql_url
 from app.models.orm_models import DailyMarket, ORMDatabase
 
 logger = get_logger(__name__)
@@ -24,7 +25,8 @@ def clean_market_data():
     logger.info("开始清理历史行情数据...")
     logger.info("=" * 60)
     
-    // ... existing code ...
+    # 连接配置和清理逻辑见下方。此处原先残留了非 Python 占位符，
+    # 会导致整个脚本无法解析。
     
     # 获取配置
     config = get_config()
@@ -35,17 +37,9 @@ def clean_market_data():
         return
     
     # 构建MySQL连接URL
-    mysql_url = (
-        f"mysql+pymysql://{mysql_config.get('username')}:"
-        f"{mysql_config.get('password')}@"
-        f"{mysql_config.get('host')}:"
-        f"{mysql_config.get('port')}/"
-        f"{mysql_config.get('database')}?charset=utf8mb4"
-    )
+    mysql_url = build_mysql_url(mysql_config)
     
     logger.info(f"MySQL数据库: {mysql_config.get('host')}:{mysql_config.get('port')}/{mysql_config.get('database')}")
-    
-    // ... existing code ...
     
     try:
         # 创建ORM数据库连接
@@ -61,8 +55,6 @@ def clean_market_data():
             logger.warning(f"查询数据量失败: {e}")
             before_count = 0
         
-        // ... existing code ...
-        
         # 删除所有数据
         logger.info("\n正在删除数据...")
         try:
@@ -75,8 +67,6 @@ def clean_market_data():
             return
         finally:
             session.close()
-        
-        // ... existing code ...
         
         # 查询清理后的数据量
         logger.info("\n检查清理后的数据...")
@@ -92,7 +82,7 @@ def clean_market_data():
         finally:
             session.close()
         
-        // ... existing code ...
+        # 清理结果记录完毕。
         
         logger.info("\n" + "=" * 60)
         logger.info("历史行情数据清理完成!")
@@ -120,7 +110,7 @@ def clean_by_stock_code(stock_code: str = None):
         logger.info("开始清理所有股票的历史行情数据...")
     logger.info("=" * 60)
     
-    // ... existing code ...
+    # 按代码清理逻辑见下方。
     
     # 获取配置
     config = get_config()
@@ -131,13 +121,7 @@ def clean_by_stock_code(stock_code: str = None):
         return
     
     # 构建MySQL连接URL
-    mysql_url = (
-        f"mysql+pymysql://{mysql_config.get('username')}:"
-        f"{mysql_config.get('password')}@"
-        f"{mysql_config.get('host')}:"
-        f"{mysql_config.get('port')}/"
-        f"{mysql_config.get('database')}?charset=utf8mb4"
-    )
+    mysql_url = build_mysql_url(mysql_config)
     
     try:
         # 创建ORM数据库连接
@@ -153,7 +137,7 @@ def clean_by_stock_code(stock_code: str = None):
             before_count = session.query(DailyMarket).count()
             logger.info(f"清理前数据量: {before_count} 条记录")
         
-        // ... existing code ...
+        # 删除操作完成后继续校验。
         
         # 删除数据
         logger.info("\n正在删除数据...")
@@ -172,7 +156,7 @@ def clean_by_stock_code(stock_code: str = None):
         finally:
             session.close()
         
-        // ... existing code ...
+        # 校验清理后的记录数量。
         
         # 查询清理后的数据量
         logger.info("\n检查清理后的数据...")
@@ -192,7 +176,7 @@ def clean_by_stock_code(stock_code: str = None):
         finally:
             session.close()
         
-        // ... existing code ...
+        # 清理结果记录完毕。
         
         logger.info("\n" + "=" * 60)
         logger.info("历史行情数据清理完成!")

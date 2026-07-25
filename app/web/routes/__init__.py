@@ -7,6 +7,7 @@ from .data import data_bp
 from .auth import auth_bp
 from .watchlist_routes import watchlist_web_bp
 from .api_token_routes import api_token_web_bp
+from .report_routes import report_web_bp
 
 __all__ = [
     'dashboard_bp',
@@ -16,5 +17,6 @@ __all__ = [
     'data_bp',
     'auth_bp',
     'watchlist_web_bp',
-    'api_token_web_bp'
+    'api_token_web_bp',
+    'report_web_bp',
 ]

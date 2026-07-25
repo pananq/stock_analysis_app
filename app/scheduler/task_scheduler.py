@@ -19,6 +19,11 @@ from app.services import (
     get_strategy_service,
     get_strategy_executor
 )
+from app.services.market_identity import SUPPORTED_MARKETS
+from app.services.data_task_coordinator import (
+    DataTaskBusyError,
+    get_data_task_coordinator,
+)
 from app.models.database_factory import get_database
 from app.utils import get_logger, get_config
 
@@ -30,8 +35,10 @@ class TaskScheduler:
     
     def __init__(self):
         """初始化任务调度器"""
-        self.scheduler = BackgroundScheduler()
         self.config = get_config()
+        self.scheduler = BackgroundScheduler(
+            timezone=self.config.get('scheduler.timezone', 'Asia/Shanghai')
+        )
         self.db = get_database()  # 使用工厂方法获取数据库（MySQL或SQLite）
         
         # 初始化数据库表
@@ -112,6 +119,7 @@ class TaskScheduler:
         if not self.scheduler.running:
             # 启动前清理僵尸任务（状态为running但实际已停止的任务）
             self._cleanup_zombie_tasks()
+            get_data_task_coordinator().clear_startup_stale_lock()
             
             self.scheduler.start()
             logger.info("任务调度器已启动")
@@ -255,6 +263,29 @@ class TaskScheduler:
             
         except Exception as e:
             logger.error(f"添加每日策略执行任务失败: {e}")
+
+    def add_daily_report_job(self, hour: int = None, minute: int = None):
+        """在邮件日报启用时添加每日关注列表分析任务。"""
+        report_config = self.config.get('notifications.daily_report', {})
+        if not report_config.get('enabled', False):
+            logger.info("每日关注列表日报未启用")
+            return
+        try:
+            if hour is None or minute is None:
+                hour, minute = self._parse_schedule_time(
+                    report_config.get('time', '20:00'), 20, 0
+                )
+            self.scheduler.add_job(
+                func=self._send_daily_report_job,
+                trigger=CronTrigger(hour=hour, minute=minute),
+                id='daily_watchlist_report',
+                name='每日关注列表分析与邮件日报',
+                replace_existing=True,
+                max_instances=1,
+            )
+            logger.info(f"已添加每日关注列表日报任务: {hour:02d}:{minute:02d}")
+        except Exception as e:
+            logger.error(f"添加每日关注列表日报任务失败: {e}")
     
     def add_periodic_health_check_job(self, interval_minutes: int = 30):
         """
@@ -348,17 +379,60 @@ class TaskScheduler:
         
         return jobs
     
+    def _run_exclusive_scheduled_data_job(
+        self,
+        task_type: str,
+        task_name: str,
+        operation,
+    ):
+        coordinator = get_data_task_coordinator()
+        try:
+            token = coordinator.reserve(
+                task_type,
+                task_name,
+                source='scheduler',
+            )
+        except DataTaskBusyError as exc:
+            active = exc.active_task
+            message = (
+                f"到达计划时间但未执行；已有任务："
+                f"{active['task_name']}（{active['source']}）"
+            )
+            self._log_job_skipped(task_type, task_name, message)
+            logger.warning("%s: %s", task_name, message)
+            return {
+                'success': False,
+                'skipped': True,
+                'message': message,
+            }
+        try:
+            return operation()
+        finally:
+            coordinator.release(token)
+
     def _update_stock_list_job(self):
+        return self._run_exclusive_scheduled_data_job(
+            'update_stock_list',
+            '更新股票列表',
+            self._perform_stock_list_update_job,
+        )
+
+    def _perform_stock_list_update_job(self):
         """更新股票列表任务"""
         logger.info("=" * 60)
         logger.info("开始执行: 更新股票列表")
         logger.info("=" * 60)
         
         start_time = datetime.now()
+        job_log_id = None
         
         try:
             # 记录任务开始（系统任务，user_id=None）
-            self._log_job_start('update_stock_list', '更新股票列表', user_id=None)
+            job_log_id = self._log_job_start(
+                'update_stock_list',
+                '更新股票列表',
+                user_id=None,
+            )
             
             # 执行更新
             result = self.stock_service.update_stock_list()
@@ -370,20 +444,27 @@ class TaskScheduler:
                 self._log_job_success(
                     'update_stock_list',
                     duration,
-                    f"新增: {result['new_count']}, 更新: {result['update_count']}"
+                    f"新增: {result['new_count']}, 更新: {result['update_count']}",
+                    job_log_id,
                 )
                 logger.info(f"✓ 股票列表更新成功: 新增{result['new_count']}只, 更新{result['update_count']}只")
             else:
                 self._log_job_error(
                     'update_stock_list',
                     duration,
-                    result.get('error', '未知错误')
+                    result.get('error', '未知错误'),
+                    job_log_id,
                 )
                 logger.error(f"✗ 股票列表更新失败: {result.get('error', '未知错误')}")
                 
         except Exception as e:
             duration = (datetime.now() - start_time).total_seconds()
-            self._log_job_error('update_stock_list', duration, str(e))
+            self._log_job_error(
+                'update_stock_list',
+                duration,
+                str(e),
+                job_log_id,
+            )
             logger.error(f"✗ 股票列表更新异常: {e}")
             import traceback
             traceback.print_exc()
@@ -391,19 +472,33 @@ class TaskScheduler:
         logger.info("=" * 60)
     
     def _update_market_data_job(self):
+        return self._run_exclusive_scheduled_data_job(
+            'update_market_data',
+            '更新行情数据',
+            self._perform_market_data_update_job,
+        )
+
+    def _perform_market_data_update_job(self):
         """更新行情数据任务"""
         logger.info("=" * 60)
         logger.info("开始执行: 更新行情数据")
         logger.info("=" * 60)
         
         start_time = datetime.now()
+        job_log_id = None
         
         try:
             # 记录任务开始（系统任务，user_id=None）
-            self._log_job_start('update_market_data', '更新行情数据', user_id=None)
+            job_log_id = self._log_job_start(
+                'update_market_data',
+                '更新行情数据',
+                user_id=None,
+            )
             
             # 执行智能增量更新（自动判断需要更新的日期范围）
-            result = self.market_data_service.incremental_update()
+            result = self.market_data_service.incremental_update(
+                markets=SUPPORTED_MARKETS,
+            )
             
             # 记录任务完成
             duration = (datetime.now() - start_time).total_seconds()
@@ -412,20 +507,37 @@ class TaskScheduler:
                 self._log_job_success(
                     'update_market_data',
                     duration,
-                    f"更新: {result['total_records']}条"
+                    (
+                        f"更新: {result['total_records']}条；"
+                        f"市场: {'/'.join(result.get('markets', []))}；"
+                        f"分市场: {result.get('market_stats', {})}"
+                    ),
+                    job_log_id,
                 )
                 logger.info(f"✓ 行情数据更新成功: 更新{result['total_records']}条记录")
             else:
+                market_error = result.get('market_errors') or {}
+                error_message = (
+                    f"分市场失败: {market_error}"
+                    if market_error
+                    else result.get('error', '未知错误')
+                )
                 self._log_job_error(
                     'update_market_data',
                     duration,
-                    result.get('error', '未知错误')
+                    error_message,
+                    job_log_id,
                 )
-                logger.error(f"✗ 行情数据更新失败: {result.get('error', '未知错误')}")
+                logger.error(f"✗ 行情数据更新失败: {error_message}")
                 
         except Exception as e:
             duration = (datetime.now() - start_time).total_seconds()
-            self._log_job_error('update_market_data', duration, str(e))
+            self._log_job_error(
+                'update_market_data',
+                duration,
+                str(e),
+                job_log_id,
+            )
             logger.error(f"✗ 行情数据更新异常: {e}")
             import traceback
             traceback.print_exc()
@@ -541,6 +653,57 @@ class TaskScheduler:
         except Exception as e:
             logger.error(f"执行用户策略失败: {e}")
 
+    def _send_daily_report_job(self):
+        """为配置的一个或多个用户生成并发送关注列表日报。"""
+        start_time = datetime.now()
+        from app.services.daily_report_service import (
+            get_daily_report_service,
+        )
+
+        service = get_daily_report_service()
+        targets = service.get_targets()
+        if not targets:
+            logger.error("日报任务未配置有效的用户与收件人")
+            return
+        job_log_id = self._log_job_start(
+            'daily_watchlist_report',
+            '每日关注列表分析与邮件日报',
+            user_id=None,
+        )
+        delivered = 0
+        item_count = 0
+        errors = []
+        for target in targets:
+            try:
+                result = service.send_report(
+                    target['user_id'],
+                    recipients=target['recipients'],
+                )
+                delivered += 1
+                item_count += result['report']['item_count']
+            except Exception as exc:
+                logger.exception(
+                    "用户 %s 的每日关注列表日报任务失败",
+                    target['user_id'],
+                )
+                errors.append(f"user_id={target['user_id']}: {exc}")
+
+        duration = (datetime.now() - start_time).total_seconds()
+        if errors:
+            self._log_job_error(
+                'daily_watchlist_report',
+                duration,
+                f"成功 {delivered}/{len(targets)}；" + '；'.join(errors),
+                job_log_id,
+            )
+        else:
+            self._log_job_success(
+                'daily_watchlist_report',
+                duration,
+                f'已向 {delivered} 个用户发送，共分析 {item_count} 只关注股票',
+                job_log_id,
+            )
+
     def _health_check_job(self):
         """健康检查任务"""
         logger.debug("执行健康检查")
@@ -642,6 +805,30 @@ class TaskScheduler:
         except Exception as e:
             logger.error(f"记录任务开始失败: {e}")
             return None
+
+    def _log_job_skipped(
+        self,
+        job_type: str,
+        job_name: str,
+        message: str,
+        user_id: Optional[int] = None,
+    ) -> Optional[int]:
+        """记录因另一个数据任务占用执行槽而未运行的计划任务。"""
+        try:
+            now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            return self.db.insert_one('job_logs', {
+                'job_type': job_type,
+                'job_name': job_name,
+                'user_id': user_id,
+                'status': 'skipped',
+                'started_at': now,
+                'completed_at': now,
+                'duration': 0,
+                'message': message,
+            })
+        except Exception as exc:
+            logger.error("记录跳过任务失败: %s", exc)
+            return None
     
     def _log_job_success(self, job_type: str, duration: float, message: str = '', job_log_id: int = None):
         """
@@ -705,7 +892,7 @@ class TaskScheduler:
             if job_log_id:
                 sql = """
                     UPDATE job_logs
-                    SET status = 'error',
+                    SET status = 'failed',
                         completed_at = %s,
                         duration = %s,
                         error = %s
@@ -723,7 +910,7 @@ class TaskScheduler:
                         ORDER BY started_at DESC
                         LIMIT 1
                     ) latest ON j.id = latest.id
-                    SET j.status = 'error',
+                    SET j.status = 'failed',
                         j.completed_at = %s,
                         j.duration = %s,
                         j.error = %s

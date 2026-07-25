@@ -4,9 +4,63 @@
 """
 import logging
 import os
+import re
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Optional
+
+
+class SensitiveDataFilter(logging.Filter):
+    """对常见凭据格式做日志脱敏。"""
+
+    PATTERNS = (
+        (
+            re.compile(r'([a-z][a-z0-9+.-]*://[^:/@\s]+:)([^@\s]+)(@)', re.I),
+            r'\1***\3',
+        ),
+        (
+            re.compile(r'(?i)(authorization\s*[:=]\s*bearer\s+)[^\s,;]+'),
+            r'\1***',
+        ),
+        (
+            re.compile(
+                r'(?i)\b(password|api[_-]?key|secret|token)\b'
+                r'(\s*[:=]\s*)'
+                r'([^\s,;]+)'
+            ),
+            r'\1\2***',
+        ),
+    )
+
+    @classmethod
+    def redact(cls, value) -> str:
+        text = str(value)
+        for pattern, replacement in cls.PATTERNS:
+            text = pattern.sub(replacement, text)
+        return text
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.msg, str):
+            record.msg = self.redact(record.msg)
+        if record.args:
+            if isinstance(record.args, dict):
+                record.args = {
+                    key: self.redact(value) if isinstance(value, str) else value
+                    for key, value in record.args.items()
+                }
+            else:
+                record.args = tuple(
+                    self.redact(value) if isinstance(value, str) else value
+                    for value in record.args
+                )
+        return True
+
+
+class RedactingFormatter(logging.Formatter):
+    """连同异常堆栈一起脱敏最终日志文本。"""
+
+    def format(self, record: logging.LogRecord) -> str:
+        return SensitiveDataFilter.redact(super().format(record))
 
 
 class ErrorTolerantRotatingFileHandler(RotatingFileHandler):
@@ -57,7 +111,7 @@ class LoggerManager:
         if log_format is None:
             log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         
-        formatter = logging.Formatter(log_format)
+        formatter = RedactingFormatter(log_format)
         
         # 创建容错的文件处理器（支持日志轮转）
         file_handler = ErrorTolerantRotatingFileHandler(
@@ -67,6 +121,7 @@ class LoggerManager:
             encoding='utf-8'
         )
         file_handler.setFormatter(formatter)
+        file_handler.addFilter(SensitiveDataFilter())
         
         # 创建容错的控制台处理器
         class ErrorTolerantStreamHandler(logging.StreamHandler):
@@ -83,6 +138,7 @@ class LoggerManager:
         
         console_handler = ErrorTolerantStreamHandler()
         console_handler.setFormatter(formatter)
+        console_handler.addFilter(SensitiveDataFilter())
         
         # 配置根日志记录器
         root_logger = logging.getLogger()
@@ -108,6 +164,7 @@ class LoggerManager:
         """
         if name not in cls._loggers:
             cls._loggers[name] = logging.getLogger(name)
+            cls._loggers[name].addFilter(SensitiveDataFilter())
         return cls._loggers[name]
 
 
@@ -121,9 +178,15 @@ def setup_logging(config):
     log_config = config.get('logging', {})
     
     LoggerManager.setup(
-        log_file=log_config.get('file_path', './logs/app.log'),
+        log_file=log_config.get(
+            'file_path',
+            log_config.get('file', './logs/app.log')
+        ),
         level=log_config.get('level', 'INFO'),
-        max_bytes=log_config.get('max_file_size', 10) * 1024 * 1024,
+        max_bytes=log_config.get(
+            'max_file_size',
+            log_config.get('max_bytes', 10)
+        ) * 1024 * 1024,
         backup_count=log_config.get('backup_count', 30),
         log_format=log_config.get('format')
     )

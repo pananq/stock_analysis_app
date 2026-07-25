@@ -11,108 +11,113 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
-    <style>
-        body {
-            background-color: #f8f9fa;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-        }
-        .login-card {
-            width: 100%;
-            max-width: 400px;
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-            background-color: #fff;
-        }
-        .login-header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-        .login-header i {
-            font-size: 3rem;
-            color: #0d6efd;
-            margin-bottom: 1rem;
-        }
-    </style>
 </head>
-<body>
-    <div class="login-card">
-        <div class="login-header">
-            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="股海罗盘" height="80" class="mb-3">
-            <h3>股海罗盘</h3>
-            <p class="text-muted">请登录您的账户</p>
-        </div>
-        
-        <div id="message-container"></div>
-        
-        <form id="login-form">
-            <div class="mb-3">
-                <label for="username" class="form-label">用户名</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="fas fa-user"></i></span>
-                    <input type="text" class="form-control" id="username" name="username" required autofocus>
-                </div>
+<body class="auth-page">
+    <main class="auth-shell">
+        <section class="auth-visual">
+            <a class="auth-brand" href="/">
+                <span class="auth-brand-mark">
+                    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="">
+                </span>
+                <span><strong>股海罗盘</strong><small>STOCK COMPASS</small></span>
+            </a>
+            <div class="auth-visual-copy">
+                <span class="auth-kicker">CROSS-MARKET INTELLIGENCE</span>
+                <h1>看见趋势，<br>保持自己的节奏。</h1>
+                <p>连接 A 股、港股与美股行情，用更清晰的视角管理关注、策略和每日洞察。</p>
             </div>
-            <div class="mb-3">
-                <label for="password" class="form-label">密码</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                    <input type="password" class="form-control" id="password" name="password" required>
-                </div>
+            <div class="auth-market-strip">
+                <span><i class="fas fa-circle"></i> A 股</span>
+                <span><i class="fas fa-circle"></i> 港股</span>
+                <span><i class="fas fa-circle"></i> 美股</span>
+                <span><i class="fas fa-sparkles"></i> AI 解读</span>
             </div>
-            <div class="d-grid gap-2">
-                <button type="submit" class="btn btn-primary btn-lg">登录</button>
-            </div>
-        </form>
-        
-        <div class="mt-3 text-center">
-            <p>还没有账号？ <a href="/register">立即注册</a></p>
-        </div>
-    </div>
+        </section>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+        <section class="auth-panel">
+            <div class="auth-form-wrap">
+                <div class="auth-form-heading">
+                    <span class="auth-kicker">WELCOME BACK</span>
+                    <h2>登录账户</h2>
+                    <p>继续进入你的跨市场投资工作台</p>
+                </div>
+
+                <div id="message-container"></div>
+
+                <form id="login-form" method="post" action="/api/auth/login?session_only=1">
+                    <div class="mb-4">
+                        <label for="username" class="form-label">用户名</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-user"></i></span>
+                            <input type="text" class="form-control" id="username" name="username"
+                                   placeholder="输入用户名" required autofocus>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label for="password" class="form-label">密码</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                            <input type="password" class="form-control" id="password" name="password"
+                                   placeholder="输入密码" required>
+                        </div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            登录工作台 <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </form>
+
+                <p class="auth-switch">还没有账户？ <a href="/register">创建账户</a></p>
+            </div>
+            <div class="auth-footnote">数据分析仅供参考，不构成投资建议。</div>
+        </section>
+    </main>
+
     <script>
-        $(document).ready(function() {
-            // 如果已登录，跳转到首页
-            if (getToken()) {
-                window.location.href = '/';
+        const form = document.getElementById('login-form');
+        const messageContainer = document.getElementById('message-container');
+        const submitButton = form.querySelector('button[type="submit"]');
+
+        function showLoginMessage(message, type) {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.setAttribute('role', 'alert');
+            alert.textContent = message;
+            messageContainer.replaceChildren(alert);
+        }
+
+        form.addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            if (!username || !password) {
+                showLoginMessage('请输入用户名和密码', 'warning');
+                return;
             }
-            
-            $('#login-form').on('submit', function(e) {
-                e.preventDefault();
-                
-                const username = $('#username').val();
-                const password = $('#password').val();
-                
-                if (!username || !password) {
-                    showMessage('请输入用户名和密码', 'warning');
-                    return;
-                }
-                
-                const btn = $(this).find('button[type="submit"]');
-                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> 登录中...');
-                
-                apiRequest('/auth/login', 'POST', {
-                    username: username,
-                    password: password
-                }, function(response) {
-                    // 登录成功
-                    setToken(response.token);
-                    setUser(response.user);
-                    showMessage('登录成功，正在跳转...', 'success');
-                    setTimeout(function() {
-                        window.location.href = '/';
-                    }, 1000);
-                }, function(error) {
-                    // 登录失败
-                    btn.prop('disabled', false).text('登录');
+
+            submitButton.disabled = true;
+            submitButton.textContent = '登录中...';
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'same-origin',
+                    body: JSON.stringify({username, password})
                 });
-            });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok || !payload.success) {
+                    throw new Error(payload.error || '登录失败');
+                }
+                showLoginMessage('登录成功，正在跳转...', 'success');
+                window.location.assign('/');
+            } catch (error) {
+                showLoginMessage(error.message || '网络请求失败', 'danger');
+                submitButton.disabled = false;
+                submitButton.textContent = '登录';
+            }
         });
     </script>
 </body>

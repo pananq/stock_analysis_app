@@ -42,21 +42,21 @@ def index():
         if code or name:
             keyword = f"{code or ''} {name or ''}".strip()
         
-        # 转换市场类型参数
         market_type = request.args.get('market')
-        if market_type:
-            market_type_map = {
-                '沪市': 'SH',
-                '深市': 'SZ',
-                '北交所': 'BJ'
-            }
-            market = market_type_map.get(market_type)
+        if market_type in {'CN', 'HK', 'US'}:
+            market = market_type
+        security_type = request.args.get('security_type')
+        industry = request.args.get('industry')
         
         # 构建API参数
         if keyword:
             params['keyword'] = keyword
         if market:
             params['market'] = market
+        if security_type in {'STOCK', 'ETF', 'FUND', 'INDEX'}:
+            params['security_type'] = security_type
+        if industry:
+            params['industry'] = industry.strip()
         
         # 默认获取前100只股票
         params['limit'] = 100
@@ -92,9 +92,19 @@ def detail(stock_code):
     """股票详情页面"""
     try:
         headers = get_auth_headers()
+        market = request.args.get('market', 'CN')
+        security_type = request.args.get('security_type', 'STOCK')
         
         # 获取股票基本信息
-        response = requests.get(f"{API_BASE_URL}/stocks/{stock_code}", headers=headers, timeout=5)
+        response = requests.get(
+            f"{API_BASE_URL}/stocks/{stock_code}",
+            params={
+                'market': market,
+                'security_type': security_type,
+            },
+            headers=headers,
+            timeout=5,
+        )
         if response.status_code == 200:
             stock = response.json().get('data', {})
         elif response.status_code == 401:
@@ -107,7 +117,11 @@ def detail(stock_code):
         # 获取历史行情数据（最近100天）
         history_response = requests.get(
             f"{API_BASE_URL}/stocks/{stock_code}/history",
-            params={'limit': 100},
+            params={
+                'limit': 100,
+                'market': market,
+                'security_type': security_type,
+            },
             headers=headers,
             timeout=5
         )

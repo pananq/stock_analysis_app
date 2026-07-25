@@ -28,6 +28,11 @@ def create_web_app(config=None):
     app = Flask(__name__,
                 template_folder='../templates',
                 static_folder='../static')
+
+    # Werkzeug 访问日志可能包含查询参数；统一套用凭据脱敏过滤器。
+    import logging
+    from app.utils.logger import SensitiveDataFilter
+    logging.getLogger('werkzeug').addFilter(SensitiveDataFilter())
     
     # 加载配置
     if config is None:
@@ -50,7 +55,8 @@ def create_web_app(config=None):
         system_bp,
         auth_bp,
         watchlist_web_bp,
-        api_token_web_bp
+        api_token_web_bp,
+        report_web_bp
     )
 
     app.register_blueprint(dashboard_bp)
@@ -61,6 +67,7 @@ def create_web_app(config=None):
     app.register_blueprint(auth_bp)
     app.register_blueprint(watchlist_web_bp)
     app.register_blueprint(api_token_web_bp)
+    app.register_blueprint(report_web_bp)
     
     logger.info("Web路由注册完成")
     
@@ -72,7 +79,8 @@ def create_web_app(config=None):
         data_bp as api_data_bp,
         auth_bp as api_auth_bp,
         watchlist_bp as api_watchlist_bp,
-        api_token_bp as api_token_bp_route
+        api_token_bp as api_token_bp_route,
+        report_bp as api_report_bp
     )
 
     app.register_blueprint(api_strategy_bp, url_prefix='/api/strategies', name='api_strategy')
@@ -82,6 +90,7 @@ def create_web_app(config=None):
     app.register_blueprint(api_auth_bp, url_prefix='/api/auth', name='api_auth')
     app.register_blueprint(api_watchlist_bp, url_prefix='/api/watchlist', name='api_watchlist')
     app.register_blueprint(api_token_bp_route, url_prefix='/api/tokens', name='api_tokens')
+    app.register_blueprint(api_report_bp, url_prefix='/api/reports', name='api_reports')
     
     logger.info("API路由注册完成")
     
@@ -101,50 +110,52 @@ def create_web_app(config=None):
 
 def register_request_hooks(app):
     """注册请求钩子"""
-    from flask import request, jsonify, g
+    from flask import request, jsonify, g, redirect
     
     @app.before_request
     def before_request():
         """请求前处理"""
-        # 仅对 API 请求进行认证检查
-        if not request.path.startswith('/api/'):
+        if request.path.startswith('/static/'):
             return
-            
-        # 认证逻辑
-        if request.method == 'OPTIONS':
-            return
-            
-        # 白名单
-        public_paths = [
+
+        from app.utils.auth import AuthUtils
+
+        is_api = request.path.startswith('/api/')
+        public_api_paths = {
             '/api/auth/login',
             '/api/auth/register',
-            '/api/system/health'
-        ]
-        
-        if request.path in public_paths:
+        }
+        public_page_paths = {'/login', '/register'}
+
+        if is_api and request.method == 'OPTIONS':
             return
-            
-        # 获取 Token
+
+        if is_api and request.path in public_api_paths:
+            return
+
+        # 外部客户端使用 Bearer Token；同源浏览器使用 HttpOnly Cookie。
         auth_header = request.headers.get('Authorization')
-        if not auth_header:
-            return jsonify({'error': 'Missing Authorization header'}), 401
-            
-        try:
+        token = request.cookies.get('auth_token')
+        if auth_header:
             parts = auth_header.split()
             if len(parts) != 2 or parts[0].lower() != 'bearer':
-                return jsonify({'error': 'Invalid token type'}), 401
+                if is_api:
+                    return jsonify({'error': 'Invalid token type'}), 401
+                return redirect('/login')
             token = parts[1]
-        except ValueError:
-            return jsonify({'error': 'Invalid Authorization header'}), 401
-            
-        # 验证 Token
-        from app.utils.auth import AuthUtils
-        
-        payload = AuthUtils.verify_token(token)
+
+        payload = AuthUtils.verify_token(token) if token else None
+
+        if request.path in public_page_paths:
+            if payload:
+                return redirect('/')
+            return
+
         if not payload:
-            return jsonify({'error': 'Invalid or expired token'}), 401
-            
-        # 设置用户信息到上下文
+            if is_api:
+                return jsonify({'error': 'Invalid or missing authentication'}), 401
+            return redirect('/login')
+
         g.user = payload
 
 

@@ -6,9 +6,8 @@
 // Web服务已集成API路由，直接使用/api路径
 const API_BASE_URL = '/api';
 
-// 认证相关常量
-const TOKEN_KEY = 'auth_token';
-const USER_KEY = 'auth_user';
+// 浏览器认证使用服务端 HttpOnly Cookie，JWT 不暴露给 JavaScript。
+let currentUser = null;
 
 // 全局加载模态框
 let loadingModal = null;
@@ -21,10 +20,16 @@ let cancelCallback = null;
 // 页面加载完成后初始化
 $(document).ready(function() {
     // 初始化加载模态框
-    loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+    const loadingElement = document.getElementById('loadingModal');
+    if (loadingElement) {
+        loadingModal = new bootstrap.Modal(loadingElement);
+    }
     
     // 初始化确认对话框
-    confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    const confirmElement = document.getElementById('confirmModal');
+    if (confirmElement) {
+        confirmModal = new bootstrap.Modal(confirmElement);
+    }
     
     // 绑定确认按钮事件
     $('#confirm-ok-btn').on('click', function() {
@@ -55,47 +60,28 @@ $(document).ready(function() {
 });
 
 /**
- * 获取Token
- */
-function getToken() {
-    return localStorage.getItem(TOKEN_KEY);
-}
-
-/**
- * 设置Token
- */
-function setToken(token) {
-    localStorage.setItem(TOKEN_KEY, token);
-    // 同时写入Cookie，有效期30天
-    const d = new Date();
-    d.setTime(d.getTime() + (30 * 24 * 60 * 60 * 1000));
-    const expires = "expires=" + d.toUTCString();
-    document.cookie = TOKEN_KEY + "=" + token + ";" + expires + ";path=/";
-}
-
-/**
  * 获取用户信息
  */
 function getUser() {
-    const userStr = localStorage.getItem(USER_KEY);
-    return userStr ? JSON.parse(userStr) : null;
+    return currentUser;
 }
 
 /**
  * 设置用户信息
  */
 function setUser(user) {
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    currentUser = user || null;
+    updateUserUI();
 }
 
 /**
  * 清除认证信息
  */
 function clearAuth() {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-    // 清除Cookie
-    document.cookie = TOKEN_KEY + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    currentUser = null;
+    // 清理旧版本曾写入的 JWT 和用户缓存。
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
 }
 
 /**
@@ -104,22 +90,23 @@ function clearAuth() {
 function checkAuth() {
     const path = window.location.pathname;
     const publicPaths = ['/login', '/register'];
-    
-    // 如果是静态资源，跳过检查
     if (path.startsWith('/static/')) return;
-    
-    const token = getToken();
-    
-    if (!token && !publicPaths.includes(path)) {
-        // 未登录且不在公开页面，跳转到登录页
-        window.location.href = '/login';
-    } else if (token && publicPaths.includes(path)) {
-        // 已登录但在登录/注册页，跳转到首页
-        window.location.href = '/';
-    }
-    
-    // 更新UI上的用户信息
-    updateUserUI();
+
+    $.ajax({
+        url: API_BASE_URL + '/auth/me',
+        method: 'GET',
+        dataType: 'json'
+    }).done(function(response) {
+        setUser(response.user);
+        if (publicPaths.includes(path)) {
+            window.location.href = '/';
+        }
+    }).fail(function() {
+        clearAuth();
+        if (!publicPaths.includes(path)) {
+            window.location.href = '/login';
+        }
+    });
 }
 
 /**
@@ -128,7 +115,7 @@ function checkAuth() {
 function updateUserUI() {
     const user = getUser();
     if (user) {
-        $('#user-name-display').text(user.username);
+        $('#user-name-display').text(user.nickname || user.username);
         $('#user-role-display').text(user.role === 'admin' ? '管理员' : '普通用户');
         
         // 控制管理员菜单显示
@@ -144,8 +131,13 @@ function updateUserUI() {
  * 注销
  */
 function logout() {
-    clearAuth();
-    window.location.href = '/login';
+    $.ajax({
+        url: API_BASE_URL + '/auth/logout',
+        method: 'POST'
+    }).always(function() {
+        clearAuth();
+        window.location.href = '/login';
+    });
 }
 
 /**
@@ -182,9 +174,13 @@ function initTooltips() {
  */
 function showMessage(message, type = 'info', duration = 5000) {
     const alertId = 'alert-' + Date.now();
+    type = type === 'error' ? 'danger' : type;
+    if (!['success', 'danger', 'warning', 'info'].includes(type)) {
+        type = 'info';
+    }
     const alertHtml = `
         <div id="${alertId}" class="alert alert-${type} alert-dismissible fade show" role="alert">
-            <i class="fas fa-${getIconForType(type)}"></i> ${message}
+            <i class="fas fa-${getIconForType(type)}"></i> ${escapeHtml(message)}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     `;
@@ -282,12 +278,6 @@ function apiRequest(url, method = 'GET', data = null, onSuccess = null, onError 
         dataType: 'json',
         headers: {}
     };
-    
-    // 添加Token
-    const token = getToken();
-    if (token) {
-        options.headers['Authorization'] = 'Bearer ' + token;
-    }
     
     if (data && (method === 'POST' || method === 'PUT')) {
         options.data = JSON.stringify(data);
@@ -530,4 +520,16 @@ function refreshPage() {
  */
 function goBack() {
     window.history.back();
+}
+/**
+ * Escape untrusted text before inserting it into an HTML template.
+ */
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }

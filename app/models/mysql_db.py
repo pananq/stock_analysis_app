@@ -102,19 +102,27 @@ class MySQLDB:
             # 创建stocks表（股票基础信息）
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS stocks (
-                    code VARCHAR(20) PRIMARY KEY,
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    code VARCHAR(20) NOT NULL,
+                    market VARCHAR(10) NOT NULL DEFAULT 'CN',
                     name VARCHAR(500) NOT NULL,
                     list_date DATE,
                     industry VARCHAR(200),
                     market_type VARCHAR(50),
+                    security_type VARCHAR(20) NOT NULL DEFAULT 'STOCK',
                     status VARCHAR(50) DEFAULT 'normal',
                     earliest_data_date DATE,
                     latest_data_date DATE,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    UNIQUE KEY uq_stocks_market_code_type
+                        (market, code, security_type),
+                    INDEX idx_stocks_code (code),
+                    INDEX idx_stocks_market (market),
                     INDEX idx_status (status),
                     INDEX idx_industry (industry),
                     INDEX idx_market_type (market_type),
+                    INDEX idx_security_type (security_type),
                     INDEX idx_earliest_data_date (earliest_data_date),
                     INDEX idx_latest_data_date (latest_data_date)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
@@ -141,6 +149,7 @@ class MySQLDB:
                 CREATE TABLE IF NOT EXISTS strategy_results (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     strategy_id INT NOT NULL,
+                    security_id BIGINT,
                     stock_code VARCHAR(20) NOT NULL,
                     stock_name VARCHAR(100),
                     trigger_date DATE NOT NULL,
@@ -153,7 +162,7 @@ class MySQLDB:
                     executed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (strategy_id) REFERENCES strategies(id) ON DELETE CASCADE,
-                    FOREIGN KEY (stock_code) REFERENCES stocks(code) ON DELETE CASCADE,
+                    INDEX idx_strategy_result_security_id (security_id),
                     INDEX idx_strategy_id (strategy_id),
                     INDEX idx_stock_code (stock_code),
                     INDEX idx_trigger_date (trigger_date),

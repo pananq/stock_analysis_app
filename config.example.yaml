@@ -8,12 +8,14 @@ api:
   debug: false
   
   # CORS配置
-  cors_origins: "*"
+  cors_origins:
+    - "http://localhost:8000"
+    - "http://127.0.0.1:8000"
   
   # SSL/TLS配置
   ssl_enabled: false  # 启用SSL（需要配置证书路径）
-  ssl_cert: "/data/home/aaronpan/stock-analysis-app/ssl/server.crt"
-  ssl_key: "/data/home/aaronpan/stock-analysis-app/ssl/server.key"
+  ssl_cert: "./ssl/server.crt"
+  ssl_key: "./ssl/server.key"
   
   # SSL配置说明：
   # 1. 自签名证书：使用 setup_ssl.sh 生成，适用于开发测试
@@ -34,12 +36,12 @@ web:
   
   # SSL/TLS配置
   ssl_enabled: false  # 启用SSL（需要配置证书路径）
-  ssl_cert: "/data/home/aaronpan/stock-analysis-app/ssl/server.crt"
-  ssl_key: "/data/home/aaronpan/stock-analysis-app/ssl/server.key"
+  ssl_cert: "./ssl/server.crt"
+  ssl_key: "./ssl/server.key"
 
 # 数据库配置
 database:
-  # 数据库类型：mysql 或 sqlite
+  # 当前运行时数据库类型
   type: mysql
   
   # MySQL配置
@@ -47,7 +49,7 @@ database:
     host: localhost
     port: 3306
     database: stock_analysis
-    user: saapp
+    username: saapp
     password: your_password
     charset: utf8mb4
     
@@ -58,10 +60,6 @@ database:
       timeout: 60       # 连接超时时间（秒）
       recycle: 1800     # 连接回收时间（秒）
   
-  # SQLite配置（备选）
-  sqlite:
-    path: ./data/stock_analysis.db
-
 # 数据源配置
 datasource:
   # 数据源类型：tushare 或 akshare
@@ -129,6 +127,10 @@ scheduler:
 auth:
   # JWT密钥（用于生成和验证token）
   secret_key: "your-jwt-secret-key-please-change-it"
+
+  # 首次初始化时使用；生产环境请通过 ADMIN_INITIAL_PASSWORD 注入，
+  # 创建完成后移除该环境变量。
+  initial_admin_password: ""
   
   # Token过期时间（小时）
   token_expire_hours: 24
@@ -152,6 +154,54 @@ performance:
 
 # MCP 服务配置
 mcp:
-  host: 0.0.0.0
+  host: 127.0.0.1
   port: 5002
   enabled: true
+  dns_rebinding_protection: true
+  allowed_hosts:
+    - "127.0.0.1:*"
+    - "localhost:*"
+
+# 港股/美股复用 AkShare 日线接口，无需额外密钥。
+global_markets:
+  providers:
+    - akshare
+    - akshare_sina
+    - yahoo
+  adjust: qfq
+  request_timeout: 30
+  cache_ttl: 300
+  cache_max_entries: 256
+
+# OpenAI-compatible Chat Completions API。
+# 密钥优先从项目目录 .env 中的 AI_API_KEY 读取。
+ai:
+  enabled: false
+  base_url: https://api.openai.com/v1
+  api_key: ""
+  model: gpt-4.1-mini
+  timeout: 60
+
+# SMTP 邮件日报。敏感信息建议写入项目目录 .env。
+notifications:
+  daily_report:
+    enabled: false
+    time: "20:00"
+    # 未配置 targets 时，使用下方 user_id + email.recipients。
+    user_id: 1
+    lookback_days: 90
+    # 多用户独立日报示例：
+    # targets:
+    #   - user_id: 1
+    #     recipients: ["owner@example.com"]
+    targets: []
+  email:
+    enabled: false
+    host: smtp.example.com
+    port: 587
+    use_ssl: false
+    starttls: true
+    username: ""
+    password: ""
+    from_address: reports@example.com
+    recipients: []

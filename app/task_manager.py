@@ -79,6 +79,29 @@ class BackgroundTask:
                 self.error = '任务已取消'
                 self.message = '任务已被取消'
                 logger.warning(f"任务 {self.task_id} ({self.task_name}) 已取消")
+            elif (
+                isinstance(self.result, dict)
+                and self.result.get('success') is False
+            ):
+                self.status = 'failed'
+                self.completed_at = datetime.now().strftime(
+                    '%Y-%m-%d %H:%M:%S'
+                )
+                market_errors = self.result.get('market_errors') or {}
+                detail = self.result.get('message') or self.result.get('error')
+                if not detail and market_errors:
+                    detail = '；'.join(
+                        f"{market}: {error}"
+                        for market, error in market_errors.items()
+                    )
+                self.error = detail or '任务返回失败结果'
+                self.message = f'任务失败: {self.error}'
+                logger.error(
+                    "任务 %s (%s) 返回失败结果: %s",
+                    self.task_id,
+                    self.task_name,
+                    self.error,
+                )
             else:
                 # 任务完成
                 self.status = 'completed'

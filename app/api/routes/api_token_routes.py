@@ -2,6 +2,7 @@
 API Token 管理路由
 """
 from flask import Blueprint, request, jsonify, g
+from app.api.responses import internal_error_response
 from app.services.api_token_service import get_api_token_service
 from app.utils import get_logger
 
@@ -19,7 +20,7 @@ def list_tokens():
         return jsonify({'success': True, 'data': tokens})
     except Exception as e:
         logger.error(f"列出 API Token 失败: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return internal_error_response()
 
 
 @api_token_bp.route('', methods=['POST'])
@@ -41,7 +42,7 @@ def create_token():
             return jsonify(result), 500
     except Exception as e:
         logger.error(f"创建 API Token 失败: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return internal_error_response()
 
 
 @api_token_bp.route('/<int:token_id>', methods=['DELETE'])
@@ -57,4 +58,4 @@ def revoke_token(token_id):
             return jsonify({'success': False, 'error': 'Token 不存在'}), 404
     except Exception as e:
         logger.error(f"撤销 API Token 失败: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return internal_error_response()

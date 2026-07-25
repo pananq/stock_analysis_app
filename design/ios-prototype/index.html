@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#082b27">
+  <title>股海罗盘 · iOS 页面原型</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="stage">
+    <section class="phone" aria-label="股海罗盘 iOS 原型">
+      <div class="dynamic-island" aria-hidden="true"></div>
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="status-icons" aria-hidden="true">
+          <span class="signal">▮▮▮▮</span><span>⌁</span><span class="battery"></span>
+        </div>
+      </div>
+
+      <div class="app-viewport">
+        <section class="screen active" data-screen="report">
+          <header class="topbar hero-topbar">
+            <div class="brand">
+              <span class="brand-mark">罗</span>
+              <div><small>股海罗盘</small><strong>今日投资简报</strong></div>
+            </div>
+            <button class="icon-button" aria-label="消息通知" data-toast="暂无未读消息">
+              <svg><use href="#bell"></use></svg><i></i>
+            </button>
+          </header>
+
+          <div class="scroll-area report-scroll">
+            <div class="date-row">
+              <span>7月25日 · 周六</span>
+              <span class="market-status"><i></i> 市场已收盘</span>
+            </div>
+
+            <article class="brief-card">
+              <div class="brief-glow"></div>
+              <div class="brief-head">
+                <span class="eyebrow">AI DAILY BRIEF</span>
+                <span class="read-time">3 分钟阅读</span>
+              </div>
+              <h1>震荡中仍有结构性机会</h1>
+              <p>科技权重回暖，消费板块承压。你的自选中有 <b>2 个积极信号</b>，同时需留意腾讯控股的短期波动。</p>
+              <div class="brief-actions">
+                <button class="primary-button" data-open-detail>阅读完整分析 <span>→</span></button>
+                <button class="audio-button" data-toast="已加入稍后听">
+                  <svg><use href="#headphones"></use></svg>
+                </button>
+              </div>
+            </article>
+
+            <section class="section">
+              <div class="section-title">
+                <div><span class="eyebrow dark">YOUR SIGNALS</span><h2>自选异动</h2></div>
+                <button class="text-button" data-tab-jump="watchlist">查看全部</button>
+              </div>
+              <div class="signal-grid">
+                <article class="signal-card rise">
+                  <div class="signal-meta"><span>NVDA</span><span class="tag">趋势增强</span></div>
+                  <strong>+3.42%</strong>
+                  <p>放量突破 20 日均线</p>
+                  <svg class="spark" viewBox="0 0 120 38" aria-hidden="true"><path d="M2 33 C17 31 19 23 32 25 S50 13 61 19 S78 11 87 12 S101 2 118 4"/></svg>
+                </article>
+                <article class="signal-card fall">
+                  <div class="signal-meta"><span>00700</span><span class="tag">注意风险</span></div>
+                  <strong>-1.86%</strong>
+                  <p>短线跌破支撑位</p>
+                  <svg class="spark" viewBox="0 0 120 38" aria-hidden="true"><path d="M2 4 C18 8 24 4 35 13 S52 9 63 20 S82 16 91 25 S106 29 118 34"/></svg>
+                </article>
+              </div>
+            </section>
+
+            <section class="section">
+              <div class="section-title compact">
+                <h2>市场温度</h2><span class="updated">收盘数据 · 16:10</span>
+              </div>
+              <div class="market-strip">
+                <div><span>上证</span><b>3,591.12</b><em class="up">+0.52%</em></div>
+                <div><span>恒生</span><b>25,388.35</b><em class="down">-0.33%</em></div>
+                <div><span>纳指</span><b>21,057.96</b><em class="up">+0.28%</em></div>
+              </div>
+            </section>
+
+            <section class="section insight-section">
+              <div class="section-title compact"><h2>今日关注</h2><span class="ai-chip">AI 精选</span></div>
+              <article class="insight-row">
+                <span class="rank">01</span>
+                <div><h3>AI 算力链情绪回升</h3><p>英伟达带动半导体板块，关注成交量能否延续。</p></div>
+                <button data-toast="已收藏该观点">＋</button>
+              </article>
+              <article class="insight-row">
+                <span class="rank">02</span>
+                <div><h3>港股互联网短期承压</h3><p>南向资金保持净流入，重要支撑位仍有效。</p></div>
+                <button data-toast="已收藏该观点">＋</button>
+              </article>
+            </section>
+            <p class="disclaimer">内容由历史行情与 AI 模型生成，不构成投资建议。</p>
+          </div>
+        </section>
+
+        <section class="screen" data-screen="watchlist">
+          <header class="topbar">
+            <div><small class="eyebrow dark">WATCHLIST</small><h1>我的自选</h1></div>
+            <button class="add-button" data-add-stock><span>＋</span> 添加</button>
+          </header>
+          <div class="scroll-area">
+            <div class="watch-summary">
+              <div><span>今日上涨</span><strong class="up">3</strong></div>
+              <i></i>
+              <div><span>今日下跌</span><strong class="down">2</strong></div>
+              <i></i>
+              <div><span>待关注</span><strong>2</strong></div>
+            </div>
+            <div class="filter-row" role="tablist" aria-label="自选分组">
+              <button class="filter active">全部 5</button>
+              <button class="filter">持仓 2</button>
+              <button class="filter">观察 3</button>
+            </div>
+            <div class="list-head"><span>股票 / 最新价</span><span>今日涨跌</span></div>
+            <div class="stock-list">
+              <button class="stock-row" data-stock="贵州茅台">
+                <span class="stock-logo cn">茅</span>
+                <span class="stock-name"><b>贵州茅台</b><small>600519 · 沪市</small></span>
+                <span class="price"><b>1,432.80</b><small>14:59</small></span>
+                <span class="change rise-bg"><b>+1.28%</b><small>+18.10</small></span>
+              </button>
+              <button class="stock-row" data-stock="腾讯控股">
+                <span class="stock-logo hk">腾</span>
+                <span class="stock-name"><b>腾讯控股</b><small>00700 · 港股</small></span>
+                <span class="price"><b>538.50</b><small>16:08</small></span>
+                <span class="change fall-bg"><b>-1.86%</b><small>-10.20</small></span>
+              </button>
+              <button class="stock-row" data-stock="宁德时代">
+                <span class="stock-logo cn">宁</span>
+                <span class="stock-name"><b>宁德时代</b><small>300750 · 深市</small></span>
+                <span class="price"><b>276.16</b><small>15:00</small></span>
+                <span class="change rise-bg"><b>+0.74%</b><small>+2.03</small></span>
+              </button>
+              <button class="stock-row" data-stock="英伟达">
+                <span class="stock-logo us">N</span>
+                <span class="stock-name"><b>英伟达</b><small>NVDA · 纳斯达克</small></span>
+                <span class="price"><b>173.42</b><small>04:00</small></span>
+                <span class="change rise-bg"><b>+3.42%</b><small>+5.74</small></span>
+              </button>
+              <button class="stock-row" data-stock="苹果">
+                <span class="stock-logo us apple">●</span>
+                <span class="stock-name"><b>苹果</b><small>AAPL · 纳斯达克</small></span>
+                <span class="price"><b>213.88</b><small>04:00</small></span>
+                <span class="change fall-bg"><b>-0.62%</b><small>-1.34</small></span>
+              </button>
+            </div>
+            <div class="tip-card">
+              <svg><use href="#sparkles"></use></svg>
+              <div><b>让自选更聪明</b><p>收盘后自动分析趋势、风险和关键价位。</p></div>
+              <button data-tab-jump="profile">设置</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="screen" data-screen="market">
+          <header class="topbar">
+            <div><small class="eyebrow dark">MARKETS</small><h1>市场</h1></div>
+            <button class="icon-button pale" data-toast="搜索功能将在下一版本开放" aria-label="搜索">
+              <svg><use href="#search"></use></svg>
+            </button>
+          </header>
+          <div class="scroll-area">
+            <div class="filter-row market-tabs">
+              <button class="filter active">A 股</button><button class="filter">港股</button><button class="filter">美股</button>
+            </div>
+            <section class="index-card">
+              <div class="index-top">
+                <div><span>上证指数</span><strong>3,591.12</strong><em class="up">+18.62　+0.52%</em></div>
+                <span class="market-status"><i></i> 已收盘</span>
+              </div>
+              <svg class="index-chart" viewBox="0 0 340 108" preserveAspectRatio="none" aria-label="上证指数分时图">
+                <defs><linearGradient id="area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e95f4d" stop-opacity=".3"/><stop offset="1" stop-color="#e95f4d" stop-opacity="0"/></linearGradient></defs>
+                <path class="area" d="M0 90 C24 76 34 79 55 66 S92 69 111 50 S139 58 162 41 S203 52 228 29 S275 39 298 23 S326 19 340 12 L340 108 L0 108Z"/>
+                <path d="M0 90 C24 76 34 79 55 66 S92 69 111 50 S139 58 162 41 S203 52 228 29 S275 39 298 23 S326 19 340 12"/>
+              </svg>
+              <div class="chart-labels"><span>09:30</span><span>11:30</span><span>15:00</span></div>
+            </section>
+            <section class="section">
+              <div class="section-title compact"><h2>主要指数</h2><span class="updated">7月25日</span></div>
+              <div class="index-list">
+                <div><span><b>深证成指</b><small>10,918.31</small></span><em class="up">+0.81%</em></div>
+                <div><span><b>创业板指</b><small>2,337.81</small></span><em class="up">+1.04%</em></div>
+                <div><span><b>科创 50</b><small>1,042.66</small></span><em class="down">-0.16%</em></div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="screen" data-screen="profile">
+          <header class="profile-header">
+            <button class="icon-button transparent" data-toast="设置已是最新" aria-label="设置">
+              <svg><use href="#settings"></use></svg>
+            </button>
+            <div class="avatar">P<span></span></div>
+            <h1>盘中人</h1>
+            <p>pananq@example.com</p>
+          </header>
+          <div class="scroll-area profile-scroll">
+            <article class="subscription-card">
+              <div class="premium-icon">✦</div>
+              <div><small>罗盘 PRO</small><h2>解锁完整 AI 投研能力</h2><p>深度日报 · 个股解读 · 无限自选</p></div>
+              <button data-subscribe>立即订阅</button>
+            </article>
+            <div class="stats-card">
+              <div><b>5</b><span>自选股票</span></div><i></i>
+              <div><b>18</b><span>已读日报</span></div><i></i>
+              <div><b>12</b><span>收藏观点</span></div>
+            </div>
+            <section class="settings-group">
+              <h2>日报与提醒</h2>
+              <div class="setting-row">
+                <span class="setting-icon coral"><svg><use href="#mail"></use></svg></span>
+                <div><b>每日分析报告</b><small>交易日 18:30 生成</small></div>
+                <label class="switch"><input type="checkbox" checked><span></span></label>
+              </div>
+              <button class="setting-row" data-toast="邮件接收：pananq@example.com">
+                <span class="setting-icon teal"><svg><use href="#bell"></use></svg></span>
+                <div><b>推送与邮件</b><small>已开启 2 项通知</small></div><span class="chevron">›</span>
+              </button>
+            </section>
+            <section class="settings-group">
+              <h2>账户</h2>
+              <button class="setting-row" data-toast="账户资料页将在下一版本开放">
+                <span class="setting-icon gold"><svg><use href="#user"></use></svg></span>
+                <div><b>个人资料</b><small>昵称、邮箱与安全设置</small></div><span class="chevron">›</span>
+              </button>
+              <button class="setting-row" data-toast="已使用系统外观">
+                <span class="setting-icon navy"><svg><use href="#moon"></use></svg></span>
+                <div><b>外观</b><small>跟随系统</small></div><span class="chevron">›</span>
+              </button>
+            </section>
+            <button class="logout" data-toast="演示模式下无法退出">退出登录</button>
+            <p class="version">股海罗盘 v1.0 · 数据仅供参考</p>
+          </div>
+        </section>
+      </div>
+
+      <nav class="tabbar" aria-label="主导航">
+        <button class="tab active" data-tab="report"><svg><use href="#newspaper"></use></svg><span>日报</span></button>
+        <button class="tab" data-tab="watchlist"><svg><use href="#star"></use></svg><span>自选</span></button>
+        <button class="tab" data-tab="market"><svg><use href="#chart"></use></svg><span>市场</span></button>
+        <button class="tab" data-tab="profile"><svg><use href="#user"></use></svg><span>我的</span></button>
+      </nav>
+      <div class="home-indicator" aria-hidden="true"></div>
+
+      <div class="sheet-backdrop" data-sheet-close></div>
+      <section class="bottom-sheet add-sheet" aria-modal="true" role="dialog" aria-labelledby="add-title">
+        <div class="sheet-handle"></div>
+        <div class="sheet-head"><div><small class="eyebrow dark">ADD SECURITY</small><h2 id="add-title">添加自选</h2></div><button data-sheet-close>×</button></div>
+        <label class="search-input"><svg><use href="#search"></use></svg><input id="stock-search" placeholder="股票名称或代码" autocomplete="off"></label>
+        <div class="market-selector"><button class="active">A 股</button><button>港股</button><button>美股</button></div>
+        <p class="suggestion-label">热门股票</p>
+        <div class="suggestions">
+          <button data-add-name="比亚迪"><span class="stock-logo cn">比</span><span><b>比亚迪</b><small>002594 · 深市</small></span><i>＋</i></button>
+          <button data-add-name="东方财富"><span class="stock-logo cn">东</span><span><b>东方财富</b><small>300059 · 深市</small></span><i>＋</i></button>
+          <button data-add-name="中芯国际"><span class="stock-logo cn">芯</span><span><b>中芯国际</b><small>688981 · 沪市</small></span><i>＋</i></button>
+        </div>
+      </section>
+
+      <section class="bottom-sheet subscribe-sheet" aria-modal="true" role="dialog" aria-labelledby="subscribe-title">
+        <div class="sheet-handle"></div>
+        <button class="sheet-close-float" data-sheet-close>×</button>
+        <div class="subscribe-hero"><span>✦</span><small>股海罗盘 PRO</small><h2 id="subscribe-title">让每一天的决策<br>更有依据</h2><p>AI 深度日报、个股风险预警与关键价位提醒</p></div>
+        <div class="plan active-plan"><span><b>连续包年</b><small>低至 ¥8.25/月</small></span><strong>¥99<small>/年</small></strong><i>推荐</i></div>
+        <div class="plan"><span><b>连续包月</b><small>随时可取消</small></span><strong>¥15<small>/月</small></strong></div>
+        <button class="subscribe-cta" data-complete-subscribe>开始 7 天免费试用</button>
+        <p class="subscription-note">试用期结束后自动续订，可随时在 App Store 取消。</p>
+      </section>
+
+      <section class="detail-overlay" aria-label="日报详情">
+        <header><button data-close-detail>←</button><b>今日投资简报</b><button data-toast="分享功能将在下一版本开放">↗</button></header>
+        <div class="detail-scroll">
+          <span class="eyebrow dark">2026 · 07 · 25</span>
+          <h1>震荡中仍有<br>结构性机会</h1>
+          <p class="lead">科技权重回暖，但风险偏好并未全面扩散。今日更适合聚焦已有趋势，而非追逐新热点。</p>
+          <div class="detail-divider"><span>核心结论</span></div>
+          <h2>你的组合偏强于大盘</h2>
+          <p>5 只自选股中 3 只上涨。英伟达放量突破 20 日均线，是最明确的积极信号；腾讯控股短线转弱，需要关注 528 港元附近支撑。</p>
+          <blockquote>策略建议：保留强趋势仓位，弱势标的等待支撑确认，不在盘中情绪高点加仓。</blockquote>
+          <h2>明日观察清单</h2>
+          <ul><li><b>NVDA</b> — 量能是否保持在 20 日均量之上</li><li><b>00700</b> — 528 港元支撑是否有效</li><li><b>300750</b> — 能否突破 280 元压力位</li></ul>
+          <p class="disclaimer">此分析由历史数据和 AI 模型生成，不构成投资建议。</p>
+        </div>
+      </section>
+
+      <div class="toast" role="status"></div>
+    </section>
+
+    <aside class="prototype-note">
+      <span>INTERACTIVE PROTOTYPE</span>
+      <h2>股海罗盘<br>iOS 页面设计</h2>
+      <p>点击底部 Tab、添加股票、订阅卡片和日报阅读按钮，可体验主要流程。</p>
+      <div><i></i><span>390 × 844 pt<br>iPhone 15 基准画板</span></div>
+    </aside>
+  </main>
+
+  <svg class="svg-sprite" aria-hidden="true">
+    <symbol id="newspaper" viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/></symbol>
+    <symbol id="star" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/></symbol>
+    <symbol id="chart" viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M7 15l4-5 3 3 5-7"/></symbol>
+    <symbol id="user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 21c.7-4 3-6 7-6s6.3 2 7 6"/></symbol>
+    <symbol id="bell" viewBox="0 0 24 24"><path d="M6 17h12l-1.5-2v-4.5A4.5 4.5 0 0 0 12 6a4.5 4.5 0 0 0-4.5 4.5V15zM10 19a2.2 2.2 0 0 0 4 0M10 4h4"/></symbol>
+    <symbol id="headphones" viewBox="0 0 24 24"><path d="M4 14v-2a8 8 0 0 1 16 0v2M4 14h4v6H6a2 2 0 0 1-2-2zM20 14h-4v6h2a2 2 0 0 0 2-2z"/></symbol>
+    <symbol id="sparkles" viewBox="0 0 24 24"><path d="m12 2 1.3 4.7L18 8l-4.7 1.3L12 14l-1.3-4.7L6 8l4.7-1.3zM19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8zM5 14l.7 1.8 1.8.7-1.8.7L5 19l-.7-1.8-1.8-.7 1.8-.7z"/></symbol>
+    <symbol id="search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></symbol>
+    <symbol id="settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1a8 8 0 0 0-1.7-1L14.5 3h-5l-.4 3a8 8 0 0 0-1.7 1L5 6.1 3 9.5 5.1 11a7 7 0 0 0 0 2L3 14.5l2 3.4 2.4-1a8 8 0 0 0 1.7 1l.4 3h5l.4-3a8 8 0 0 0 1.7-1l2.4 1 2-3.4-2.1-1.5a7 7 0 0 0 .1-1Z"/></symbol>
+    <symbol id="mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></symbol>
+    <symbol id="moon" viewBox="0 0 24 24"><path d="M19 15.5A8 8 0 0 1 8.5 5 8 8 0 1 0 19 15.5Z"/></symbol>
+  </svg>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -5,12 +5,46 @@
 """
 
 from flask import Blueprint, request, jsonify
-from app.services import get_stock_service, get_market_data_service
+from app.services import (
+    get_market_data_service,
+    get_security_market_data_service,
+    get_stock_service,
+)
+from app.services.market_identity import SUPPORTED_MARKETS
+from app.services.data_task_coordinator import (
+    DataTaskBusyError,
+    create_exclusive_background_task,
+)
+from app.services.data_task_jobs import (
+    execute_recent_update,
+    execute_stock_list_import,
+    execute_stock_list_update,
+)
+from app.task_manager import get_task_manager
+from app.api.validation import parse_int, validate_date_range
 from app.utils import get_logger
 
 logger = get_logger(__name__)
 
 stock_bp = Blueprint('stock', __name__)
+
+
+def _get_history_frame(
+    stock_code,
+    start_date,
+    end_date,
+    limit,
+    market,
+    security_type,
+):
+    return get_security_market_data_service().get_daily_data(
+        stock_code,
+        market=market,
+        security_type=security_type,
+        start_date=start_date,
+        end_date=end_date,
+        limit=limit,
+    )
 
 
 @stock_bp.route('', methods=['GET'])
@@ -19,29 +53,42 @@ def list_stocks():
     获取股票列表
     
     Query参数:
-        market: 市场类型（SH/SZ/BJ）
+        market: 市场（CN/HK/US）
         keyword: 搜索关键词（股票代码或名称）
         limit: 返回记录数（默认100）
         offset: 偏移量（默认0）
-        
+
     Returns:
         股票列表
     """
     try:
         market = request.args.get('market')
+        security_type = request.args.get('security_type')
+        industry = request.args.get('industry')
         keyword = request.args.get('keyword')
-        limit = int(request.args.get('limit', 100))
-        offset = int(request.args.get('offset', 0))
-        
+        limit = parse_int(
+            request.args.get('limit'), 'limit', 100, minimum=1, maximum=1000
+        )
+        offset = parse_int(
+            request.args.get('offset'), 'offset', 0, minimum=0
+        )
+
         stock_service = get_stock_service()
         stocks = stock_service.list_stocks(
             market=market,
             keyword=keyword,
+            security_type=security_type,
+            industry=industry,
             limit=limit,
             offset=offset
         )
         
-        total = stock_service.count_stocks(market=market, keyword=keyword)
+        total = stock_service.count_stocks(
+            market=market,
+            keyword=keyword,
+            security_type=security_type,
+            industry=industry,
+        )
         
         return jsonify({
             'success': True,
@@ -54,6 +101,8 @@ def list_stocks():
             }
         })
         
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"获取股票列表失败: {e}")
         return jsonify({
@@ -75,7 +124,11 @@ def get_stock(stock_code):
     """
     try:
         stock_service = get_stock_service()
-        stock = stock_service.get_stock(stock_code)
+        stock = stock_service.get_stock(
+            stock_code,
+            market=request.args.get('market'),
+            security_type=request.args.get('security_type'),
+        )
         
         if stock:
             # 添加兼容字段，同时支持 name/code 和 stock_name/stock_code
@@ -94,6 +147,8 @@ def get_stock(stock_code):
                 'error': '股票不存在'
             }), 404
             
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"获取股票详情失败: {e}")
         return jsonify({
@@ -121,14 +176,18 @@ def get_stock_history_data(stock_code):
     try:
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
-        limit = int(request.args.get('limit', 100))
-        
-        market_data_service = get_market_data_service()
-        df = market_data_service.get_stock_data(
-            code=stock_code,
-            start_date=start_date,
-            end_date=end_date,
-            limit=limit
+        limit = parse_int(
+            request.args.get('limit'), 'limit', 100, minimum=1, maximum=5000
+        )
+        validate_date_range(start_date, end_date)
+
+        df = _get_history_frame(
+            stock_code,
+            start_date,
+            end_date,
+            limit,
+            request.args.get('market', 'CN'),
+            request.args.get('security_type', 'STOCK'),
         )
         
         # 将DataFrame转换为字典列表，并映射字段名以兼容前端
@@ -151,6 +210,8 @@ def get_stock_history_data(stock_code):
             'count': len(data)
         })
         
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"获取历史数据失败: {e}")
         return jsonify({
@@ -178,14 +239,18 @@ def get_stock_daily_data(stock_code):
     try:
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
-        limit = int(request.args.get('limit', 100))
-        
-        market_data_service = get_market_data_service()
-        df = market_data_service.get_stock_data(
-            code=stock_code,
-            start_date=start_date,
-            end_date=end_date,
-            limit=limit
+        limit = parse_int(
+            request.args.get('limit'), 'limit', 100, minimum=1, maximum=5000
+        )
+        validate_date_range(start_date, end_date)
+
+        df = _get_history_frame(
+            stock_code,
+            start_date,
+            end_date,
+            limit,
+            request.args.get('market', 'CN'),
+            request.args.get('security_type', 'STOCK'),
         )
         
         # 将DataFrame转换为字典列表，并映射字段名以兼容前端
@@ -208,6 +273,8 @@ def get_stock_daily_data(stock_code):
             'count': len(data)
         })
         
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"获取日线数据失败: {e}")
         return jsonify({
@@ -228,8 +295,16 @@ def get_stock_latest_data(stock_code):
         最新数据
     """
     try:
-        market_data_service = get_market_data_service()
-        data = market_data_service.get_latest_data(stock_code)
+        frame = get_security_market_data_service().get_daily_data(
+            stock_code,
+            market=request.args.get('market', 'CN'),
+            security_type=request.args.get('security_type', 'STOCK'),
+            limit=1,
+        )
+        data = None
+        if not frame.empty:
+            latest = frame.astype(object).where(frame.notna(), None).iloc[-1]
+            data = latest.to_dict()
         
         if data:
             return jsonify({
@@ -242,6 +317,8 @@ def get_stock_latest_data(stock_code):
                 'error': '没有数据'
             }), 404
             
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"获取最新数据失败: {e}")
         return jsonify({
@@ -259,24 +336,23 @@ def update_stock_list():
         更新结果
     """
     try:
-        stock_service = get_stock_service()
-        result = stock_service.update_stock_list()
-        
-        if result['success']:
-            return jsonify({
-                'success': True,
-                'data': {
-                    'added': result['new_count'],
-                    'updated': result['update_count']
-                },
-                'message': '股票列表更新成功'
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': result.get('error', '更新失败')
-            }), 500
-            
+        task_id = create_exclusive_background_task(
+            get_task_manager(),
+            task_type='stock_list_update',
+            task_name='证券目录更新（CN/HK/US）',
+            func=execute_stock_list_update,
+        )
+        return jsonify({
+            'success': True,
+            'task_id': task_id,
+            'message': '证券目录更新任务已启动',
+        })
+    except DataTaskBusyError as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'active_task': e.active_task,
+        }), 409
     except Exception as e:
         logger.error(f"更新股票列表失败: {e}")
         return jsonify({
@@ -298,25 +374,34 @@ def update_market_data():
     """
     try:
         data = request.get_json() or {}
-        days = int(data.get('days', 5))
+        days = parse_int(
+            data.get('days'), 'days', 5, minimum=1, maximum=365
+        )
         
-        market_data_service = get_market_data_service()
-        result = market_data_service.incremental_update(days=days)
-        
-        if result['success']:
-            return jsonify({
-                'success': True,
-                'data': {
-                    'updated_count': result['updated_count']
-                },
-                'message': '行情数据更新成功'
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': result.get('error', '更新失败')
-            }), 500
-            
+        task_id = create_exclusive_background_task(
+            get_task_manager(),
+            task_type='data_update',
+            task_name=f'跨市场行情更新（CN/HK/US，最近{days}天）',
+            func=execute_recent_update,
+            kwargs={
+                'days': days,
+                'only_existing': False,
+                'markets': list(SUPPORTED_MARKETS),
+            },
+        )
+        return jsonify({
+            'success': True,
+            'task_id': task_id,
+            'message': 'CN/HK/US 行情数据更新任务已启动',
+        })
+    except DataTaskBusyError as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'active_task': e.active_task,
+        }), 409
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"更新行情数据失败: {e}")
         return jsonify({
@@ -339,7 +424,9 @@ def search_stocks():
     """
     try:
         keyword = request.args.get('q', '')
-        limit = int(request.args.get('limit', 20))
+        limit = parse_int(
+            request.args.get('limit'), 'limit', 20, minimum=1, maximum=100
+        )
         
         if not keyword:
             return jsonify({
@@ -356,6 +443,8 @@ def search_stocks():
             'count': len(stocks)
         })
         
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"搜索股票失败: {e}")
         return jsonify({
@@ -374,26 +463,23 @@ def import_stock_list():
         导入结果
     """
     try:
-        stock_service = get_stock_service()
-        result = stock_service.fetch_and_save_stock_list()
-        
-        if result['success']:
-            return jsonify({
-                'success': True,
-                'data': {
-                    'total': result['total'],
-                    'success_count': result['success_count'],
-                    'fail_count': result['fail_count'],
-                    'duration': result['duration']
-                },
-                'message': '股票列表导入成功'
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': result.get('message', '导入失败')
-            }), 500
-            
+        task_id = create_exclusive_background_task(
+            get_task_manager(),
+            task_type='stock_list_import',
+            task_name='证券目录导入（CN/HK/US）',
+            func=execute_stock_list_import,
+        )
+        return jsonify({
+            'success': True,
+            'task_id': task_id,
+            'message': '证券目录导入任务已启动',
+        })
+    except DataTaskBusyError as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'active_task': e.active_task,
+        }), 409
     except Exception as e:
         logger.error(f"导入股票列表失败: {e}")
         return jsonify({
@@ -416,21 +502,31 @@ def get_stock_stats():
         
         # 获取股票数量统计
         total_stocks = stock_service.count_stocks()
-        sh_stocks = stock_service.count_stocks(market='SH')
-        sz_stocks = stock_service.count_stocks(market='SZ')
-        bj_stocks = stock_service.count_stocks(market='BJ')
+        cn_stocks = stock_service.count_stocks(market='CN')
+        hk_stocks = stock_service.count_stocks(market='HK')
+        us_stocks = stock_service.count_stocks(market='US')
+        stock_count = stock_service.count_stocks(security_type='STOCK')
+        etf_count = stock_service.count_stocks(security_type='ETF')
+        fund_count = stock_service.count_stocks(security_type='FUND')
+        index_count = stock_service.count_stocks(security_type='INDEX')
         
         # 获取行情数据统计
-        data_stats = market_data_service.get_data_stats()
+        data_stats = market_data_service.get_data_statistics()
         
         return jsonify({
             'success': True,
             'data': {
                 'stocks': {
                     'total': total_stocks,
-                    'sh': sh_stocks,
-                    'sz': sz_stocks,
-                    'bj': bj_stocks
+                    'cn': cn_stocks,
+                    'hk': hk_stocks,
+                    'us': us_stocks
+                },
+                'security_types': {
+                    'stock': stock_count,
+                    'etf': etf_count,
+                    'fund': fund_count,
+                    'index': index_count,
                 },
                 'market_data': data_stats
             }

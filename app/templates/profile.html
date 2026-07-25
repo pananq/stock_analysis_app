@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}个人资料 - 股海罗盘{% endblock %}
+
+{% block content %}
+<section class="page-hero profile-hero">
+    <div>
+        <span class="eyebrow">PROFILE</span>
+        <h1><i class="fas fa-id-card"></i> 个人资料</h1>
+        <p>维护你的显示名称和每日日报收件邮箱。</p>
+    </div>
+    <div class="profile-email-state" id="profile-email-state">
+        <i class="fas fa-envelope-open-text"></i>
+        <span>正在读取邮箱状态</span>
+    </div>
+</section>
+
+<div class="profile-layout">
+    <section class="surface-card profile-card">
+        <div class="section-heading">
+            <div>
+                <span class="eyebrow">ACCOUNT</span>
+                <h2>账户信息</h2>
+            </div>
+        </div>
+        <form id="profile-form" novalidate>
+            <div class="mb-4">
+                <label for="profile-username" class="form-label">用户名</label>
+                <input type="text" class="form-control" id="profile-username" readonly>
+                <div class="form-text">用户名是登录凭证，暂不支持修改。</div>
+            </div>
+            <div class="mb-4">
+                <label for="profile-nickname" class="form-label">个人昵称</label>
+                <input type="text" class="form-control" id="profile-nickname"
+                       maxlength="50" placeholder="输入你希望展示的昵称">
+                <div class="form-text">留空时，导航栏仍显示用户名。</div>
+            </div>
+            <div class="mb-4">
+                <label for="profile-email" class="form-label">日报收件邮箱</label>
+                <input type="email" class="form-control" id="profile-email"
+                       maxlength="254" autocomplete="email"
+                       placeholder="name@example.com">
+                <div class="form-text">定时生成的个人关注列表日报会发送到这里。</div>
+            </div>
+            <div class="profile-report-toggle mb-4">
+                <div>
+                    <label class="form-check-label" for="daily-report-enabled">
+                        开启邮件日报
+                    </label>
+                    <div class="form-text" id="daily-report-help">
+                        配置有效邮箱后方可开启。
+                    </div>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox"
+                           role="switch" id="daily-report-enabled" disabled>
+                </div>
+            </div>
+            <div class="profile-actions">
+                <button type="submit" class="btn btn-primary" id="profile-save">
+                    <i class="fas fa-floppy-disk me-2"></i>保存资料
+                </button>
+            </div>
+        </form>
+    </section>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const form = document.getElementById('profile-form');
+    const saveButton = document.getElementById('profile-save');
+
+    function setEmailState(email, enabled) {
+        const state = document.getElementById('profile-email-state');
+        state.classList.toggle('is-ready', Boolean(email && enabled));
+        state.querySelector('span').textContent = !email
+            ? '尚未配置个人日报邮箱'
+            : (enabled ? '邮件日报已开启' : '邮件日报未开启');
+    }
+
+    function syncReportToggle() {
+        const email = $('#profile-email').val().trim();
+        const toggle = document.getElementById('daily-report-enabled');
+        toggle.disabled = !email;
+        if (!email) toggle.checked = false;
+        $('#daily-report-help').text(email
+            ? '开启后，系统会按计划发送你的个人关注列表日报。'
+            : '配置有效邮箱后方可开启。');
+        setEmailState(email, toggle.checked);
+    }
+
+    function populate(user) {
+        $('#profile-username').val(user.username || '');
+        $('#profile-nickname').val(user.nickname || '');
+        $('#profile-email').val(user.email || '');
+        $('#daily-report-enabled').prop(
+            'checked',
+            Boolean(user.daily_report_enabled)
+        );
+        syncReportToggle();
+    }
+
+    $('#profile-email').on('input', syncReportToggle);
+    $('#daily-report-enabled').on('change', syncReportToggle);
+
+    apiRequest('/auth/profile', 'GET', null, function(response) {
+        populate(response.user);
+    });
+
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        saveButton.disabled = true;
+        saveButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>保存中';
+        apiRequest('/auth/profile', 'PUT', {
+            nickname: $('#profile-nickname').val().trim(),
+            email: $('#profile-email').val().trim(),
+            daily_report_enabled: $('#daily-report-enabled').prop('checked')
+        }, function(response) {
+            populate(response.user);
+            setUser(response.user);
+            showMessage(response.message || '个人资料已保存', 'success');
+            saveButton.disabled = false;
+            saveButton.innerHTML = '<i class="fas fa-floppy-disk me-2"></i>保存资料';
+        }, function() {
+            saveButton.disabled = false;
+            saveButton.innerHTML = '<i class="fas fa-floppy-disk me-2"></i>保存资料';
+        });
+    });
+})();
+</script>
+{% endblock %}

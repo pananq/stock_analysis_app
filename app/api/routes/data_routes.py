@@ -8,112 +8,23 @@ from flask import Blueprint, request, jsonify
 from app.services import get_market_data_service
 from app.task_manager import get_task_manager
 from app.models.database_factory import get_database
-from app.services.market_data_service import get_market_data_service
+from app.api.validation import parse_int, validate_date_range
+from app.api.responses import internal_error_response
+from app.services.market_identity import SUPPORTED_MARKETS
+from app.services.data_task_coordinator import (
+    DataTaskBusyError,
+    create_exclusive_background_task,
+    get_data_task_coordinator,
+)
+from app.services.data_task_jobs import (
+    execute_full_import as execute_full_import_job,
+    execute_recent_update as execute_recent_update_job,
+)
 from app.utils import get_logger, get_config
 
 logger = get_logger(__name__)
 
 data_bp = Blueprint('data', __name__)
-
-
-def _execute_full_import(progress_callback=None, **kwargs):
-    """执行全量导入的包装函数"""
-    from app.scheduler import get_task_scheduler
-    
-    scheduler = get_task_scheduler()
-    job_log_id = scheduler._log_job_start('data_import', '全量数据导入')
-    
-    # 创建包装的进度回调函数，用于记录详细结果
-    def wrapped_progress_callback(progress, message, **extra_data):
-        # 调用原始的进度回调
-        if progress_callback:
-            progress_callback(progress, message)
-        
-        # 记录详细结果
-        if job_log_id and extra_data.get('stock_code'):
-            detail_type = 'stock_import_success' if extra_data.get('success') else 'stock_import_failed'
-            scheduler.log_task_detail(
-                job_log_id=job_log_id,
-                task_type='data_import',
-                detail_type=detail_type,
-                stock_code=extra_data.get('stock_code'),
-                stock_name=extra_data.get('stock_name'),
-                detail_data={
-                    'records': extra_data.get('records', 0),
-                    'start_date': extra_data.get('start_date'),
-                    'end_date': extra_data.get('end_date'),
-                    'error': extra_data.get('error')
-                }
-            )
-    
-    try:
-        service = get_market_data_service()
-        result = service.import_all_history(
-            progress_callback=wrapped_progress_callback,
-            stop_event=kwargs.get('stop_event')
-        )
-        
-        # 记录任务完成
-        if result.get('success'):
-            message = f"成功: {result.get('success_count', 0)}, 失败: {result.get('fail_count', 0)}, 总记录: {result.get('total_records', 0)}"
-            scheduler._log_job_success('data_import', 0, message)
-        else:
-            scheduler._log_job_error('data_import', 0, result.get('message', '导入失败'))
-        
-        return result
-    except Exception as e:
-        scheduler._log_job_error('data_import', 0, str(e))
-        raise
-
-
-def _execute_incremental_update(progress_callback=None, **kwargs):
-    """执行增量更新的包装函数"""
-    from app.scheduler import get_task_scheduler
-    
-    scheduler = get_task_scheduler()
-    job_log_id = scheduler._log_job_start('data_update', '增量数据更新')
-    
-    # 创建包装的进度回调函数，用于记录详细结果
-    def wrapped_progress_callback(progress, message, **extra_data):
-        # 调用原始的进度回调
-        if progress_callback:
-            progress_callback(progress, message)
-        
-        # 记录详细结果
-        if job_log_id and extra_data.get('stock_code'):
-            detail_type = 'stock_update_success' if extra_data.get('success') else 'stock_update_failed'
-            scheduler.log_task_detail(
-                job_log_id=job_log_id,
-                task_type='data_update',
-                detail_type=detail_type,
-                stock_code=extra_data.get('stock_code'),
-                stock_name=extra_data.get('stock_name'),
-                detail_data={
-                    'records': extra_data.get('records', 0),
-                    'start_date': extra_data.get('start_date'),
-                    'end_date': extra_data.get('end_date'),
-                    'error': extra_data.get('error')
-                }
-            )
-    
-    try:
-        service = get_market_data_service()
-        result = service.update_recent_data(
-            progress_callback=wrapped_progress_callback,
-            stop_event=kwargs.get('stop_event')
-        )
-        
-        # 记录任务完成
-        if result.get('success'):
-            message = f"成功: {result.get('success_count', 0)}, 失败: {result.get('fail_count', 0)}, 总记录: {result.get('total_records', 0)}"
-            scheduler._log_job_success('data_update', 0, message)
-        else:
-            scheduler._log_job_error('data_update', 0, result.get('message', '更新失败'))
-        
-        return result
-    except Exception as e:
-        scheduler._log_job_error('data_update', 0, str(e))
-        raise
 
 
 @data_bp.route('/import', methods=['POST'])
@@ -135,30 +46,31 @@ def start_full_import():
         }
     """
     try:
-        # 检查是否已有运行中的导入任务
         task_manager = get_task_manager()
-        running_tasks = task_manager.list_tasks(status='running')
-        
-        if running_tasks:
-            running_task_names = [task['task_name'] for task in running_tasks if '导入' in task['task_name']]
-            if running_task_names:
-                logger.warning(f"已有运行中的导入任务: {running_task_names}")
-                return jsonify({
-                    'success': False,
-                    'error': f'已有运行中的导入任务: {running_task_names[0]}。请等待当前任务完成或取消后再启动新任务。'
-                }), 400
-        
         data = request.get_json() or {}
         start_date = data.get('start_date')
         end_date = data.get('end_date')
+        validate_date_range(start_date, end_date)
         limit = data.get('limit')
         skip = data.get('skip', 0)
+
+        if limit is not None:
+            limit = parse_int(limit, 'limit', minimum=1, maximum=100000)
+        skip = parse_int(skip, 'skip', 0, minimum=0)
         
         # 创建后台任务
-        task_id = task_manager.create_task(
-            task_name='全量数据导入',
-            func=_execute_full_import,
-            auto_start=True
+        task_id = create_exclusive_background_task(
+            task_manager,
+            task_type='data_import',
+            task_name='跨市场全量数据导入（CN/HK/US）',
+            func=execute_full_import_job,
+            kwargs={
+                'start_date': start_date,
+                'end_date': end_date,
+                'limit': limit,
+                'skip': skip,
+                'markets': list(SUPPORTED_MARKETS),
+            },
         )
         
         logger.info(f"启动全量导入任务: {task_id}")
@@ -166,9 +78,18 @@ def start_full_import():
         return jsonify({
             'success': True,
             'task_id': task_id,
+            'markets': list(SUPPORTED_MARKETS),
             'message': '全量导入任务已启动，请在后台执行'
         })
         
+    except DataTaskBusyError as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'active_task': e.active_task,
+        }), 409
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"启动全量导入失败: {e}")
         return jsonify({
@@ -184,7 +105,7 @@ def start_incremental_update():
     
     Request Body（可选）:
         days: 更新最近N天的数据（默认5）
-        only_existing: 是否只更新已有数据的股票（默认true）
+        only_existing: 必须为false，避免遗漏尚无行情的港美证券
     
     Returns:
         {
@@ -194,28 +115,39 @@ def start_incremental_update():
         }
     """
     try:
-        # 检查是否已有运行中的导入任务
         task_manager = get_task_manager()
-        running_tasks = task_manager.list_tasks(status='running')
-        
-        if running_tasks:
-            running_task_names = [task['task_name'] for task in running_tasks if '导入' in task['task_name'] or '更新' in task['task_name']]
-            if running_task_names:
-                logger.warning(f"已有运行中的数据任务: {running_task_names}")
-                return jsonify({
-                    'success': False,
-                    'error': f'已有运行中的数据任务: {running_task_names[0]}。请等待当前任务完成或取消后再启动新任务。'
-                }), 400
-        
         data = request.get_json() or {}
-        days = data.get('days', 5)
-        only_existing = data.get('only_existing', True)
+        days = parse_int(
+            data.get('days'), 'days', 5, minimum=1, maximum=365
+        )
+        only_existing = data.get('only_existing', False)
+        if not isinstance(only_existing, bool):
+            return jsonify({
+                'success': False,
+                'error': 'only_existing 必须是布尔值'
+            }), 400
+        if only_existing:
+            return jsonify({
+                'success': False,
+                'error': (
+                    '多市场行情更新不允许 only_existing=true；'
+                    '该选项会排除尚无历史行情的港股和美股'
+                ),
+            }), 400
         
         # 创建后台任务
-        task_id = task_manager.create_task(
-            task_name=f'增量数据更新（最近{days}天）',
-            func=_execute_incremental_update,
-            auto_start=True
+        task_id = create_exclusive_background_task(
+            task_manager,
+            task_type='data_update',
+            task_name=(
+                f'跨市场行情更新（CN/HK/US，最近{days}天）'
+            ),
+            func=execute_recent_update_job,
+            kwargs={
+                'days': days,
+                'only_existing': False,
+                'markets': list(SUPPORTED_MARKETS),
+            },
         )
         
         logger.info(f"启动增量更新任务: {task_id}")
@@ -223,9 +155,18 @@ def start_incremental_update():
         return jsonify({
             'success': True,
             'task_id': task_id,
+            'markets': list(SUPPORTED_MARKETS),
             'message': '增量更新任务已启动，请在后台执行'
         })
         
+    except DataTaskBusyError as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'active_task': e.active_task,
+        }), 409
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"启动增量更新失败: {e}")
         return jsonify({
@@ -300,7 +241,9 @@ def list_tasks():
     """
     try:
         status = request.args.get('status')
-        limit = int(request.args.get('limit', 10))
+        limit = parse_int(
+            request.args.get('limit'), 'limit', 10, minimum=1, maximum=100
+        )
         
         task_manager = get_task_manager()
         tasks = task_manager.list_tasks(status=status)
@@ -314,6 +257,8 @@ def list_tasks():
             'count': len(tasks)
         })
         
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"获取任务列表失败: {e}")
         return jsonify({
@@ -382,30 +327,36 @@ def get_data_status():
         # 使用MySQL查询行情数据统计
         stats = market_data_service.get_data_statistics()
         
+        directory_count = stats.get(
+            'directory_count',
+            stats.get('stock_count', 0),
+        )
+        market_data_count = stats.get(
+            'market_data_security_count',
+            stats.get('stock_count', 0),
+        )
         return jsonify({
             'success': True,
             'data': {
-                'total_stocks': stats.get('stock_count', 0),
+                'total_stocks': directory_count,
+                'directory_count': directory_count,
+                'market_data_security_count': market_data_count,
+                'directory_by_market': stats.get('directory_by_market', {}),
+                'market_data_by_market': stats.get(
+                    'market_data_by_market',
+                    {},
+                ),
                 'total_records': stats.get('total_records', 0),
                 'earliest_date': stats.get('min_date'),
                 'latest_date': stats.get('max_date'),
-                'record_count_millions': round(stats.get('total_records', 0) / 10000, 1)
+                'record_count_millions': round(stats.get('total_records', 0) / 10000, 1),
+                'current_task': get_data_task_coordinator().current(),
             }
         })
         
     except Exception as e:
         logger.error(f"获取数据状态失败: {e}")
-        return jsonify({
-            'success': True,
-            'data': {
-                'total_stocks': 0,
-                'total_records': 0,
-                'earliest_date': None,
-                'latest_date': None,
-                'record_count_millions': 0
-            },
-            'error': str(e)
-        })
+        return internal_error_response()
 
 
 @data_bp.route('/job-logs/<int:job_log_id>/details', methods=['GET'])
@@ -434,8 +385,12 @@ def get_job_details(job_log_id):
     try:
         from app.scheduler import get_task_scheduler
         
-        limit = int(request.args.get('limit', 1000))
-        offset = int(request.args.get('offset', 0))
+        limit = parse_int(
+            request.args.get('limit'), 'limit', 1000, minimum=1, maximum=5000
+        )
+        offset = parse_int(
+            request.args.get('offset'), 'offset', 0, minimum=0
+        )
         detail_type = request.args.get('detail_type')
         
         scheduler = get_task_scheduler()
@@ -506,6 +461,8 @@ def get_job_details(job_log_id):
             }
         })
         
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"获取任务详细结果失败: {e}")
         return jsonify({

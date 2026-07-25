@@ -9,6 +9,41 @@ logger = get_logger(__name__)
 
 class AuthUtils:
     """认证工具类"""
+
+    @staticmethod
+    def is_password_acceptable(password: str) -> bool:
+        """新密码必须有合理长度，避免弱口令与异常超长输入。"""
+        length = len(str(password or ''))
+        return 12 <= length <= 128
+
+    @staticmethod
+    def is_secret_strong(secret_key: str) -> bool:
+        """判断 JWT 密钥是否满足运行时最低安全要求。"""
+        normalized = str(secret_key or '').strip()
+        weak_markers = (
+            'your-secret',
+            'dev-secret',
+            'change-me',
+            'replace-with',
+        )
+        return (
+            len(normalized) >= 32
+            and not any(marker in normalized.lower() for marker in weak_markers)
+        )
+
+    @staticmethod
+    def _get_secret_key() -> str:
+        config = get_config()
+        secret_key = config.get(
+            'auth.secret_key',
+            config.get('web.secret_key', '')
+        )
+        normalized = str(secret_key or '').strip()
+        if not AuthUtils.is_secret_strong(normalized):
+            raise ValueError(
+                "AUTH_SECRET_KEY 未配置或强度不足，请设置至少 32 字符的随机密钥"
+            )
+        return normalized
     
     @staticmethod
     def hash_password(password: str) -> str:
@@ -58,7 +93,10 @@ class AuthUtils:
             str: JWT Token
         """
         config = get_config()
-        secret_key = config.get('web.secret_key', 'dev-secret-key')
+        secret_key = AuthUtils._get_secret_key()
+        configured_hours = int(config.get('auth.token_expire_hours', 1))
+        if expires_in == 3600:
+            expires_in = configured_hours * 3600
         
         payload = {
             'user_id': user_id,
@@ -82,12 +120,13 @@ class AuthUtils:
         Returns:
             Optional[Dict]: Token 载荷，验证失败返回 None
         """
-        config = get_config()
-        secret_key = config.get('web.secret_key', 'dev-secret-key')
-        
         try:
+            secret_key = AuthUtils._get_secret_key()
             payload = jwt.decode(token, secret_key, algorithms=['HS256'])
             return payload
+        except ValueError as e:
+            logger.error(f"认证密钥配置无效: {e}")
+            return None
         except jwt.ExpiredSignatureError:
             logger.warning("Token已过期")
             return None

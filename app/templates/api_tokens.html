@@ -3,17 +3,16 @@
 {% block title %}API Token 管理 - 股海罗盘{% endblock %}
 
 {% block content %}
-<div class="row mb-3">
-    <div class="col-md-8">
-        <h2><i class="fas fa-key"></i> API Token 管理</h2>
-        <p class="text-muted">生成长期 API Token，用于 MCP 服务（Claude Desktop 等 AI 工具）认证。</p>
+<section class="legacy-page-hero d-flex flex-wrap justify-content-between align-items-end gap-3">
+    <div>
+        <span class="eyebrow">DEVELOPER ACCESS</span>
+        <h1>API 凭证</h1>
+        <p>创建并管理用于 MCP 服务及外部工具认证的长期访问凭证。</p>
     </div>
-    <div class="col-md-4 text-end">
-        <button class="btn btn-primary" onclick="showCreateModal()">
-            <i class="fas fa-plus"></i> 生成新 Token
-        </button>
-    </div>
-</div>
+    <button class="btn btn-primary" onclick="showCreateModal()">
+        <i class="fas fa-plus"></i>生成新 Token
+    </button>
+</section>
 
 <!-- Token List -->
 <div class="row">

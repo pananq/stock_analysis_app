@@ -135,11 +135,15 @@ class StrategyExecutor:
                 
                 stock_code = stock['stock_code']
                 stock_name = stock['stock_name']
+                security_id = stock['security_id']
+                market = stock['market']
+                security_type = stock['security_type']
                 
                 try:
                     # 查找符合条件的交易日
                     stock_matches = self._scan_stock(
-                        stock_code, stock_name,
+                        security_id, stock_code, stock_name,
+                        market, security_type,
                         start_date, end_date,
                         rise_threshold, observation_days, ma_period
                     )
@@ -218,32 +222,20 @@ class StrategyExecutor:
             股票列表
         """
         try:
-            # 从MySQL中获取有数据的股票代码
-            stock_codes = self.market_data_service.get_stocks_with_data(limit)
-            
-            if not stock_codes:
-                return []
-            
-            # 从主数据库中获取股票详细信息
-            placeholders = ','.join(['?' for _ in stock_codes])
-            sql = f"""
-                SELECT code as stock_code, name as stock_name, market_type as market
-                FROM stocks
-                WHERE code IN ({placeholders})
-                AND name NOT LIKE 'ST%'
-                AND name NOT LIKE '*ST%'
-                ORDER BY code
-            """
-            
-            stocks = self.db.execute_query(sql, tuple(stock_codes))
-            
-            return stocks
+            stocks = self.market_data_service.get_securities_with_data(limit)
+            return [
+                stock
+                for stock in stocks
+                if not stock['stock_name'].startswith(('ST', '*ST'))
+            ]
             
         except Exception as e:
             logger.error(f"获取股票列表失败: {e}")
             return []
     
-    def _scan_stock(self, stock_code: str, stock_name: str,
+    def _scan_stock(
+                   self, security_id: int, stock_code: str, stock_name: str,
+                   market: str, security_type: str,
                    start_date: str, end_date: str,
                    rise_threshold: float, observation_days: int, 
                    ma_period: int) -> List[Dict[str, Any]]:
@@ -276,7 +268,10 @@ class StrategyExecutor:
             df = self.market_data_service.get_stock_data(
                 code=stock_code,
                 start_date=extended_start,
-                end_date=end_date
+                end_date=end_date,
+                market=market,
+                security_type=security_type,
+                security_id=security_id,
             )
             
             if df.empty or len(df) < ma_period + observation_days:
@@ -323,7 +318,10 @@ class StrategyExecutor:
                 
                 if is_valid:
                     matches.append({
+                        'security_id': security_id,
                         'stock_code': stock_code,
+                        'market': market,
+                        'security_type': security_type,
                         'stock_name': stock_name,
                         'trigger_date': rise_date,
                         'trigger_pct_change': rise_pct,
@@ -440,10 +438,10 @@ class StrategyExecutor:
             # 插入新结果
             sql = """
                 INSERT INTO strategy_results
-                (strategy_id, stock_code, stock_name, trigger_date,
+                (strategy_id, security_id, stock_code, stock_name, trigger_date,
                  trigger_pct_change, observation_days, ma_period,
                  observation_result, created_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             
             now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -469,6 +467,7 @@ class StrategyExecutor:
                     sql,
                     (
                         strategy_id,
+                        match['security_id'],
                         match['stock_code'],
                         match['stock_name'],
                         match['trigger_date'],

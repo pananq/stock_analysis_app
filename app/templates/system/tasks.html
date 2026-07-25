@@ -3,12 +3,14 @@
 {% block title %}任务历史 - 股海罗盘{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <h2><i class="fas fa-tasks"></i> 任务执行历史</h2>
-        <hr>
+<section class="legacy-page-hero d-flex flex-wrap justify-content-between align-items-end gap-3">
+    <div>
+        <span class="eyebrow">AUTOMATION HISTORY</span>
+        <h1>任务执行历史</h1>
+        <p>回顾数据同步、策略计算和日报任务的执行结果与耗时表现。</p>
     </div>
-</div>
+    <a class="btn btn-secondary" href="/system/"><i class="fas fa-arrow-left"></i>返回系统</a>
+</section>
 
 <!-- 统计信息 -->
 <div class="row mb-4">
@@ -140,8 +142,10 @@
                                 <td>
                                     {% if task.status == 'success' %}
                                     <span class="badge bg-success">成功</span>
-                                    {% elif task.status == 'failed' %}
+                                    {% elif task.status in ['failed', 'error'] %}
                                     <span class="badge bg-danger">失败</span>
+                                    {% elif task.status == 'skipped' %}
+                                    <span class="badge bg-warning text-dark">暂缓</span>
                                     {% else %}
                                     <span class="badge bg-secondary">{{ task.status }}</span>
                                     {% endif %}

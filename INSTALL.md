@@ -15,23 +15,23 @@
 ## 🚀 快速开始
 
 ### 环境要求
-- Python 3.8+
+- Python 3.10+
 - pip 包管理器
 
 ### 安装步骤
 
 1. **克隆项目**
 ```bash
-git clone <repository-url>
-cd stock-analysis-app
+git clone https://github.com/pananq/stock_analysis_app.git
+cd stock_analysis_app
 ```
 
 2. **创建虚拟环境（推荐）**
 ```bash
-python3 -m venv venv
-source venv/bin/activate  # Linux/Mac
+python3 -m venv .venv
+source .venv/bin/activate  # Linux/Mac
 # 或
-venv\Scripts\activate  # Windows
+.venv\Scripts\activate  # Windows
 ```
 
 3. **安装依赖**
@@ -41,8 +41,11 @@ pip install -r requirements.txt
 
 4. **初始化配置**
 ```bash
-cp config.yaml.example config.yaml
-# 编辑 config.yaml 配置数据源和其他选项
+cp config.example.yaml config.yaml
+cp .env.example .env
+# 编辑 config.yaml 配置非敏感选项，并在 .env 中至少设置
+# AUTH_SECRET_KEY 和首次启动所需的 ADMIN_INITIAL_PASSWORD。
+python main.py doctor
 ```
 
 5. **初始化数据库**
@@ -87,6 +90,9 @@ python main.py stop
 # 查看服务状态
 python main.py status
 
+# 脱敏检查认证、AI、SMTP 和日报配置（不访问外部服务）
+python main.py doctor
+
 # 重启服务
 python main.py restart
 ```
@@ -112,7 +118,7 @@ python run_web.py
 
 ### 访问系统
 - **Web界面**: http://localhost:8000
-- **API文档**: http://localhost:5000/api/docs
+- **智能日报**: http://localhost:8000/reports
 
 ## 🏭 生产环境部署
 
@@ -126,7 +132,7 @@ python run_web.py
 - **网络**: 稳定的互联网连接
 
 #### 2. 软件依赖
-- Python 3.8+
+- Python 3.10+
 - MySQL 5.7+ 或 8.0+
 - Git
 - pip
@@ -141,7 +147,7 @@ sudo apt update && sudo apt upgrade -y  # Ubuntu/Debian
 # 或
 sudo yum update -y  # CentOS/RHEL
 
-# 安装Python 3.8+
+# 安装Python 3.10+
 sudo apt install python3 python3-pip python3-venv -y  # Ubuntu/Debian
 # 或
 sudo yum install python3 python3-pip -y  # CentOS/RHEL
@@ -220,64 +226,42 @@ pip install -r requirements.txt
 
 ```bash
 # 复制配置文件模板
-cp config.yaml.example config.yaml
+cp config.example.yaml config.yaml
+cp .env.example .env
 
-# 编辑配置文件
-vim config.yaml  # 或使用 nano config.yaml
+# config.yaml 只保存非敏感选项；密码和密钥写入 .env
+vim config.yaml
+vim .env
+python main.py doctor
 ```
 
 **重要配置项**：
 
-```yaml
-# 应用模式（生产环境必须设置为production）
-app_mode: production
+```dotenv
+DATASOURCE_TYPE=akshare
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_DATABASE=stock_analysis
+MYSQL_USER=YOUR_DB_USERNAME
+MYSQL_PASSWORD=YOUR_SECURE_PASSWORD
 
-# 数据源配置
-datasource:
-  default: tushare  # 或 akshare
-  tushare:
-    enabled: true
-    token: YOUR_TUSHARE_TOKEN_HERE  # 替换为你的实际Token
+# 至少 32 字符的独立随机值；不要提交到 Git。
+AUTH_SECRET_KEY=YOUR_LONG_RANDOM_AUTH_SECRET
+WEB_SECRET_KEY=YOUR_DIFFERENT_LONG_RANDOM_WEB_SECRET
+ADMIN_INITIAL_PASSWORD=YOUR_INITIAL_ADMIN_PASSWORD
 
-# 数据库配置
-database:
-  type: mysql
-  mysql:
-    host: localhost
-    port: 3306
-    username: YOUR_DB_USERNAME
-    password: YOUR_SECURE_PASSWORD  # 使用步骤2中设置的密码
-    database: stock_analysis
+# 可选 AI 分析
+AI_ENABLED=false
+AI_API_KEY=
 
-# API服务器配置
-api:
-  host: 0.0.0.0
-  port: 5000
-  debug: false
-
-# Web服务器配置
-web:
-  host: 0.0.0.0
-  port: 8000
-  debug: false
-
-# 调度任务配置
-scheduler:
-  enabled: true
-  update_stock_list:
-    hour: 18
-    minute: 0
-  update_market_data:
-    hour: 19
-    minute: 0
-
-# 日志配置
-logging:
-  level: INFO
-  file: logs/app.log
-  max_size: 10485760
-  backup_count: 5
+# 可选 SMTP 日报
+EMAIL_ENABLED=false
+DAILY_REPORT_ENABLED=false
 ```
+
+港美股日线无需额外密钥；A 股使用 Tushare 时将 `DATASOURCE_TYPE` 改为
+`tushare` 并配置 `TUSHARE_TOKEN`。完整选项以 `.env.example` 和
+`config.example.yaml` 为准。
 
 #### 步骤6: 初始化数据库
 
@@ -446,9 +430,9 @@ sudo certbot renew --dry-run
 # 登录Web界面
 # 访问 http://YOUR_DOMAIN_OR_IP 或 http://YOUR_SERVER_IP
 
-# 使用默认管理员账号登录
+# 使用首次初始化时创建的管理员登录
 # 用户名: admin
-# 密码: ******** (首次登录后请立即修改，默认密码请联系管理员获取)
+# 密码: .env 中的 ADMIN_INITIAL_PASSWORD
 
 # 进入数据管理页面，开始全量导入
 # 导入任务会在后台运行，约需3-5小时
@@ -720,71 +704,18 @@ docker run -d \
 
 ## ⚙️ 配置说明
 
-### 配置文件 (config.yaml)
+### 配置文件
 
-```yaml
-# 数据源配置
-datasource:
-  default: akshare          # 默认数据源
-  akshare:
-    enabled: true
-  tushare:
-    enabled: false
-    token: YOUR_TUSHARE_TOKEN_HERE  # Tushare Token（请替换为实际token）
-
-# API频率控制
-api_rate_limit:
-  min_delay: 0.1            # 最小延迟（秒）
-  max_delay: 0.3            # 最大延迟（秒）
-  max_retries: 3            # 最大重试次数
-
-# 数据库配置
-database:
-  type: mysql
-  mysql:
-    host: localhost
-    port: 3306
-    username: YOUR_DB_USERNAME
-    password: YOUR_DB_PASSWORD
-    database: stock_analysis
-
-# API服务器配置
-api:
-  host: 0.0.0.0
-  port: 5000
-  debug: false
-
-# Web服务器配置
-web:
-  host: 0.0.0.0
-  port: 8000
-  debug: false
-
-# 调度任务配置
-scheduler:
-  enabled: true
-  update_stock_list:
-    hour: 18
-    minute: 0
-  update_market_data:
-    hour: 19
-    minute: 0
-
-# 日志配置
-logging:
-  level: INFO
-  file: logs/app.log
-  max_size: 10485760        # 10MB
-  backup_count: 5
-```
+`config.yaml` 保存服务端口、调度时间、行情回退顺序等非敏感选项；`.env`
+保存数据库密码、认证密钥、Tushare Token、AI API Key 和 SMTP 凭据。
+部署前运行 `python main.py doctor` 可查看脱敏准备状态。
 
 ### 配置项说明
 
 #### 数据源配置
-- `default`: 默认使用的数据源（akshare 或 tushare）
-- `akshare.enabled`: 是否启用Akshare数据源
-- `tushare.enabled`: 是否启用Tushare数据源
-- `tushare.token`: Tushare API Token（需要注册获取）
+- `DATASOURCE_TYPE`: A 股默认数据源（`akshare` 或 `tushare`）
+- `TUSHARE_TOKEN`: 使用 Tushare 时所需的 API Token
+- `global_markets.providers`: 港美股日线的数据源回退顺序
 
 #### API频率控制
 - `min_delay`: 每次API请求的最小延迟时间（秒）
@@ -809,15 +740,15 @@ logging:
 
 #### 调度任务配置
 - `scheduler.enabled`: 是否启用定时任务
-- `update_stock_list.hour`: 更新股票列表的小时（24小时制）
-- `update_stock_list.minute`: 更新股票列表的分钟
-- `update_market_data.hour`: 更新行情数据的小时
-- `update_market_data.minute`: 更新行情数据的分钟
+- `scheduler.timezone`: 调度器时区
+- `scheduler.jobs.stock_update`: 股票列表更新开关与时间
+- `scheduler.jobs.market_data_update`: A 股行情更新开关与时间
+- `notifications.daily_report`: 关注列表日报开关、时间与用户目标
 
 #### 日志配置
 - `logging.level`: 日志级别（DEBUG, INFO, WARNING, ERROR, CRITICAL）
 - `logging.file`: 日志文件路径
-- `logging.max_size`: 单个日志文件最大大小（字节）
+- `logging.max_bytes`: 单个日志文件最大大小
 - `logging.backup_count`: 保留的日志文件数量
 
 ## ❓ 常见问题

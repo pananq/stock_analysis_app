@@ -6,6 +6,7 @@ from .data_routes import data_bp
 from .auth_routes import auth_bp
 from .watchlist_routes import watchlist_bp
 from .api_token_routes import api_token_bp
+from .report_routes import report_bp
 
 __all__ = [
     'strategy_bp',
@@ -14,5 +15,6 @@ __all__ = [
     'data_bp',
     'auth_bp',
     'watchlist_bp',
-    'api_token_bp'
+    'api_token_bp',
+    'report_bp',
 ]

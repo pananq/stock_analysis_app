@@ -5,6 +5,7 @@ __pycache__/
 *.so
 .Python
 venv/
+.venv/
 env/
 ENV/
 *.egg-info/
@@ -18,6 +19,8 @@ data/backups/
 
 # 日志文件
 logs/*.log
+/.stock_app.pid
+/=
 
 # IDE
 .vscode/
@@ -31,7 +34,8 @@ logs/*.log
 Thumbs.db
 
 # 配置文件（如果包含敏感信息）
-# config.yaml
+config.yaml
+.env
 
 # 测试
 .pytest_cache/

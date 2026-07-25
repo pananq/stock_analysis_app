@@ -4,6 +4,7 @@ ORM 数据库适配器
 """
 from typing import Dict, Any
 from app.models.orm_models import ORMDatabase
+from app.utils.database_url import build_mysql_url
 from app.utils import get_logger
 
 logger = get_logger(__name__)
@@ -44,31 +45,7 @@ class ORMDBAdapter:
             数据库连接URL字符串
         """
         if self.db_type == 'mysql':
-            # MySQL连接URL: mysql+pymysql://user:password@host:port/database
-            host = self.config.get('host', 'localhost')
-            port = self.config.get('port', 3306)
-            database = self.config.get('database', 'stock_analysis')
-            username = self.config.get('username', 'root')
-            password = self.config.get('password', '')
-            charset = self.config.get('charset', 'utf8mb4')
-            
-            # 添加额外的连接参数以避免连接问题
-            # autocommit: 自动提交
-            # connect_timeout: 连接超时
-            # read_timeout: 读取超时
-            # write_timeout: 写入超时
-            # charset: 字符集
-            extra_params = {
-                'autocommit': 'false',
-                'connect_timeout': '10',
-                'read_timeout': '30',
-                'write_timeout': '30',
-                'charset': charset
-            }
-            
-            param_str = '&'.join([f"{k}={v}" for k, v in extra_params.items()])
-            
-            return f"mysql+pymysql://{username}:{password}@{host}:{port}/{database}?{param_str}"
+            return build_mysql_url(self.config)
         
         else:
             raise ValueError(f"不支持的数据库类型: {self.db_type}，只支持mysql")

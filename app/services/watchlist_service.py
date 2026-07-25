@@ -6,7 +6,14 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 import pandas as pd
 from app.models.orm_models import ORMDatabase, Watchlist, Stock
+from app.services.market_identity import (
+    MARKETS,
+    normalize_market,
+    normalize_security_code,
+    normalize_security_type,
+)
 from app.utils import get_logger, get_config
+from app.utils.database_url import build_mysql_url
 from sqlalchemy.orm import sessionmaker
 
 logger = get_logger(__name__)
@@ -15,22 +22,19 @@ logger = get_logger(__name__)
 class WatchlistService:
     """关注列表服务类"""
 
-    def __init__(self):
-        config = get_config()
-        mysql_config = config.get('database.mysql')
-        if not mysql_config:
-            raise ValueError("未配置MySQL数据库信息")
+    def __init__(self, session_factory=None, market_data_resolver=None):
+        self.orm_db = None
+        self.market_data_resolver = market_data_resolver
+        if session_factory is not None:
+            self.Session = session_factory
+        else:
+            config = get_config()
+            mysql_config = config.get('database.mysql')
+            if not mysql_config:
+                raise ValueError("未配置MySQL数据库信息")
 
-        mysql_url = (
-            f"mysql+pymysql://{mysql_config.get('username')}:"
-            f"{mysql_config.get('password')}@"
-            f"{mysql_config.get('host')}:"
-            f"{mysql_config.get('port')}/"
-            f"{mysql_config.get('database')}?charset=utf8mb4"
-        )
-
-        self.orm_db = ORMDatabase(mysql_url)
-        self.Session = sessionmaker(bind=self.orm_db.engine)
+            self.orm_db = ORMDatabase(build_mysql_url(mysql_config))
+            self.Session = sessionmaker(bind=self.orm_db.engine)
         logger.info("WatchlistService 初始化完成")
 
     def _tags_to_db(self, tags: Optional[str]) -> Optional[str]:
@@ -52,8 +56,10 @@ class WatchlistService:
         return {
             'id': row.id,
             'user_id': row.user_id,
+            'security_id': row.security_id,
             'stock_code': row.stock_code,
             'market': row.market,
+            'security_type': row.security_type or 'STOCK',
             'group_name': row.group_name,
             'tags': self._tags_from_db(row.tags),
             'notes': row.notes,
@@ -61,22 +67,37 @@ class WatchlistService:
         }
 
     def add_stock(self, user_id: int, stock_code: str, market: str = 'CN',
-                  group_name: str = None, tags: str = None, notes: str = None) -> dict:
+                  security_type: str = 'STOCK', group_name: str = None,
+                  tags: str = None, notes: str = None) -> dict:
+        market = normalize_market(market)
+        security_type = normalize_security_type(security_type)
+        stock_code = normalize_security_code(
+            stock_code, market, security_type
+        )
         session = self.Session()
         try:
+            stock = session.query(Stock).filter(
+                Stock.market == market,
+                Stock.code == stock_code,
+                Stock.security_type == security_type,
+            ).first()
+            if not stock:
+                return {'success': False, 'error': '证券目录中不存在该证券'}
+
             # Check if already exists
             existing = session.query(Watchlist).filter(
                 Watchlist.user_id == user_id,
-                Watchlist.stock_code == stock_code,
-                Watchlist.market == market
+                Watchlist.security_id == stock.id,
             ).first()
             if existing:
                 return {'success': False, 'error': '已在关注列表中'}
 
             item = Watchlist(
                 user_id=user_id,
+                security_id=stock.id,
                 stock_code=stock_code,
                 market=market,
+                security_type=security_type,
                 group_name=group_name,
                 tags=self._tags_to_db(tags),
                 notes=notes,
@@ -88,7 +109,7 @@ class WatchlistService:
         except Exception as e:
             session.rollback()
             logger.error(f"添加关注股票失败: {e}")
-            return {'success': False, 'error': str(e)}
+            raise
         finally:
             session.close()
 
@@ -104,7 +125,7 @@ class WatchlistService:
         except Exception as e:
             session.rollback()
             logger.error(f"删除关注股票失败: {e}")
-            return False
+            raise
         finally:
             session.close()
 
@@ -131,7 +152,7 @@ class WatchlistService:
         except Exception as e:
             session.rollback()
             logger.error(f"更新关注股票失败: {e}")
-            return {'success': False, 'error': str(e)}
+            raise
         finally:
             session.close()
 
@@ -146,19 +167,22 @@ class WatchlistService:
             items = query.order_by(Watchlist.created_at.desc()).all()
 
             # Batch-fetch stock metadata to avoid N+1 queries
-            stock_codes = [item.stock_code for item in items]
             stock_map = {}
-            if stock_codes:
-                stocks = session.query(Stock).filter(Stock.code.in_(stock_codes)).all()
-                stock_map = {s.code: s for s in stocks}
+            security_ids = {item.security_id for item in items}
+            if security_ids:
+                stocks = session.query(Stock).filter(
+                    Stock.id.in_(security_ids)
+                ).all()
+                stock_map = {stock.id: stock for stock in stocks}
 
             result = []
             for item in items:
                 d = self._row_to_dict(item)
-                s = stock_map.get(item.stock_code)
+                s = stock_map.get(item.security_id)
                 d['stock_name'] = s.name if s else None
                 d['industry'] = s.industry if s else None
-                d['market_type'] = s.market_type if s else None
+                d['market_type'] = s.market_type if s else MARKETS[item.market].name
+                d['currency'] = MARKETS[item.market].currency
                 result.append(d)
             return result
         finally:
@@ -175,19 +199,78 @@ class WatchlistService:
         finally:
             session.close()
 
-    def get_stock_data_with_indicators(self, stock_code: str, start_date: str = None,
-                                        end_date: str = None, ma_periods: List[int] = None) -> dict:
+    def get_stock_dataframe(
+        self,
+        stock_code: str,
+        market: str = 'CN',
+        security_type: str = 'STOCK',
+        start_date: str = None,
+        end_date: str = None,
+    ) -> pd.DataFrame:
+        market = normalize_market(market)
+        security_type = normalize_security_type(security_type)
+        stock_code = normalize_security_code(
+            stock_code, market, security_type
+        )
+        if self.market_data_resolver is not None:
+            return self.market_data_resolver(
+                stock_code,
+                market,
+                security_type,
+                start_date,
+                end_date,
+            )
+        from app.services.security_market_data_service import (
+            get_security_market_data_service,
+        )
+        return get_security_market_data_service().get_daily_data(
+            stock_code,
+            market=market,
+            security_type=security_type,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def get_stock_data_with_indicators(
+        self,
+        stock_code: str,
+        market: str = 'CN',
+        security_type: str = 'STOCK',
+        start_date: str = None,
+        end_date: str = None,
+        ma_periods: List[int] = None,
+    ) -> dict:
         if ma_periods is None:
             ma_periods = [5, 30, 60]
+        ma_periods = sorted(set(ma_periods))
+        if (
+            not ma_periods
+            or len(ma_periods) > 10
+            or any(period < 1 or period > 250 for period in ma_periods)
+        ):
+            raise ValueError("均线周期必须为 1-250 之间的整数，且最多 10 个")
 
-        from app.services.market_data_service import get_market_data_service
         from app.indicators.technical_indicators import TechnicalIndicators
 
-        df = get_market_data_service().get_stock_data(stock_code, start_date, end_date)
+        market = normalize_market(market)
+        security_type = normalize_security_type(security_type)
+        stock_code = normalize_security_code(
+            stock_code, market, security_type
+        )
+        df = self.get_stock_dataframe(
+            stock_code,
+            market,
+            security_type,
+            start_date,
+            end_date,
+        )
 
         if df.empty:
             return {
                 'stock_code': stock_code,
+                'market': market,
+                'security_type': security_type,
+                'currency': MARKETS[market].currency,
                 'records': [],
                 'summary': {'avg_price': None, 'max_price': None, 'record_count': 0},
                 'indicators': {}
@@ -224,6 +307,9 @@ class WatchlistService:
 
         return {
             'stock_code': stock_code,
+            'market': market,
+            'security_type': security_type,
+            'currency': MARKETS[market].currency,
             'records': records,
             'summary': {
                 'avg_price': round(avg_price, 4) if avg_price else None,

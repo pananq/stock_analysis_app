@@ -19,70 +19,92 @@
     
     {% block extra_css %}{% endblock %}
 </head>
-<body>
-    <!-- 导航栏 -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/">
-                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="股海罗盘" height="32" class="me-2">
-                股海罗盘
+<body class="app-body">
+    <div class="ambient-orb ambient-orb-one"></div>
+    <div class="ambient-orb ambient-orb-two"></div>
+    <nav class="navbar navbar-expand-xl app-navbar sticky-top">
+        <div class="container-fluid app-navbar-inner">
+            <a class="navbar-brand brand-lockup" href="/">
+                <span class="brand-symbol">
+                    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="">
+                </span>
+                <span class="brand-copy">
+                    <strong>股海罗盘</strong>
+                    <small>STOCK COMPASS</small>
+                </span>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    aria-label="展开导航">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
+                <ul class="navbar-nav app-primary-nav me-auto">
                     <li class="nav-item">
                         <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">
-                            <i class="fas fa-home"></i> 仪表板
+                            <span class="nav-icon"><i class="fas fa-chart-pie"></i></span>概览
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path.startswith('/strategies') %}active{% endif %}" href="/strategies">
-                            <i class="fas fa-brain"></i> 策略管理
+                        <a class="nav-link {% if request.path.startswith('/strategies') %}active{% endif %}" href="/strategies/">
+                            <span class="nav-icon"><i class="fas fa-wave-square"></i></span>策略
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.path.startswith('/stocks') %}active{% endif %}" href="/stocks">
-                            <i class="fas fa-list"></i> 股票查询
+                        <a class="nav-link {% if request.path.startswith('/stocks') %}active{% endif %}" href="/stocks/">
+                            <span class="nav-icon"><i class="fas fa-magnifying-glass-chart"></i></span>行情
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.path == '/watchlist' %}active{% endif %}" href="/watchlist">
-                            <i class="fas fa-star"></i> 关注列表
+                            <span class="nav-icon"><i class="fas fa-bookmark"></i></span>关注
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/reports' %}active{% endif %}" href="/reports">
+                            <span class="nav-icon"><i class="fas fa-newspaper"></i></span>日报
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.path == '/api-tokens' %}active{% endif %}" href="/api-tokens">
-                            <i class="fas fa-key"></i> API Token
+                            <span class="nav-icon"><i class="fas fa-key"></i></span>API
                         </a>
                     </li>
                     <li class="nav-item admin-only" style="display: none;">
-                        <a class="nav-link {% if request.path.startswith('/data') %}active{% endif %}" href="/data">
-                            <i class="fas fa-database"></i> 数据管理
+                        <a class="nav-link {% if request.path.startswith('/data') %}active{% endif %}" href="/data/">
+                            <span class="nav-icon"><i class="fas fa-database"></i></span>数据
                         </a>
                     </li>
                     <li class="nav-item admin-only" style="display: none;">
-                        <a class="nav-link {% if request.path.startswith('/system') %}active{% endif %}" href="/system">
-                            <i class="fas fa-cog"></i> 系统设置
+                        <a class="nav-link {% if request.path.startswith('/system') %}active{% endif %}" href="/system/">
+                            <span class="nav-icon"><i class="fas fa-sliders"></i></span>系统
                         </a>
                     </li>
                 </ul>
-                <ul class="navbar-nav">
+                <ul class="navbar-nav app-utility-nav">
+                    <li class="nav-item d-none d-xl-flex align-items-center">
+                        <span class="market-pulse">
+                            <span class="pulse-dot"></span>
+                            <span id="current-time"></span>
+                        </span>
+                    </li>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user-circle"></i> <span id="user-name-display">用户</span>
+                        <a class="nav-link user-menu-trigger dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <span class="user-avatar"><i class="fas fa-user"></i></span>
+                            <span id="user-name-display">用户</span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><span class="dropdown-item-text text-muted" id="user-role-display">角色</span></li>
+                            <li class="dropdown-profile">
+                                <small>当前账户</small>
+                                <strong id="user-role-display">角色</strong>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="/profile">
+                                    <i class="fas fa-id-card me-2"></i>个人资料
+                                </a>
+                            </li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#" onclick="logout()">注销</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="logout()"><i class="fas fa-right-from-bracket me-2"></i>注销</a></li>
                         </ul>
-                    </li>
-                    <li class="nav-item">
-                        <span class="navbar-text ms-3">
-                            <i class="fas fa-clock"></i> <span id="current-time"></span>
-                        </span>
                     </li>
                 </ul>
             </div>
@@ -90,18 +112,22 @@
     </nav>
 
     <!-- 主内容区 -->
-    <div class="container-fluid mt-4">
+    <main class="app-main container-fluid">
         <!-- 消息提示区 -->
         <div id="message-container"></div>
         
         <!-- 页面内容 -->
         {% block content %}{% endblock %}
-    </div>
+    </main>
 
     <!-- 页脚 -->
-    <footer class="footer mt-5 py-3 bg-light">
-        <div class="container text-center">
-            <span class="text-muted">股海罗盘 v1.0.0 &copy; 2025</span>
+    <footer class="app-footer">
+        <div class="container-fluid">
+            <div class="footer-brand">
+                <span class="footer-mark"></span>
+                <span>股海罗盘 · 跨市场智能分析</span>
+            </div>
+            <span>© 2026 STOCK COMPASS</span>
         </div>
     </footer>
 

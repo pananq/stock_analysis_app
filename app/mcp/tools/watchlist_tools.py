@@ -35,6 +35,7 @@ def register_watchlist_tools(mcp):
     def add_to_watchlist(
         stock_code: str,
         market: str = "CN",
+        security_type: str = "STOCK",
         group: Optional[str] = None,
         tags: Optional[str] = None,
         notes: Optional[str] = None
@@ -45,6 +46,7 @@ def register_watchlist_tools(mcp):
         Args:
             stock_code: 股票代码（如 600000）
             market: 市场（默认 CN 表示A股）
+            security_type: 证券类型（STOCK/ETF/FUND/INDEX）
             group: 分组名（可选，如"持仓"、"观察"）
             tags: 标签，逗号分隔（可选，如"银行,价值投资"）
             notes: 备注（可选）
@@ -61,6 +63,7 @@ def register_watchlist_tools(mcp):
             user_id=user_id,
             stock_code=stock_code,
             market=market,
+            security_type=security_type,
             group_name=group,
             tags=tags,
             notes=notes

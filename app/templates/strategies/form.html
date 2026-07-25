@@ -3,20 +3,16 @@
 {% block title %}{% if strategy_id %}编辑策略{% else %}创建策略{% endif %} - 股海罗盘{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center">
-            <h2>
-                <i class="fas fa-brain"></i> 
-                {% if strategy_id %}编辑策略{% else %}创建策略{% endif %}
-            </h2>
-            <a href="/strategies" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> 返回列表
-            </a>
-        </div>
-        <hr>
+<section class="legacy-page-hero d-flex flex-wrap justify-content-between align-items-end gap-3">
+    <div>
+        <span class="eyebrow">STRATEGY BUILDER</span>
+        <h1>{% if strategy_id %}编辑策略{% else %}创建策略{% endif %}</h1>
+        <p>用清晰的筛选参数定义你的市场观察逻辑。</p>
     </div>
-</div>
+    <a href="/strategies" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i>返回策略中心
+    </a>
+</section>
 
 <div class="row justify-content-center">
     <div class="col-md-8">
@@ -72,8 +68,9 @@
                                    id="rise_threshold" 
                                    name="rise_threshold" 
                                    step="0.1"
-                                   min="0"
-                                   value="{{ strategy.config.min_change if strategy else 8.0 }}">
+                                   min="0.01"
+                                   max="20"
+                                   value="{{ strategy.config.rise_threshold if strategy else 8.0 }}">
                             <span class="input-group-text">%</span>
                         </div>
                         <div class="form-text">筛选单日涨幅超过此阈值的股票</div>
@@ -90,8 +87,8 @@
                                    id="observation_days" 
                                    name="observation_days" 
                                    min="1"
-                                   max="365"
-                                   value="{{ strategy.config.days if strategy else 3 }}">
+                                   max="30"
+                                   value="{{ strategy.config.observation_days if strategy else 3 }}">
                             <span class="input-group-text">天</span>
                         </div>
                         <div class="form-text">大涨后观察多少天，要求每天收盘价都在均线之上</div>
@@ -103,16 +100,17 @@
                             <i class="fas fa-chart-line"></i> 均线周期
                         </label>
                         <div class="input-group">
-                            <input type="number" 
-                                   class="form-control" 
-                                   id="ma_period" 
-                                   name="ma_period" 
-                                   min="5"
-                                   max="120"
-                                   value="{{ strategy.config.ma_period if strategy else 5 }}">
+                            <select class="form-select" id="ma_period" name="ma_period">
+                                {% for period in [5, 10, 20, 30, 60] %}
+                                <option value="{{ period }}"
+                                    {% if (strategy and strategy.config.ma_period == period) or (not strategy and period == 5) %}selected{% endif %}>
+                                    {{ period }}
+                                </option>
+                                {% endfor %}
+                            </select>
                             <span class="input-group-text">日</span>
                         </div>
-                        <div class="form-text">移动平均线的周期（常用：5、10、20、60日均线）</div>
+                        <div class="form-text">支持 5、10、20、30、60 日均线</div>
                     </div>
                     
                     <hr>
@@ -193,18 +191,18 @@ document.getElementById('strategyForm').addEventListener('submit', function(e) {
         return;
     }
     
-    if (riseThreshold <= 0) {
-        showMessage('涨幅阈值必须大于0', 'danger');
+    if (!Number.isFinite(riseThreshold) || riseThreshold < 0.01 || riseThreshold > 20) {
+        showMessage('涨幅阈值必须在0.01-20之间', 'danger');
         return;
     }
     
-    if (observationDays < 1 || observationDays > 365) {
-        showMessage('观察天数必须在1-365之间', 'danger');
+    if (!Number.isInteger(observationDays) || observationDays < 1 || observationDays > 30) {
+        showMessage('观察天数必须在1-30之间', 'danger');
         return;
     }
     
-    if (maPeriod < 5 || maPeriod > 120) {
-        showMessage('均线周期必须在5-120之间', 'danger');
+    if (![5, 10, 20, 30, 60].includes(maPeriod)) {
+        showMessage('均线周期必须是5、10、20、30或60', 'danger');
         return;
     }
     

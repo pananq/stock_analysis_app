@@ -11,3 +11,9 @@ def login():
 def register():
     """注册页面"""
     return render_template('register.html')
+
+
+@auth_bp.route('/profile')
+def profile():
+    """当前用户个人资料页面。"""
+    return render_template('profile.html')

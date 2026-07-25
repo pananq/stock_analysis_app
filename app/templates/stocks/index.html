@@ -3,12 +3,16 @@
 {% block title %}股票查询 - 股海罗盘{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <h2><i class="fas fa-list"></i> 股票查询</h2>
-        <hr>
+<section class="legacy-page-hero d-flex flex-wrap justify-content-between align-items-end gap-3">
+    <div>
+        <span class="eyebrow">GLOBAL SECURITIES</span>
+        <h1>跨市场行情</h1>
+        <p>浏览与筛选 A 股、港股和美股的股票、ETF、基金及指数。</p>
     </div>
-</div>
+    <button class="btn btn-outline-primary" onclick="exportTableToCSV('stocksTable', 'stocks.csv')">
+        <i class="fas fa-download"></i>导出当前列表
+    </button>
+</section>
 
 <!-- 筛选表单 -->
 <div class="row mb-4">
@@ -20,7 +24,7 @@
             <div class="card-body">
                 <form method="GET" id="filterForm">
                     <div class="row">
-                        <div class="col-md-3">
+                        <div class="col-md">
                             <label for="code" class="form-label">股票代码</label>
                             <input type="text" 
                                    class="form-control" 
@@ -29,7 +33,7 @@
                                    placeholder="例如：600000"
                                    value="{{ params.code or '' }}">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md">
                             <label for="name" class="form-label">股票名称</label>
                             <input type="text" 
                                    class="form-control" 
@@ -38,7 +42,7 @@
                                    placeholder="例如：浦发银行"
                                    value="{{ params.name or '' }}">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md">
                             <label for="industry" class="form-label">行业</label>
                             <input type="text" 
                                    class="form-control" 
@@ -47,13 +51,23 @@
                                    placeholder="例如：银行"
                                    value="{{ params.industry or '' }}">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md">
                             <label for="market" class="form-label">市场</label>
                             <select class="form-select" id="market" name="market">
                                 <option value="">全部</option>
-                                <option value="沪市" {% if params.market == '沪市' %}selected{% endif %}>沪市</option>
-                                <option value="深市" {% if params.market == '深市' %}selected{% endif %}>深市</option>
-                                <option value="北交所" {% if params.market == '北交所' %}selected{% endif %}>北交所</option>
+                                <option value="CN" {% if params.market == 'CN' %}selected{% endif %}>A股</option>
+                                <option value="HK" {% if params.market == 'HK' %}selected{% endif %}>港股</option>
+                                <option value="US" {% if params.market == 'US' %}selected{% endif %}>美股</option>
+                            </select>
+                        </div>
+                        <div class="col-md">
+                            <label for="security_type" class="form-label">证券类型</label>
+                            <select class="form-select" id="security_type" name="security_type">
+                                <option value="">全部</option>
+                                <option value="STOCK" {% if params.security_type == 'STOCK' %}selected{% endif %}>股票</option>
+                                <option value="ETF" {% if params.security_type == 'ETF' %}selected{% endif %}>ETF/ETP</option>
+                                <option value="FUND" {% if params.security_type == 'FUND' %}selected{% endif %}>基金/REIT</option>
+                                <option value="INDEX" {% if params.security_type == 'INDEX' %}selected{% endif %}>指数</option>
                             </select>
                         </div>
                     </div>
@@ -84,9 +98,7 @@
                     <span class="badge bg-info ms-2">{{ total }} 只</span>
                     {% endif %}
                 </span>
-                <button class="btn btn-sm btn-outline-primary" onclick="exportTableToCSV('stocksTable', 'stocks.csv')">
-                    <i class="fas fa-download"></i> 导出CSV
-                </button>
+                <span class="text-muted small">支持代码、名称、行业、市场和证券类型组合筛选</span>
             </div>
             <div class="card-body">
                 {% if error %}
@@ -102,6 +114,7 @@
                             <tr>
                                 <th>股票代码</th>
                                 <th>股票名称</th>
+                                <th>证券类型</th>
                                 <th>行业</th>
                                 <th>市场类型</th>
                                 <th>上市日期</th>
@@ -116,16 +129,18 @@
                                     <strong>{{ stock.code }}</strong>
                                 </td>
                                 <td>{{ stock.name }}</td>
+                                <td>
+                                    {% set type_names = {'STOCK': '股票', 'ETF': 'ETF/ETP', 'FUND': '基金/REIT', 'INDEX': '指数'} %}
+                                    <span class="badge bg-dark">{{ type_names.get(stock.security_type, stock.security_type) }}</span>
+                                </td>
                                 <td>{{ stock.industry or '-' }}</td>
                                 <td>
-                                    {% if stock.market_type == '沪市' %}
-                                    <span class="badge bg-primary">沪市</span>
-                                    {% elif stock.market_type == '深市' %}
-                                    <span class="badge bg-success">深市</span>
-                                    {% elif stock.market_type == '北交所' %}
-                                    <span class="badge bg-warning">北交所</span>
+                                    {% if stock.market == 'HK' %}
+                                    <span class="badge bg-danger">港股</span>
+                                    {% elif stock.market == 'US' %}
+                                    <span class="badge bg-info">美股</span>
                                     {% else %}
-                                    <span class="badge bg-secondary">{{ stock.market_type }}</span>
+                                    <span class="badge bg-primary">A股 · {{ stock.market_type }}</span>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -146,27 +161,34 @@
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="/stocks/{{ stock.code }}" class="btn btn-outline-primary">
+                                        <a href="/stocks/{{ stock.code }}?market={{ stock.market }}&security_type={{ stock.security_type }}" class="btn btn-outline-primary">
                                             <i class="fas fa-eye"></i> 查看详情
                                         </a>
                                         <button type="button"
                                                 class="btn btn-outline-warning btn-watch-toggle"
                                                 data-stock-code="{{ stock.code }}"
-                                                onclick="quickAddWatch('{{ stock.code }}')">
+                                                data-stock-market="{{ stock.market }}"
+                                                data-security-type="{{ stock.security_type }}"
+                                                onclick="quickAddWatch('{{ stock.code }}', '{{ stock.market }}', '{{ stock.security_type }}')">
                                             <i class="fas fa-star"></i> 关注
                                         </button>
                                         <button type="button"
                                                 class="btn btn-outline-warning dropdown-toggle dropdown-toggle-split btn-watch-dropdown"
                                                 data-stock-code="{{ stock.code }}"
+                                                data-stock-market="{{ stock.market }}"
+                                                data-security-type="{{ stock.security_type }}"
                                                 data-bs-toggle="dropdown"
                                                 data-bs-auto-close="outside"
                                                 aria-expanded="false">
                                             <span class="visually-hidden">分组选项</span>
                                         </button>
-                                        <ul class="dropdown-menu watch-group-menu" data-stock-code="{{ stock.code }}">
+                                        <ul class="dropdown-menu watch-group-menu"
+                                            data-stock-code="{{ stock.code }}"
+                                            data-stock-market="{{ stock.market }}"
+                                            data-security-type="{{ stock.security_type }}">
                                             <li>
                                                 <a class="dropdown-item" href="#"
-                                                   onclick="addToWatchlist('{{ stock.code }}', null); return false;">
+                                                   onclick="addToWatchlist('{{ stock.code }}', '{{ stock.market }}', '{{ stock.security_type }}', null); return false;">
                                                     <i class="fas fa-star"></i> 全部（不分组）
                                                 </a>
                                             </li>
@@ -215,6 +237,7 @@ function resetFilter() {
     document.getElementById('name').value = '';
     document.getElementById('industry').value = '';
     document.getElementById('market').value = '';
+    document.getElementById('security_type').value = '';
     document.getElementById('filterForm').submit();
 }
 
@@ -226,7 +249,7 @@ $(document).ready(function() {
     apiRequest('/watchlist', 'GET', null, function(response) {
         const items = response.data || [];
         items.forEach(function(item) {
-            watchedCodes.add(item.stock_code);
+            watchedCodes.add(item.market + ':' + (item.security_type || 'STOCK') + ':' + item.stock_code);
             if (item.group_name && !existingGroups.includes(item.group_name)) {
                 existingGroups.push(item.group_name);
             }
@@ -239,7 +262,9 @@ $(document).ready(function() {
 function updateWatchButtons() {
     $('.btn-watch-toggle').each(function() {
         const code = $(this).data('stock-code');
-        if (watchedCodes.has(code)) {
+        const market = $(this).data('stock-market');
+        const securityType = $(this).data('security-type');
+        if (watchedCodes.has(market + ':' + securityType + ':' + code)) {
             $(this)
                 .removeClass('btn-outline-warning')
                 .addClass('btn-success')
@@ -260,12 +285,14 @@ function updateGroupDropdowns() {
 
         if (existingGroups.length > 0) {
             const stockCode = menu.data('stock-code');
+            const stockMarket = menu.data('stock-market');
+            const securityType = menu.data('security-type');
             let groupHtml = '';
             existingGroups.forEach(function(g) {
                 // Use JSON.stringify so group names with ' or " don't break the JS string literal
                 const jsGroup = escapeHtml(JSON.stringify(g));
                 groupHtml += '<li class="injected-group"><a class="dropdown-item" href="#" onclick="addToWatchlist(\'' +
-                    escapeHtml(stockCode) + '\', ' + jsGroup + '); return false;">' +
+                    escapeHtml(stockCode) + '\', \'' + escapeHtml(stockMarket) + '\', \'' + escapeHtml(securityType) + '\', ' + jsGroup + '); return false;">' +
                     escapeHtml(g) + '</a></li>';
             });
             divider.before(groupHtml);
@@ -276,13 +303,18 @@ function updateGroupDropdowns() {
     });
 }
 
-function quickAddWatch(stockCode) {
-    addToWatchlist(stockCode, null);
+function quickAddWatch(stockCode, market, securityType) {
+    addToWatchlist(stockCode, market, securityType, null);
 }
 
-function addToWatchlist(stockCode, groupName) {
-    apiRequest('/watchlist', 'POST', {stock_code: stockCode, market: 'CN', group_name: groupName}, function(response) {
-        watchedCodes.add(stockCode);
+function addToWatchlist(stockCode, market, securityType, groupName) {
+    apiRequest('/watchlist', 'POST', {
+        stock_code: stockCode,
+        market: market,
+        security_type: securityType,
+        group_name: groupName
+    }, function(response) {
+        watchedCodes.add(market + ':' + securityType + ':' + stockCode);
         if (groupName && !existingGroups.includes(groupName)) {
             existingGroups.push(groupName);
             updateGroupDropdowns();
@@ -302,6 +334,8 @@ function showNewGroupInput(linkEl) {
     const li = $(linkEl).closest('li');
     const menu = $(linkEl).closest('.watch-group-menu');
     const stockCode = menu.data('stock-code');
+    const stockMarket = menu.data('stock-market');
+    const securityType = menu.data('security-type');
     $(linkEl).hide();
     const inputDiv = li.find('.new-group-input');
     inputDiv.show();
@@ -311,7 +345,7 @@ function showNewGroupInput(linkEl) {
         if (e.key === 'Enter') {
             const newGroup = $(this).val().trim();
             if (newGroup) {
-                addToWatchlist(stockCode, newGroup);
+                addToWatchlist(stockCode, stockMarket, securityType, newGroup);
             }
             // Reset UI
             inputDiv.hide();

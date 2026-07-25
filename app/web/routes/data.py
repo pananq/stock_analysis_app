@@ -65,6 +65,7 @@ def import_data():
         response = requests.post(
             f"{API_BASE_URL}/data/import",
             json=request.get_json() or {},
+            headers=get_auth_headers(),
             timeout=10
         )
         
@@ -86,6 +87,7 @@ def update_data():
         response = requests.post(
             f"{API_BASE_URL}/data/update",
             json=request.get_json() or {},
+            headers=get_auth_headers(),
             timeout=10
         )
         

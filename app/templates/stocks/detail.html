@@ -8,20 +8,16 @@
 {% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center">
-            <h2>
-                <i class="fas fa-chart-line"></i> 
-                {{ stock.stock_name }} <small class="text-muted">({{ stock.stock_code }})</small>
-            </h2>
-            <a href="/stocks" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> 返回列表
-            </a>
-        </div>
-        <hr>
+<section class="legacy-page-hero d-flex flex-wrap justify-content-between align-items-end gap-3">
+    <div>
+        <span class="eyebrow">SECURITY PROFILE</span>
+        <h1>{{ stock.stock_name }}</h1>
+        <p>{{ stock.stock_code }} · {{ stock.market_type or '跨市场证券' }} · 行情与历史数据详情</p>
     </div>
-</div>
+    <a href="/stocks" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i>返回行情列表
+    </a>
+</section>
 
 {% if error %}
 <div class="alert alert-warning">
@@ -29,7 +25,7 @@
 </div>
 {% endif %}
 
-<!-- 股票基本信息 -->
+<!-- 证券基本信息 -->
 <div class="row mb-4">
     <div class="col-md-6">
         <div class="card">
@@ -39,12 +35,17 @@
             <div class="card-body">
                 <table class="table table-sm">
                     <tr>
-                        <th width="30%">股票代码</th>
+                        <th width="30%">证券代码</th>
                         <td><strong>{{ stock.stock_code }}</strong></td>
                     </tr>
                     <tr>
-                        <th>股票名称</th>
+                        <th>证券名称</th>
                         <td>{{ stock.stock_name }}</td>
+                    </tr>
+                    <tr>
+                        <th>证券类型</th>
+                        {% set type_names = {'STOCK': '股票', 'ETF': 'ETF/ETP', 'FUND': '基金/REIT', 'INDEX': '指数'} %}
+                        <td>{{ type_names.get(stock.security_type, stock.security_type) }}</td>
                     </tr>
                     <tr>
                         <th>行业</th>

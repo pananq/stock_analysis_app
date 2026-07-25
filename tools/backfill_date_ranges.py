@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.models.orm_models import ORMDatabase
 from app.utils import get_logger, get_config
+from app.utils.database_url import build_mysql_url
 from datetime import datetime
 from sqlalchemy import func
 from sqlalchemy.orm import sessionmaker
@@ -42,13 +43,7 @@ def backfill_date_ranges(batch_size: int = 100, verbose: bool = True):
             raise ValueError("未配置MySQL数据库信息")
         
         # 构建数据库连接URL
-        mysql_url = (
-            f"mysql+pymysql://{mysql_config.get('username')}:"
-            f"{mysql_config.get('password')}@"
-            f"{mysql_config.get('host')}:"
-            f"{mysql_config.get('port')}/"
-            f"{mysql_config.get('database')}?charset=utf8mb4"
-        )
+        mysql_url = build_mysql_url(mysql_config)
         
         # 创建数据库连接
         orm_db = ORMDatabase(mysql_url)
@@ -190,13 +185,7 @@ def backfill_single_stock(stock_code: str):
             raise ValueError("未配置MySQL数据库信息")
         
         # 构建数据库连接URL
-        mysql_url = (
-            f"mysql+pymysql://{mysql_config.get('username')}:"
-            f"{mysql_config.get('password')}@"
-            f"{mysql_config.get('host')}:"
-            f"{mysql_config.get('port')}/"
-            f"{mysql_config.get('database')}?charset=utf8mb4"
-        )
+        mysql_url = build_mysql_url(mysql_config)
         
         # 创建数据库连接
         orm_db = ORMDatabase(mysql_url)

@@ -7,6 +7,7 @@
 from flask import Blueprint, request, jsonify, g
 from app.scheduler import get_task_scheduler
 from app.utils import get_logger, get_config
+from app.api.validation import parse_int
 
 logger = get_logger(__name__)
 
@@ -28,10 +29,10 @@ def get_system_info():
             'success': True,
             'data': {
                 'name': '股海罗盘',
-                'version': '1.0.0',
+                'version': '2.0.0',
                 'datasource': config.get('datasource', {}).get('type', 'unknown'),
                 'database': {
-                    'duckdb': config.get('database', {}).get('duckdb_path', '')
+                    'type': config.get('database', {}).get('type', 'unknown')
                 }
             }
         })
@@ -131,7 +132,9 @@ def get_system_logs():
         import re
         from datetime import datetime
         
-        limit = int(request.args.get('limit', 100))
+        limit = parse_int(
+            request.args.get('limit'), 'limit', 100, minimum=1, maximum=1000
+        )
         level_filter = request.args.get('level', '').upper()
         module_filter = request.args.get('module', '').lower()
         
@@ -194,6 +197,8 @@ def get_system_logs():
             'total': len(logs)
         })
         
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"获取系统日志失败: {e}")
         return jsonify({
@@ -215,8 +220,12 @@ def get_scheduler_logs():
         任务日志列表
     """
     try:
-        limit = int(request.args.get('limit', 100))
-        offset = int(request.args.get('offset', 0))
+        limit = parse_int(
+            request.args.get('limit'), 'limit', 100, minimum=1, maximum=1000
+        )
+        offset = parse_int(
+            request.args.get('offset'), 'offset', 0, minimum=0
+        )
         
         # 获取当前用户
         user = getattr(g, 'user', None)
@@ -239,6 +248,8 @@ def get_scheduler_logs():
             }
         })
         
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         logger.error(f"获取任务日志失败: {e}")
         return jsonify({
@@ -454,7 +465,11 @@ def get_database_status():
         
         # 检查主数据库（MySQL/SQLite）
         main_db_status = {
-            'type': db.type if hasattr(db, 'type') else 'unknown',
+            'type': (
+                db.type
+                if hasattr(db, 'type')
+                else get_config().get('database.type', 'unknown')
+            ),
             'status': 'unknown',
             'error': None
         }
